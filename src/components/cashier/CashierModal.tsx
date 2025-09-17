@@ -14,6 +14,7 @@ import { usePackages } from "@/hooks/usePackages";
 import { useInventory } from "@/hooks/useInventory";
 import { useToast } from "@/hooks/use-toast";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Badge } from "@/components/ui/badge"; // Added Badge import
 
 interface CartItem {
   id: number;

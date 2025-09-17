@@ -232,7 +232,7 @@ export function AppointmentModal({ open, onOpenChange, onSave }: AppointmentModa
           </div>
 
           {/* Seleção de Pacote */}
-          {formData.package_id > 0 && (
+          {formData.package_id !== 0 && (
             <div className="space-y-2">
               <Label htmlFor="package">Pacote</Label>
               <Select value={formData.package_id.toString()} onValueChange={handlePackageSelect}>
@@ -253,7 +253,7 @@ export function AppointmentModal({ open, onOpenChange, onSave }: AppointmentModa
           )}
 
           {/* Seleção de Serviço */}
-          {formData.service_id > 0 && (
+          {formData.service_id !== 0 && (
             <div className="space-y-2">
               <Label htmlFor="service">Serviço</Label>
               <Select value={formData.service_id.toString()} onValueChange={handleServiceSelect}>

@@ -31,17 +31,22 @@ export default function Appointments() {
 
   const handleSaveAppointment = (appointmentData: any) => {
     const dataToSave = {
-      ...appointmentData,
+      service_id: appointmentData.service_id,
+      client_id: appointmentData.client_id,
+      client_name: appointmentData.client_name,
+      client_phone: appointmentData.client_phone,
+      duration: appointmentData.duration,
+      price: appointmentData.price,
+      notes: appointmentData.notes,
+      status: appointmentData.status,
       appointment_date: format(appointmentData.date, 'yyyy-MM-dd'),
       appointment_time: appointmentData.time,
     };
-    delete dataToSave.date;
-    delete dataToSave.time;
 
     addAppointment(dataToSave);
     toast({
       title: "Agendamento confirmado!",
-      description: `${appointmentData.serviceName} agendado para ${appointmentData.clientName}.`,
+      description: `${appointmentData.serviceName} agendado para ${appointmentData.client_name}.`,
     });
   };
 

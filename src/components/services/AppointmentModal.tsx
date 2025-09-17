@@ -14,8 +14,7 @@ import { cn } from "@/lib/utils";
 import { Service, useServices } from "@/hooks/useServices";
 import { useClients } from "@/hooks/useClients";
 
-interface Appointment {
-  id?: number;
+interface FormData {
   service_id: number;
   serviceName: string;
   client_id: number;
@@ -33,7 +32,7 @@ interface AppointmentModalProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   service?: Service | null;
-  onSave: (appointment: Omit<Appointment, 'id'>) => void;
+  onSave: (appointment: FormData) => void;
 }
 
 const timeSlots = Array.from({ length: 21 }, (_, i) => {
@@ -48,7 +47,7 @@ export function AppointmentModal({ open, onOpenChange, service, onSave }: Appoin
   const [selectedClientId, setSelectedClientId] = useState<string>("");
   const [selectedServiceId, setSelectedServiceId] = useState<string>("");
 
-  const [formData, setFormData] = useState<Omit<Appointment, 'id'>>({
+  const [formData, setFormData] = useState<FormData>({
     service_id: 0,
     serviceName: "",
     client_id: 0,
@@ -95,7 +94,7 @@ export function AppointmentModal({ open, onOpenChange, service, onSave }: Appoin
     onOpenChange(false);
   };
 
-  const handleChange = (field: keyof Omit<Appointment, 'id'>, value: any) => {
+  const handleChange = (field: keyof FormData, value: any) => {
     setFormData(prev => ({ ...prev, [field]: value }));
   };
 

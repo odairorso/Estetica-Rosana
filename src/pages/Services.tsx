@@ -11,6 +11,7 @@ import { AppointmentModal } from "@/components/services/AppointmentModal";
 import { useServices, Service } from "@/hooks/useServices";
 import { useAppointments } from "@/hooks/useAppointments";
 import { useToast } from "@/hooks/use-toast";
+import { format } from "date-fns";
 
 const categories = ["Todos", "Facial", "Corporal"];
 
@@ -66,10 +67,23 @@ export default function Services() {
   };
 
   const handleSaveAppointment = (appointmentData: any) => {
-    const appointment = addAppointment(appointmentData);
+    const dataToSave = {
+      service_id: appointmentData.service_id,
+      client_id: appointmentData.client_id,
+      client_name: appointmentData.client_name,
+      client_phone: appointmentData.client_phone,
+      duration: appointmentData.duration,
+      price: appointmentData.price,
+      notes: appointmentData.notes,
+      status: appointmentData.status,
+      appointment_date: format(appointmentData.date, 'yyyy-MM-dd'),
+      appointment_time: appointmentData.time,
+    };
+
+    addAppointment(dataToSave);
     toast({
       title: "Agendamento confirmado!",
-      description: `${appointment.serviceName} agendado para ${appointment.clientName} em ${new Date(appointment.date).toLocaleDateString('pt-BR')} às ${appointment.time}.`,
+      description: `${appointmentData.serviceName} agendado para ${appointmentData.client_name} em ${new Date(appointmentData.date).toLocaleDateString('pt-BR')} às ${appointmentData.time}.`,
     });
   };
 

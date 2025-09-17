@@ -41,7 +41,7 @@ export function useAppointments() {
       
       const formattedData = data.map(a => ({
         ...a,
-        serviceName: a.services.name,
+        serviceName: a.services ? a.services.name : 'Serviço Removido',
       }));
 
       setAppointments(formattedData as any);

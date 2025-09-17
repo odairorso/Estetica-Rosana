@@ -66,8 +66,9 @@ export function AppointmentModal({ open, onOpenChange, onSave }: AppointmentModa
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
 
-    if (!formData.package_id || !formData.service_id) {
-      toast({ title: "Erro", description: "Selecione um pacote e um serviço.", variant: "destructive" });
+    // Allow either package OR service to be selected, not both required
+    if (!formData.package_id && !formData.service_id) {
+      toast({ title: "Erro", description: "Selecione um pacote ou um serviço.", variant: "destructive" });
       return;
     }
 
@@ -127,10 +128,10 @@ export function AppointmentModal({ open, onOpenChange, onSave }: AppointmentModa
         <form onSubmit={handleSubmit} className="space-y-4">
           {/* Pacote */}
           <div className="space-y-2">
-            <Label htmlFor="package">Pacote *</Label>
-            <Select value={formData.package_id.toString()} onValueChange={handlePackageSelect} required>
+            <Label htmlFor="package">Pacote</Label>
+            <Select value={formData.package_id.toString()} onValueChange={handlePackageSelect}>
               <SelectTrigger>
-                <SelectValue placeholder="Selecione um pacote" />
+                <SelectValue placeholder="Selecione um pacote (opcional)" />
               </SelectTrigger>
               <SelectContent>
                 {packages
@@ -147,10 +148,10 @@ export function AppointmentModal({ open, onOpenChange, onSave }: AppointmentModa
 
           {/* Serviço */}
           <div className="space-y-2">
-            <Label htmlFor="service">Serviço *</Label>
-            <Select value={formData.service_id.toString()} onValueChange={handleServiceSelect} required>
+            <Label htmlFor="service">Serviço</Label>
+            <Select value={formData.service_id.toString()} onValueChange={handleServiceSelect}>
               <SelectTrigger>
-                <SelectValue placeholder="Selecione o serviço" />
+                <SelectValue placeholder="Selecione o serviço (opcional)" />
               </SelectTrigger>
               <SelectContent>
                 {services.map((service) => (

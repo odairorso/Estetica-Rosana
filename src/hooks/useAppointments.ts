@@ -17,6 +17,40 @@ export interface Appointment {
   serviceName?: string; // Opcional - vem do JOIN
 }
 
+// Dados mock para fallback quando Supabase falhar
+const MOCK_APPOINTMENTS: Appointment[] = [
+  {
+    id: 1,
+    service_id: 1,
+    client_id: 1,
+    client_name: "Ana Silva",
+    client_phone: "(11) 99999-9999",
+    appointment_date: "2024-01-15",
+    appointment_time: "14:00",
+    duration: 60,
+    price: 150,
+    notes: "Cliente preferencial",
+    status: "confirmado",
+    created_at: "2024-01-10T10:00:00Z",
+    serviceName: "Limpeza de Pele"
+  },
+  {
+    id: 2,
+    service_id: 2,
+    client_id: 2,
+    client_name: "Beatriz Costa",
+    client_phone: "(11) 98888-8888",
+    appointment_date: "2024-01-16",
+    appointment_time: "15:30",
+    duration: 90,
+    price: 200,
+    notes: "",
+    status: "agendado",
+    created_at: "2024-01-11T11:00:00Z",
+    serviceName: "Drenagem Linfática"
+  }
+];
+
 export function useAppointments() {
   const [appointments, setAppointments] = useState<Appointment[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -27,8 +61,9 @@ export function useAppointments() {
     console.log('📡 Supabase disponível:', !!supabase);
     
     if (!supabase) {
-      console.warn('⚠️ Supabase não disponível');
-      setError('Conexão offline');
+      console.warn('⚠️ Supabase não disponível, usando dados mock');
+      setError('Conexão offline - usando dados locais');
+      setAppointments(MOCK_APPOINTMENTS);
       setIsLoading(false);
       return;
     }
@@ -49,21 +84,23 @@ export function useAppointments() {
 
       if (error) {
         console.error('❌ Erro ao carregar agendamentos:', error);
-        setError('Erro ao carregar dados');
+        setError('Erro ao carregar dados do servidor');
+        setAppointments(MOCK_APPOINTMENTS); // Fallback
       } else {
-        console.log('✅ Agendamentos carregados:', data?.length);
+        console.log('✅ Agendamentos carregados com sucesso:', data?.length);
         
         // Formatar dados corretamente com serviceName do JOIN
         const formattedData = (data || []).map(a => ({
           ...a,
-          serviceName: a.services?.name || 'Serviço não encontrado',
+          serviceName: a.services ? a.services.name : 'Serviço Removido',
         }));
         
         setAppointments(formattedData as any);
       }
     } catch (error) {
-      console.error('❌ Erro crítico:', error);
-      setError('Erro de conexão');
+      console.error('❌ Erro crítico ao carregar agendamentos:', error);
+      setError('Erro de conexão - usando dados locais');
+      setAppointments(MOCK_APPOINTMENTS); // Fallback
     } finally {
       setIsLoading(false);
     }
@@ -75,8 +112,15 @@ export function useAppointments() {
 
   const addAppointment = async (appointmentData: any) => {
     if (!supabase) {
-      console.warn('⚠️ Supabase não disponível');
-      return null;
+      console.warn('⚠️ Supabase não disponível, adicionando localmente');
+      const newAppointment = {
+        ...appointmentData,
+        id: Math.max(...appointments.map(a => a.id)) + 1,
+        created_at: new Date().toISOString(),
+        serviceName: 'Serviço Local'
+      };
+      setAppointments(prev => [newAppointment, ...prev]);
+      return newAppointment;
     }
     
     try {
@@ -88,14 +132,17 @@ export function useAppointments() {
       await loadAppointments();
       return data;
     } catch (error) {
-      console.error('❌ Erro crítico:', error);
+      console.error('❌ Erro crítico ao adicionar:', error);
       return null;
     }
   };
 
   const updateAppointment = async (id: number, appointmentData: Partial<Appointment>) => {
     if (!supabase) {
-      console.warn('⚠️ Supabase não disponível');
+      console.warn('⚠️ Supabase não disponível, atualizando localmente');
+      setAppointments(prev => prev.map(apt => 
+        apt.id === id ? { ...apt, ...appointmentData } : apt
+      ));
       return;
     }
     
@@ -107,13 +154,14 @@ export function useAppointments() {
       }
       await loadAppointments();
     } catch (error) {
-      console.error('❌ Erro crítico:', error);
+      console.error('❌ Erro crítico ao atualizar:', error);
     }
   };
 
   const deleteAppointment = async (id: number) => {
     if (!supabase) {
-      console.warn('⚠️ Supabase não disponível');
+      console.warn('⚠️ Supabase não disponível, removendo localmente');
+      setAppointments(prev => prev.filter(apt => apt.id !== id));
       return;
     }
     
@@ -125,7 +173,7 @@ export function useAppointments() {
       }
       await loadAppointments();
     } catch (error) {
-      console.error('❌ Erro crítico:', error);
+      console.error('❌ Erro crítico ao excluir:', error);
     }
   };
 

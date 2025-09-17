@@ -1,5 +1,4 @@
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { supabase } from '@/lib/supabase';
+import { useState, useEffect } from 'react';
 
 export interface ClinicInfo {
   name: string;
@@ -9,47 +8,51 @@ export interface ClinicInfo {
 }
 
 export interface Settings {
-  clinic_info: ClinicInfo;
+  clinicInfo: ClinicInfo;
   theme: 'light' | 'dark' | 'system';
 }
 
-const fetchSettings = async () => {
-  const { data, error } = await supabase.from('settings').select('*').eq('id', 1).single();
-  if (error) throw new Error(error.message);
-  return data;
-};
-
-const updateSettings = async (settingsData: Partial<Settings>) => {
-  const { data, error } = await supabase.from('settings').update(settingsData).eq('id', 1).select();
-  if (error) throw new Error(error.message);
-  return data[0];
+const DEFAULT_SETTINGS: Settings = {
+  clinicInfo: {
+    name: "Clínica Rosana Turci",
+    phone: "(11) 99999-9999",
+    email: "contato@rosanaturci.com.br",
+    address: "Rua das Flores, 123 - Centro, São Paulo - SP"
+  },
+  theme: 'dark'
 };
 
 export function useSettings() {
-  const queryClient = useQueryClient();
+  const [settings, setSettings] = useState<Settings>(DEFAULT_SETTINGS);
+  const [isLoading, setIsLoading] = useState(true);
 
-  const { data: settings, isLoading } = useQuery<Settings>({
-    queryKey: ['settings'],
-    queryFn: fetchSettings,
-  });
-
-  const updateMutation = useMutation({
-    mutationFn: updateSettings,
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['settings'] });
-    },
-  });
+  useEffect(() => {
+    // Simulate API call
+    setTimeout(() => {
+      const storedSettings = localStorage.getItem('settings');
+      if (storedSettings) {
+        setSettings(JSON.parse(storedSettings));
+      } else {
+        setSettings(DEFAULT_SETTINGS);
+        localStorage.setItem('settings', JSON.stringify(DEFAULT_SETTINGS));
+      }
+      setIsLoading(false);
+    }, 500);
+  }, []);
 
   const updateClinicInfo = (info: Partial<ClinicInfo>) => {
-    if (settings) {
-      updateMutation.mutate({
-        clinic_info: { ...settings.clinic_info, ...info }
-      });
-    }
+    const updatedSettings = {
+      ...settings,
+      clinicInfo: { ...settings.clinicInfo, ...info }
+    };
+    setSettings(updatedSettings);
+    localStorage.setItem('settings', JSON.stringify(updatedSettings));
   };
 
   const updateTheme = (theme: 'light' | 'dark' | 'system') => {
-    updateMutation.mutate({ theme });
+    const updatedSettings = { ...settings, theme };
+    setSettings(updatedSettings);
+    localStorage.setItem('settings', JSON.stringify(updatedSettings));
   };
 
   return {

@@ -1,85 +1,116 @@
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { supabase } from '@/lib/supabase';
+import { useState, useEffect } from 'react';
 
 export interface Product {
-  id: string;
+  id: number;
   name: string;
   quantity: number;
-  min_stock: number;
+  minStock: number;
   category: string;
   supplier?: string;
-  cost_price: number;
-  last_updated: string;
+  costPrice: number;
+  lastUpdated: string;
 }
 
-const fetchInventory = async () => {
-  const { data, error } = await supabase.from('inventory').select('*').order('name');
-  if (error) throw new Error(error.message);
-  return data;
-};
-
-const addProduct = async (productData: Omit<Product, 'id' | 'last_updated'>) => {
-  const newProduct = { ...productData, last_updated: new Date().toISOString() };
-  const { data, error } = await supabase.from('inventory').insert([newProduct]).select();
-  if (error) throw new Error(error.message);
-  return data[0];
-};
-
-const updateProduct = async (productData: Partial<Product> & { id: string }) => {
-  const { id, ...updateData } = productData;
-  const updatedProduct = { ...updateData, last_updated: new Date().toISOString() };
-  const { data, error } = await supabase.from('inventory').update(updatedProduct).eq('id', id).select();
-  if (error) throw new Error(error.message);
-  return data[0];
-};
-
-const deleteProduct = async (id: string) => {
-  const { error } = await supabase.from('inventory').delete().eq('id', id);
-  if (error) throw new Error(error.message);
-};
+const MOCK_PRODUCTS: Product[] = [
+  {
+    id: 1,
+    name: "Ácido Hialurônico (Seringa)",
+    quantity: 15,
+    minStock: 5,
+    category: "Preenchedores",
+    supplier: "Dermage",
+    costPrice: 45.00,
+    lastUpdated: "2023-05-01"
+  },
+  {
+    id: 2,
+    name: "Botox 50U",
+    quantity: 3,
+    minStock: 5,
+    category: "Toxina Botulínica",
+    supplier: "Allergan",
+    costPrice: 1200.00,
+    lastUpdated: "2023-05-10"
+  },
+  {
+    id: 3,
+    name: "Argila Verde",
+    quantity: 8,
+    minStock: 10,
+    category: "Cosméticos",
+    supplier: "Natureza Brasil",
+    costPrice: 25.00,
+    lastUpdated: "2023-04-15"
+  }
+];
 
 export function useInventory() {
-  const queryClient = useQueryClient();
+  const [products, setProducts] = useState<Product[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
 
-  const { data: products = [], isLoading } = useQuery<Product[]>({
-    queryKey: ['inventory'],
-    queryFn: fetchInventory,
-  });
+  useEffect(() => {
+    // Simulate API call
+    setTimeout(() => {
+      const storedProducts = localStorage.getItem('inventory');
+      if (storedProducts) {
+        setProducts(JSON.parse(storedProducts));
+      } else {
+        setProducts(MOCK_PRODUCTS);
+        localStorage.setItem('inventory', JSON.stringify(MOCK_PRODUCTS));
+      }
+      setIsLoading(false);
+    }, 500);
+  }, []);
 
-  const addMutation = useMutation({
-    mutationFn: addProduct,
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['inventory'] });
-    },
-  });
+  const addProduct = (productData: Omit<Product, 'id' | 'lastUpdated'>) => {
+    const newProduct = {
+      ...productData,
+      id: Date.now(),
+      lastUpdated: new Date().toISOString().split('T')[0]
+    };
+    const updatedProducts = [...products, newProduct];
+    setProducts(updatedProducts);
+    localStorage.setItem('inventory', JSON.stringify(updatedProducts));
+    return newProduct;
+  };
 
-  const updateMutation = useMutation({
-    mutationFn: updateProduct,
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['inventory'] });
-    },
-  });
+  const updateProduct = (id: number, productData: Partial<Product>) => {
+    const updatedProducts = products.map(product => 
+      product.id === id ? { 
+        ...product, 
+        ...productData,
+        lastUpdated: new Date().toISOString().split('T')[0]
+      } : product
+    );
+    setProducts(updatedProducts);
+    localStorage.setItem('inventory', JSON.stringify(updatedProducts));
+    return updatedProducts.find(product => product.id === id);
+  };
 
-  const deleteMutation = useMutation({
-    mutationFn: deleteProduct,
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['inventory'] });
-    },
-  });
+  const deleteProduct = (id: number) => {
+    const updatedProducts = products.filter(product => product.id !== id);
+    setProducts(updatedProducts);
+    localStorage.setItem('inventory', JSON.stringify(updatedProducts));
+  };
+
+  const getProduct = (id: number) => {
+    return products.find(product => product.id === id);
+  };
 
   const getStockStatus = (product: Product) => {
     if (product.quantity <= 0) return "empty";
-    if (product.quantity <= product.min_stock / 2) return "critical";
-    if (product.quantity <= product.min_stock) return "low";
+    if (product.quantity <= product.minStock / 2) return "critical";
+    if (product.quantity <= product.minStock) return "low";
     return "ok";
   };
 
   return {
     products,
     isLoading,
-    addProduct: addMutation.mutate,
-    updateProduct: updateMutation.mutate,
-    deleteProduct: deleteMutation.mutate,
-    getStockStatus,
+    addProduct,
+    updateProduct,
+    deleteProduct,
+    getProduct,
+    getStockStatus
   };
 }

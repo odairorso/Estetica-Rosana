@@ -1,5 +1,4 @@
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { supabase } from '@/lib/supabase';
+import { useState, useEffect } from 'react';
 
 export interface SessionHistoryEntry {
   id: string;
@@ -8,112 +7,284 @@ export interface SessionHistoryEntry {
 }
 
 export interface Package {
-  id: string;
+  id: number;
   name: string;
   description: string;
-  client_id: string;
-  client_name: string;
-  total_sessions: number;
-  used_sessions: number;
+  clientId: number;
+  clientName: string;
+  totalSessions: number;
+  usedSessions: number;
+  remainingSessions: number;
   price: number;
-  valid_until: string;
-  last_used: string | null;
+  validUntil: string;
+  lastUsed: string | null;
   status: "active" | "expiring" | "completed" | "expired";
-  created_at: string;
-  session_history: SessionHistoryEntry[];
+  sessionHistory: SessionHistoryEntry[];
 }
 
-const fetchPackages = async () => {
-  const { data, error } = await supabase.from('packages').select('*').order('created_at', { ascending: false });
-  if (error) throw new Error(error.message);
-  return data;
-};
-
-const addPackage = async (packageData: Omit<Package, 'id' | 'created_at' | 'used_sessions' | 'status' | 'session_history'>) => {
-  const newPackage = {
-    ...packageData,
-    used_sessions: 0,
-    status: 'active',
-    session_history: [],
-  };
-  const { data, error } = await supabase.from('packages').insert([newPackage]).select();
-  if (error) throw new Error(error.message);
-  return data[0];
-};
-
-const updatePackage = async (packageData: Partial<Package> & { id: string }) => {
-  const { id, ...updateData } = packageData;
-  const { data, error } = await supabase.from('packages').update(updateData).eq('id', id).select();
-  if (error) throw new Error(error.message);
-  return data[0];
-};
-
-const deletePackage = async (id: string) => {
-  const { error } = await supabase.from('packages').delete().eq('id', id);
-  if (error) throw new Error(error.message);
-};
+const MOCK_PACKAGES: Package[] = [
+  {
+    id: 1,
+    name: "Pacote Limpeza de Pele Premium",
+    description: "10 sessões de limpeza de pele com produtos especiais",
+    clientId: 1,
+    clientName: "Ana Silva",
+    totalSessions: 10,
+    usedSessions: 3,
+    remainingSessions: 7,
+    price: 850.00,
+    validUntil: "2023-12-31",
+    lastUsed: "2023-05-15",
+    status: "active",
+    sessionHistory: [
+      { id: "1", date: "2023-03-01", notes: "Sessão 1" },
+      { id: "2", date: "2023-04-01", notes: "Sessão 2" },
+      { id: "3", date: "2023-05-15", notes: "Sessão 3" }
+    ]
+  },
+  {
+    id: 2,
+    name: "Pacote Botox Express",
+    description: "5 sessões de aplicação de botox",
+    clientId: 2,
+    clientName: "Carlos Oliveira",
+    totalSessions: 5,
+    usedSessions: 5,
+    remainingSessions: 0,
+    price: 1200.00,
+    validUntil: "2023-08-31",
+    lastUsed: "2023-05-20",
+    status: "completed",
+    sessionHistory: [
+      { id: "1", date: "2023-01-15", notes: "Sessão 1" },
+      { id: "2", date: "2023-02-15", notes: "Sessão 2" },
+      { id: "3", date: "2023-03-15", notes: "Sessão 3" },
+      { id: "4", date: "2023-04-15", notes: "Sessão 4" },
+      { id: "5", date: "2023-05-20", notes: "Sessão 5" }
+    ]
+  }
+];
 
 export function usePackages() {
-  const queryClient = useQueryClient();
+  const [packages, setPackages] = useState<Package[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
 
-  const { data: packages = [], isLoading } = useQuery<Package[]>({
-    queryKey: ['packages'],
-    queryFn: fetchPackages,
-  });
+  useEffect(() => {
+    // Simulate API call
+    setTimeout(() => {
+      const storedPackages = localStorage.getItem('packages');
+      if (storedPackages) {
+        setPackages(JSON.parse(storedPackages));
+      } else {
+        setPackages(MOCK_PACKAGES);
+        localStorage.setItem('packages', JSON.stringify(MOCK_PACKAGES));
+      }
+      setIsLoading(false);
+    }, 500);
+  }, []);
 
-  const addMutation = useMutation({
-    mutationFn: addPackage,
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['packages'] });
-    },
-  });
+  const addPackage = (packageData: Omit<Package, 'id' | 'usedSessions' | 'remainingSessions' | 'status' | 'sessionHistory'>) => {
+    const newPackage = {
+      ...packageData,
+      id: Date.now(),
+      usedSessions: 0,
+      remainingSessions: packageData.totalSessions,
+      status: 'active' as const,
+      sessionHistory: []
+    };
+    const updatedPackages = [...packages, newPackage];
+    setPackages(updatedPackages);
+    localStorage.setItem('packages', JSON.stringify(updatedPackages));
+    return newPackage;
+  };
 
-  const updateMutation = useMutation({
-    mutationFn: updatePackage,
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['packages'] });
-    },
-  });
+  const updatePackage = (id: number, packageData: Partial<Package>) => {
+    const updatedPackages = packages.map(pkg => 
+      pkg.id === id ? { ...pkg, ...packageData } : pkg
+    );
+    setPackages(updatedPackages);
+    localStorage.setItem('packages', JSON.stringify(updatedPackages));
+    return updatedPackages.find(pkg => pkg.id === id);
+  };
 
-  const deleteMutation = useMutation({
-    mutationFn: deletePackage,
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['packages'] });
-    },
-  });
+  const deletePackage = (id: number) => {
+    const updatedPackages = packages.filter(pkg => pkg.id !== id);
+    setPackages(updatedPackages);
+    localStorage.setItem('packages', JSON.stringify(updatedPackages));
+  };
 
-  const useSession = (pkg: Package, notes?: string) => {
-    if (!pkg || pkg.used_sessions >= pkg.total_sessions) return;
+  const getPackage = (id: number) => {
+    return packages.find(pkg => pkg.id === id);
+  };
+
+  const useSession = (id: number, notes?: string) => {
+    const pkg = packages.find(p => p.id === id);
+    if (!pkg || pkg.usedSessions >= pkg.totalSessions) return;
 
     const newSessionEntry: SessionHistoryEntry = {
       id: Date.now().toString(),
       date: new Date().toISOString().split('T')[0],
-      notes: notes || `Sessão ${pkg.used_sessions + 1}`,
+      notes: notes || `Sessão ${pkg.usedSessions + 1}`,
     };
 
-    const used_sessions = pkg.used_sessions + 1;
-    const remaining_sessions = pkg.total_sessions - used_sessions;
-    let status = pkg.status;
-    if (remaining_sessions <= 0) {
+    const usedSessions = pkg.usedSessions + 1;
+    const remainingSessions = pkg.totalSessions - usedSessions;
+    let status: Package['status'] = pkg.status;
+    
+    if (remainingSessions <= 0) {
       status = 'completed';
+    } else if (remainingSessions <= 2) {
+      status = 'expiring';
     }
 
-    updateMutation.mutate({
-      id: pkg.id,
-      used_sessions,
+    const updatedPackage = {
+      ...pkg,
+      usedSessions,
+      remainingSessions,
       status,
-      last_used: newSessionEntry.date,
-      session_history: [...(pkg.session_history || []), newSessionEntry],
-    });
+      lastUsed: newSessionEntry.date,
+      sessionHistory: [...pkg.sessionHistory, newSessionEntry]
+    };
+
+    const updatedPackages = packages.map(p => 
+      p.id === id ? updatedPackage : p
+    );
+    
+    setPackages(updatedPackages);
+    localStorage.setItem('packages', JSON.stringify(updatedPackages));
   };
 
   return {
     packages,
     isLoading,
-    addPackage: addMutation.mutate,
-    updatePackage: updateMutation.mutate,
-    deletePackage: deleteMutation.mutate,
-    getPackage: (id: string) => packages.find(p => p.id === id),
-    useSession,
+    addPackage,
+    updatePackage,
+    deletePackage,
+    getPackage,
+   <dyad-write path="src/hooks/useServices.ts" description="Updating services hook to work with mock data">
+import { useState, useEffect } from 'react';
+import { Sparkles, Heart, Droplet, Zap } from "lucide-react";
+
+export interface Service {
+  id: number;
+  name: string;
+  category: string;
+  price: number;
+  duration: number;
+  description: string;
+  icon: string;
+  popular: boolean;
+}
+
+const MOCK_SERVICES: Service[] = [
+  {
+    id: 1,
+    name: "Limpeza de Pele",
+    category: "Facial",
+    price: 120.00,
+    duration: 60,
+    description: "Procedimento completo de limpeza de pele com extração de cravos e espinhas",
+    icon: "Sparkles",
+    popular: true
+  },
+  {
+    id: 2,
+    name: "Massagem Relaxante",
+    category: "Corporal",
+    price: 150.00,
+    duration: 60,
+    description: "Massagem corporal relaxante com óleos essenciais",
+    icon: "Heart",
+    popular: false
+  },
+  {
+    id: 3,
+    name: "Drenagem Linfática",
+    category: "Corporal",
+    price: 180.00,
+    duration: 60,
+    description: "Massagem especializada para redução de inchaços e melhora da circulação",
+    icon: "Droplet",
+    popular: true
+  },
+  {
+    id: 4,
+    name: "Aplicação de Botox",
+    category: "Facial",
+    price: 800.00,
+    duration: 30,
+    description: "Aplicação de botox para redução de rugas e expressões faciais",
+    icon: "Zap",
+    popular: false
+  }
+];
+
+const iconMap = {
+  Sparkles,
+  Heart,
+  Droplet,
+  Zap,
+};
+
+export function useServices() {
+  const [services, setServices] = useState<Service[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    // Simulate API call
+    setTimeout(() => {
+      const storedServices = localStorage.getItem('services');
+      if (storedServices) {
+        setServices(JSON.parse(storedServices));
+      } else {
+        setServices(MOCK_SERVICES);
+        localStorage.setItem('services', JSON.stringify(MOCK_SERVICES));
+      }
+      setIsLoading(false);
+    }, 500);
+  }, []);
+
+  const addService = (serviceData: Omit<Service, 'id'>) => {
+    const newService = {
+      ...serviceData,
+      id: Date.now()
+    };
+    const updatedServices = [...services, newService];
+    setServices(updatedServices);
+    localStorage.setItem('services', JSON.stringify(updatedServices));
+    return newService;
+  };
+
+  const updateService = (serviceData: Service) => {
+    const updatedServices = services.map(service => 
+      service.id === serviceData.id ? serviceData : service
+    );
+    setServices(updatedServices);
+    localStorage.setItem('services', JSON.stringify(updatedServices));
+    return serviceData;
+  };
+
+  const deleteService = (id: number) => {
+    const updatedServices = services.filter(service => service.id !== id);
+    setServices(updatedServices);
+    localStorage.setItem('services', JSON.stringify(updatedServices));
+  };
+
+  const getService = (id: number) => {
+    return services.find(service => service.id === id);
+  };
+
+  const getServiceIcon = (iconName: string) => {
+    return iconMap[iconName as keyof typeof iconMap] || Sparkles;
+  };
+
+  return {
+    services,
+    isLoading,
+    addService,
+    updateService,
+    deleteService,
+    getService,
+    getServiceIcon
   };
 }

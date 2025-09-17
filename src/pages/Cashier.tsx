@@ -1,17 +1,11 @@
 import { Helmet } from "react-helmet-async";
 import { useState } from "react";
-import { Plus, Sparkles, Package, User, Calendar, DollarSign, ShoppingCart, Box } from "lucide-react";
-import { SearchBar } from "@/components/ui/search-bar";
+import { Plus, ShoppingCart, DollarSign, Calendar, User, Box, Package, Sparkles } from "lucide-react";
 import { GlassCard } from "@/components/ui/glass-card";
 import { NeonButton } from "@/components/ui/neon-button";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
-import { useServices } from "@/hooks/useServices";
-import { usePackages } from "@/hooks/usePackages";
-import { useClients } from "@/hooks/useClients";
-import { useInventory } from "@/hooks/useInventory";
 import { useToast } from "@/hooks/use-toast";
 import { CashierModal } from "@/components/cashier/CashierModal";
 
@@ -24,86 +18,63 @@ interface SaleItem {
   itemName: string;
   price: number;
   sale_date: string;
-  duration?: number; // Para serviços
-  total_sessions?: number; // Para pacotes
-  valid_until?: string; // Para pacotes
-  quantity?: number; // Para produtos
+  quantity?: number;
+  payment_method: string;
 }
 
 export default function Cashier() {
   const { toast } = useToast();
-  const { services } = useServices();
-  const { packages } = usePackages();
-  const { clients } = useClients();
-  const { products } = useInventory();
-  const [searchTerm, setSearchTerm] = useState("");
   const [modalOpen, setModalOpen] = useState(false);
-  const [saleType, setSaleType] = useState<'service' | 'package' | 'product'>('service');
-  const [sales] = useState<SaleItem[]>([]); // Em produção, isso viria de um hook useSales
-
-  // Simulando vendas a partir de serviços, pacotes e produtos existentes
-  const simulatedSales: SaleItem[] = [
-    ...services.map(s => ({
-      id: s.id * 1000,
-      type: 'service' as const,
-      item_id: s.id,
-      client_id: 1, // Exemplo
-      clientName: "Ana Silva",
-      itemName: s.name,
-      price: s.price,
-      sale_date: new Date().toISOString().split('T')[0],
-      duration: s.duration
-    })),
-    ...packages.map(p => ({
-      id: p.id * 10000,
-      type: 'package' as const,
-      item_id: p.id,
-      client_id: p.client_id,
-      clientName: p.clientName || "Cliente não encontrado",
-      itemName: p.name,
-      price: p.price,
-      sale_date: p.created_at.split('T')[0],
-      total_sessions: p.total_sessions,
-      valid_until: p.valid_until
-    })),
-    ...products.map(p => ({
-      id: p.id * 100000,
-      type: 'product' as const,
-      item_id: p.id,
-      client_id: 1, // Exemplo
-      clientName: "Ana Silva",
-      itemName: p.name,
-      price: p.costPrice,
-      sale_date: new Date().toISOString().split('T')[0],
-      quantity: 1
-    }))
-  ];
-
-  const filteredSales = simulatedSales.filter(sale =>
-    sale.clientName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    sale.itemName.toLowerCase().includes(searchTerm.toLowerCase())
-  );
-
-  const handleNewSale = (type: 'service' | 'package' | 'product') => {
-    setSaleType(type);
-    setModalOpen(true);
-  };
+  const [sales, setSales] = useState<SaleItem[]>([]);
 
   const handleSaveSale = (saleData: any) => {
-    console.log("Nova venda registrada:", saleData);
-    // Em produção, aqui você chamaria um hook como addSale(saleData)
+    const newSale: SaleItem = {
+      id: Math.max(0, ...sales.map(s => s.id)) + 1,
+      ...saleData,
+      sale_date: new Date().toISOString().split('T')[0]
+    };
+    
+    setSales([...sales, newSale]);
+    
     toast({
       title: "Venda registrada!",
-      description: `Venda de ${saleData.type === 'service' ? 'procedimento' : saleData.type === 'package' ? 'pacote' : 'produto'} "${saleData.itemName}" para ${saleData.clientName} registrada com sucesso.`,
+      description: `Venda de ${saleData.itemName} para ${saleData.clientName} registrada com sucesso.`,
     });
     setModalOpen(false);
+  };
+
+  const getItemIcon = (type: string) => {
+    switch (type) {
+      case 'service': return <Sparkles className="h-4 w-4" />;
+      case 'package': return <Package className="h-4 w-4" />;
+      case 'product': return <Box className="h-4 w-4" />;
+      default: return <DollarSign className="h-4 w-4" />;
+    }
+  };
+
+  const getItemTypeName = (type: string) => {
+    switch (type) {
+      case 'service': return 'Procedimento';
+      case 'package': return 'Pacote';
+      case 'product': return 'Produto';
+      default: return 'Item';
+    }
+  };
+
+  const getPaymentMethodName = (method: string) => {
+    switch (method) {
+      case 'cartao': return 'Cartão';
+      case 'pix': return 'PIX';
+      case 'dinheiro': return 'Dinheiro';
+      default: return method;
+    }
   };
 
   return (
     <>
       <Helmet>
         <title>Caixa | Gestão de Clínica Estética</title>
-        <meta name="description" content="Registro de vendas de procedimentos avulsos, pacotes promocionais e produtos do estoque." />
+        <meta name="description" content="Registro de vendas de procedimentos, pacotes e produtos." />
         <link rel="canonical" href="/caixa" />
       </Helmet>
 
@@ -112,47 +83,23 @@ export default function Cashier() {
         <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
           <div>
             <h1 className="text-2xl font-bold text-gradient-brand">Caixa</h1>
-            <p className="text-muted-foreground">Registro de vendas de procedimentos, pacotes e produtos</p>
+            <p className="text-muted-foreground">Registro de vendas realizadas</p>
           </div>
-          <div className="flex gap-3">
-            <SearchBar 
-              placeholder="Buscar vendas..."
-              value={searchTerm}
-              onChange={setSearchTerm}
-            />
-            <div className="flex gap-2">
-              <NeonButton icon={Sparkles} onClick={() => handleNewSale('service')} size="sm">
-                Procedimento
-              </NeonButton>
-              <NeonButton icon={Package} onClick={() => handleNewSale('package')} size="sm">
-                Pacote
-              </NeonButton>
-              <NeonButton icon={Box} onClick={() => handleNewSale('product')} size="sm">
-                Produto
-              </NeonButton>
-            </div>
-          </div>
+          <NeonButton icon={Plus} onClick={() => setModalOpen(true)}>
+            Nova Venda
+          </NeonButton>
         </div>
 
-        {/* Grid de vendas */}
+        {/* Vendas registradas */}
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-          {filteredSales.map((sale) => (
-            <GlassCard key={sale.id} className="hover-lift">
+          {sales.map((sale) => (
+            <GlassCard key={sale.id} className="hover-lift p-4">
               <div className="space-y-3">
+                {/* Header */}
                 <div className="flex items-start justify-between">
                   <div className="flex items-center gap-3">
-                    <div className={`rounded-full p-2 ${
-                      sale.type === 'service' ? 'bg-primary' : 
-                      sale.type === 'package' ? 'bg-brand-gradient' : 
-                      'bg-secondary'
-                    }`}>
-                      {sale.type === 'service' ? (
-                        <Sparkles className="h-4 w-4 text-primary-foreground" />
-                      ) : sale.type === 'package' ? (
-                        <Package className="h-4 w-4 text-white" />
-                      ) : (
-                        <Box className="h-4 w-4 text-secondary-foreground" />
-                      )}
+                    <div className="rounded-full bg-brand-gradient p-2">
+                      {getItemIcon(sale.type)}
                     </div>
                     <div>
                       <h3 className="font-semibold text-foreground">{sale.itemName}</h3>
@@ -162,65 +109,55 @@ export default function Cashier() {
                       </p>
                     </div>
                   </div>
-                  <Badge className={
-                    sale.type === 'service' ? "bg-primary/20 text-primary" : 
-                    sale.type === 'package' ? "bg-green-500/20 text-green-600" : 
-                    "bg-secondary/20 text-secondary"
-                  }>
-                    {sale.type === 'service' ? 'Procedimento' : 
-                     sale.type === 'package' ? 'Pacote' : 'Produto'}
+                  <Badge className="bg-green-500/20 text-green-600">
+                    {getItemTypeName(sale.type)}
                   </Badge>
                 </div>
 
-                <div className="grid grid-cols-2 gap-2 text-sm">
+                {/* Informações da venda */}
+                <div className="grid grid-cols-2 gap-3 text-sm">
                   <div className="space-y-1">
                     <div className="flex items-center gap-1 text-muted-foreground">
                       <Calendar className="h-3 w-3" />
-                      Venda
+                      Data
                     </div>
                     <p className="font-medium">
                       {format(new Date(sale.sale_date), "dd/MM/yyyy", { locale: ptBR })}
                     </p>
                   </div>
+                  
                   <div className="space-y-1">
                     <div className="flex items-center gap-1 text-muted-foreground">
                       <DollarSign className="h-3 w-3" />
                       Valor
                     </div>
-                    <p className="font-medium text-green-600">R$ {sale.price.toFixed(2).replace('.', ',')}</p>
+                    <p className="font-medium text-green-600">
+                      R$ {sale.price.toFixed(2).replace('.', ',')}
+                    </p>
                   </div>
                 </div>
 
-                {sale.type === 'service' && sale.duration && (
-                  <div className="pt-2 border-t border-border/30">
-                    <p className="text-xs text-muted-foreground">
-                      Duração: {sale.duration} minutos
-                    </p>
+                {/* Informações adicionais */}
+                <div className="grid grid-cols-2 gap-3 text-sm">
+                  {sale.quantity && (
+                    <div className="space-y-1">
+                      <span className="text-muted-foreground">Quantidade:</span>
+                      <p className="font-medium">{sale.quantity}</p>
+                    </div>
+                  )}
+                  
+                  <div className="space-y-1">
+                    <span className="text-muted-foreground">Pagamento:</span>
+                    <p className="font-medium">{getPaymentMethodName(sale.payment_method)}</p>
                   </div>
-                )}
-
-                {sale.type === 'package' && sale.total_sessions && (
-                  <div className="pt-2 border-t border-border/30">
-                    <p className="text-xs text-muted-foreground">
-                      {sale.total_sessions} sessões - Válido até: {sale.valid_until ? format(new Date(sale.valid_until), "dd/MM/yyyy", { locale: ptBR }) : 'N/A'}
-                    </p>
-                  </div>
-                )}
-
-                {sale.type === 'product' && sale.quantity && (
-                  <div className="pt-2 border-t border-border/30">
-                    <p className="text-xs text-muted-foreground">
-                      Quantidade: {sale.quantity}
-                    </p>
-                  </div>
-                )}
+                </div>
               </div>
             </GlassCard>
           ))}
         </div>
 
         {/* Estado vazio */}
-        {filteredSales.length === 0 && (
+        {sales.length === 0 && (
           <GlassCard className="text-center py-12">
             <div className="space-y-4">
               <div className="mx-auto h-16 w-16 rounded-full bg-muted flex items-center justify-center">
@@ -229,22 +166,12 @@ export default function Cashier() {
               <div>
                 <h3 className="font-semibold">Nenhuma venda registrada</h3>
                 <p className="text-muted-foreground text-sm">
-                  {searchTerm ? "Tente ajustar sua busca" : "Registre sua primeira venda"}
+                  Registre sua primeira venda para começar
                 </p>
               </div>
-              {!searchTerm && (
-                <div className="flex justify-center gap-3">
-                  <NeonButton icon={Sparkles} onClick={() => handleNewSale('service')}>
-                    Vender Procedimento
-                  </NeonButton>
-                  <NeonButton icon={Package} onClick={() => handleNewSale('package')}>
-                    Vender Pacote
-                  </NeonButton>
-                  <NeonButton icon={Box} onClick={() => handleNewSale('product')}>
-                    Vender Produto
-                  </NeonButton>
-                </div>
-              )}
+              <NeonButton icon={Plus} onClick={() => setModalOpen(true)}>
+                Registrar Primeira Venda
+              </NeonButton>
             </div>
           </GlassCard>
         )}
@@ -253,7 +180,6 @@ export default function Cashier() {
         <CashierModal
           open={modalOpen}
           onOpenChange={setModalOpen}
-          type={saleType}
           onSave={handleSaveSale}
         />
       </div>

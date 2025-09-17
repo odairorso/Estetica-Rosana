@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
-import { Calendar, Clock, Package, Sparkles } from "lucide-react";
+import { Calendar, Clock, Package } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -16,7 +16,7 @@ interface FormData {
   package_id: number;
   service_id: number;
   serviceName: string;
-  date: string; // kept for internal use but not exposed to user
+  date: string;
   time: string;
   notes: string;
 }
@@ -42,7 +42,7 @@ export function AppointmentModal({ open, onOpenChange, onSave }: AppointmentModa
     package_id: 0,
     service_id: 0,
     serviceName: '',
-    date: new Date().toISOString().split('T')[0], // default to today
+    date: new Date().toISOString().split('T')[0],
     time: "09:00",
     notes: '',
   });
@@ -55,7 +55,7 @@ export function AppointmentModal({ open, onOpenChange, onSave }: AppointmentModa
         package_id: 0,
         service_id: 0,
         serviceName: '',
-        date: new Date().toISOString().split('T')[0], // reset to today on open
+        date: new Date().toISOString().split('T')[0],
         time: "09:00",
         notes: '',
       });
@@ -66,7 +66,6 @@ export function AppointmentModal({ open, onOpenChange, onSave }: AppointmentModa
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
 
-    // Allow either package OR service to be selected, not both required
     if (!formData.package_id && !formData.service_id) {
       toast({ title: "Erro", description: "Selecione um pacote ou um serviço.", variant: "destructive" });
       return;
@@ -82,7 +81,7 @@ export function AppointmentModal({ open, onOpenChange, onSave }: AppointmentModa
       client_id: selectedPackage?.client_id || 0,
       client_name: selectedPackage?.clientName || "",
       client_phone: "",
-      appointment_date: formData.date, // date is set automatically to today
+      appointment_date: formData.date,
       appointment_time: formData.time,
       duration: selectedService?.duration || 60,
       price: 0,

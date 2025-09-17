@@ -55,7 +55,7 @@ export function ClientCard({ client, onEdit, onDelete }: ClientCardProps) {
           </Avatar>
           <div className="flex-1">
             <h3 className="font-semibold text-foreground">{client.name}</h3>
-            <p className="text-sm text-muted-foreground">{client.totalVisits} visitas</p>
+            <p className="text-sm text-muted-foreground">{client.total_visits} visitas</p>
           </div>
         </div>
 
@@ -74,9 +74,9 @@ export function ClientCard({ client, onEdit, onDelete }: ClientCardProps) {
               CPF: {client.cpf}
             </div>
           )}
-          {client.address && client.address.city && (
+          {client.city && (
             <div className="text-xs text-muted-foreground">
-              {client.address.city}, {client.address.state}
+              {client.city}, {client.state}
             </div>
           )}
         </div>
@@ -84,23 +84,23 @@ export function ClientCard({ client, onEdit, onDelete }: ClientCardProps) {
         {/* Status e badges */}
         <div className="flex items-center justify-between">
           <div className="flex gap-2">
-            {client.activePackages > 0 && (
+            {client.active_packages > 0 && (
               <Badge variant="secondary" className="text-xs bg-brand-start/20 text-brand-start">
-                {client.activePackages} pacote{client.activePackages > 1 ? 's' : ''}
+                {client.active_packages} pacote{client.active_packages > 1 ? 's' : ''}
               </Badge>
             )}
           </div>
           <div className="text-xs text-muted-foreground">
-            Última: {client.lastVisit}
+            Última: {client.last_visit}
           </div>
         </div>
 
         {/* Próximo agendamento */}
-        {client.nextAppointment && (
+        {client.next_appointment && (
           <div className="flex items-center gap-2 rounded-lg bg-brand-start/10 p-2 text-sm">
             <Calendar className="h-4 w-4 text-brand-start" />
             <span className="text-brand-start font-medium">
-              Próximo: {new Date(client.nextAppointment).toLocaleString('pt-BR')}
+              Próximo: {new Date(client.next_appointment).toLocaleString('pt-BR')}
             </span>
           </div>
         )}

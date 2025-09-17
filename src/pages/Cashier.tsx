@@ -1,9 +1,10 @@
 import { Helmet } from "react-helmet-async";
 import { useState } from "react";
-import { Plus, ShoppingCart, DollarSign, Calendar, User, Box, Package, Sparkles } from "lucide-react";
+import { Plus, ShoppingCart, DollarSign, Calendar, User, Receipt, Trash2 } from "lucide-react";
 import { GlassCard } from "@/components/ui/glass-card";
 import { NeonButton } from "@/components/ui/neon-button";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { useToast } from "@/hooks/use-toast";
@@ -43,12 +44,20 @@ export default function Cashier() {
     setModalOpen(false);
   };
 
+  const handleDeleteSale = (id: number) => {
+    setSales(sales.filter(sale => sale.id !== id));
+    toast({
+      title: "Venda removida",
+      description: "A venda foi removida com sucesso.",
+    });
+  };
+
   const getItemIcon = (type: string) => {
     switch (type) {
-      case 'service': return <Sparkles className="h-4 w-4" />;
-      case 'package': return <Package className="h-4 w-4" />;
-      case 'product': return <Box className="h-4 w-4" />;
-      default: return <DollarSign className="h-4 w-4" />;
+      case 'service': return "💆‍♀️";
+      case 'package': return "📦";
+      case 'product': return "🧴";
+      default: return "💰";
     }
   };
 
@@ -70,11 +79,22 @@ export default function Cashier() {
     }
   };
 
+  const getPaymentMethodColor = (method: string) => {
+    switch (method) {
+      case 'cartao': return "bg-blue-500/20 text-blue-600";
+      case 'pix': return "bg-green-500/20 text-green-600";
+      case 'dinheiro': return "bg-yellow-500/20 text-yellow-600";
+      default: return "bg-gray-500/20 text-gray-600";
+    }
+  };
+
+  const totalRevenue = sales.reduce((sum, sale) => sum + sale.price, 0);
+
   return (
     <>
       <Helmet>
         <title>Caixa | Gestão de Clínica Estética</title>
-        <meta name="description" content="Registro de vendas de procedimentos, pacotes e produtos." />
+        <meta name="description" content="Sistema profissional de caixa para clínica estética" />
         <link rel="canonical" href="/caixa" />
       </Helmet>
 
@@ -83,73 +103,75 @@ export default function Cashier() {
         <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
           <div>
             <h1 className="text-2xl font-bold text-gradient-brand">Caixa</h1>
-            <p className="text-muted-foreground">Registro de vendas realizadas</p>
+            <p className="text-muted-foreground">Controle profissional de vendas</p>
           </div>
-          <NeonButton icon={Plus} onClick={() => setModalOpen(true)}>
-            Nova Venda
-          </NeonButton>
+          <div className="flex items-center gap-4">
+            <div className="text-right">
+              <p className="text-sm text-muted-foreground">Total de Vendas</p>
+              <p className="text-xl font-bold text-green-600">
+                R$ {totalRevenue.toFixed(2).replace('.', ',')}
+              </p>
+            </div>
+            <NeonButton icon={Plus} onClick={() => setModalOpen(true)}>
+              Nova Venda
+            </NeonButton>
+          </div>
         </div>
 
         {/* Vendas registradas */}
-        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+        <div className="space-y-4">
           {sales.map((sale) => (
-            <GlassCard key={sale.id} className="hover-lift p-4">
-              <div className="space-y-3">
-                {/* Header */}
-                <div className="flex items-start justify-between">
-                  <div className="flex items-center gap-3">
-                    <div className="rounded-full bg-brand-gradient p-2">
-                      {getItemIcon(sale.type)}
+            <GlassCard key={sale.id} className="p-4 hover-lift">
+              <div className="flex items-start justify-between">
+                {/* Informações principais */}
+                <div className="flex items-start gap-4 flex-1">
+                  <div className="text-2xl mt-1">{getItemIcon(sale.type)}</div>
+                  
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-3 mb-2">
+                      <h3 className="font-semibold text-foreground text-lg">{sale.itemName}</h3>
+                      <Badge variant="secondary" className="text-xs">
+                        {getItemTypeName(sale.type)}
+                      </Badge>
                     </div>
-                    <div>
-                      <h3 className="font-semibold text-foreground">{sale.itemName}</h3>
-                      <p className="text-sm text-muted-foreground flex items-center gap-1">
-                        <User className="h-3 w-3" />
+                    
+                    <div className="flex items-center gap-4 text-sm text-muted-foreground">
+                      <div className="flex items-center gap-1">
+                        <User className="h-4 w-4" />
                         {sale.clientName}
-                      </p>
+                      </div>
+                      <div className="flex items-center gap-1">
+                        <Calendar className="h-4 w-4" />
+                        {format(new Date(sale.sale_date), "dd/MM/yyyy", { locale: ptBR })}
+                      </div>
+                      {sale.quantity && (
+                        <div className="flex items-center gap-1">
+                          <span>Qtd: {sale.quantity}</span>
+                        </div>
+                      )}
                     </div>
                   </div>
-                  <Badge className="bg-green-500/20 text-green-600">
-                    {getItemTypeName(sale.type)}
-                  </Badge>
                 </div>
 
-                {/* Informações da venda */}
-                <div className="grid grid-cols-2 gap-3 text-sm">
-                  <div className="space-y-1">
-                    <div className="flex items-center gap-1 text-muted-foreground">
-                      <Calendar className="h-3 w-3" />
-                      Data
-                    </div>
-                    <p className="font-medium">
-                      {format(new Date(sale.sale_date), "dd/MM/yyyy", { locale: ptBR })}
-                    </p>
-                  </div>
-                  
-                  <div className="space-y-1">
-                    <div className="flex items-center gap-1 text-muted-foreground">
-                      <DollarSign className="h-3 w-3" />
-                      Valor
-                    </div>
-                    <p className="font-medium text-green-600">
+                {/* Lado direito - valor e ações */}
+                <div className="flex flex-col items-end gap-3">
+                  <div className="text-right">
+                    <p className="text-lg font-bold text-green-600">
                       R$ {sale.price.toFixed(2).replace('.', ',')}
                     </p>
+                    <Badge className={getPaymentMethodColor(sale.payment_method)}>
+                      {getPaymentMethodName(sale.payment_method)}
+                    </Badge>
                   </div>
-                </div>
-
-                {/* Informações adicionais */}
-                <div className="grid grid-cols-2 gap-3 text-sm">
-                  {sale.quantity && (
-                    <div className="space-y-1">
-                      <span className="text-muted-foreground">Quantidade:</span>
-                      <p className="font-medium">{sale.quantity}</p>
-                    </div>
-                  )}
                   
-                  <div className="space-y-1">
-                    <span className="text-muted-foreground">Pagamento:</span>
-                    <p className="font-medium">{getPaymentMethodName(sale.payment_method)}</p>
-                  </div>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-8 w-8 text-muted-foreground hover:text-destructive"
+                    onClick={() => handleDeleteSale(sale.id)}
+                  >
+                    <Trash2 className="h-4 w-4" />
+                  </Button>
                 </div>
               </div>
             </GlassCard>
@@ -161,17 +183,41 @@ export default function Cashier() {
           <GlassCard className="text-center py-12">
             <div className="space-y-4">
               <div className="mx-auto h-16 w-16 rounded-full bg-muted flex items-center justify-center">
-                <ShoppingCart className="h-8 w-8 text-muted-foreground" />
+                <Receipt className="h-8 w-8 text-muted-foreground" />
               </div>
               <div>
                 <h3 className="font-semibold">Nenhuma venda registrada</h3>
                 <p className="text-muted-foreground text-sm">
-                  Registre sua primeira venda para começar
+                  Comece registrando sua primeira venda
                 </p>
               </div>
               <NeonButton icon={Plus} onClick={() => setModalOpen(true)}>
                 Registrar Primeira Venda
               </NeonButton>
+            </div>
+          </GlassCard>
+        )}
+
+        {/* Resumo do dia */}
+        {sales.length > 0 && (
+          <GlassCard className="p-4">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div className="text-center">
+                <p className="text-sm text-muted-foreground">Total de Vendas</p>
+                <p className="text-2xl font-bold">{sales.length}</p>
+              </div>
+              <div className="text-center">
+                <p className="text-sm text-muted-foreground">Faturamento do Dia</p>
+                <p className="text-2xl font-bold text-green-600">
+                  R$ {totalRevenue.toFixed(2).replace('.', ',')}
+                </p>
+              </div>
+              <div className="text-center">
+                <p className="text-sm text-muted-foreground">Ticket Médio</p>
+                <p className="text-2xl font-bold">
+                  R$ {(totalRevenue / sales.length).toFixed(2).replace('.', ',')}
+                </p>
+              </div>
             </div>
           </GlassCard>
         )}

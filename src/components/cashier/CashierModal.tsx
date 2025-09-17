@@ -6,11 +6,8 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Popover, PopoverTrigger, PopoverContent } from "@/components/ui/popover";
 import { Command, CommandInput, CommandEmpty, CommandGroup, CommandItem } from "@/components/ui/command";
-import { Check, ChevronsUpDown, CalendarIcon, CreditCard, QrCode, Banknote } from "lucide-react";
+import { Check, ChevronsUpDown, CreditCard, QrCode, Banknote, Sparkles, Package, Box } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { format } from "date-fns";
-import { ptBR } from "date-fns/locale";
-import { Calendar } from "@/components/ui/calendar";
 import { useClients } from "@/hooks/useClients";
 import { useServices } from "@/hooks/useServices";
 import { usePackages } from "@/hooks/usePackages";
@@ -167,11 +164,23 @@ export function CashierModal({ open, onOpenChange, onSave }: CashierModalProps) 
     }
   };
 
+  const getItemTypeIcon = () => {
+    switch (formData.type) {
+      case 'service': return <Sparkles className="h-4 w-4" />;
+      case 'package': return <Package className="h-4 w-4" />;
+      case 'product': return <Box className="h-4 w-4" />;
+      default: return <Box className="h-4 w-4" />;
+    }
+  };
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-[500px]">
         <DialogHeader>
-          <DialogTitle className="text-gradient-brand">
+          <DialogTitle className="text-gradient-brand flex items-center gap-2">
+            <div className="rounded-full bg-brand-gradient p-2">
+              {getItemTypeIcon()}
+            </div>
             Nova Venda
           </DialogTitle>
         </DialogHeader>
@@ -179,17 +188,36 @@ export function CashierModal({ open, onOpenChange, onSave }: CashierModalProps) 
         <form onSubmit={handleSubmit} className="space-y-4">
           {/* Tipo de venda */}
           <div className="space-y-2">
-            <Label>Tipo de Venda *</Label>
-            <Select value={formData.type} onValueChange={(value) => handleInputChange('type', value)}>
-              <SelectTrigger>
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="service">Procedimento</SelectItem>
-                <SelectItem value="package">Pacote</SelectItem>
-                <SelectItem value="product">Produto</SelectItem>
-              </SelectContent>
-            </Select>
+            <Label>Tipo de Venda</Label>
+            <div className="grid grid-cols-3 gap-2">
+              <Button
+                type="button"
+                variant={formData.type === 'service' ? "default" : "outline"}
+                className={formData.type === 'service' ? "bg-brand-gradient" : ""}
+                onClick={() => handleInputChange('type', 'service')}
+              >
+                <Sparkles className="h-4 w-4 mr-2" />
+                Procedimento
+              </Button>
+              <Button
+                type="button"
+                variant={formData.type === 'package' ? "default" : "outline"}
+                className={formData.type === 'package' ? "bg-brand-gradient" : ""}
+                onClick={() => handleInputChange('type', 'package')}
+              >
+                <Package className="h-4 w-4 mr-2" />
+                Pacote
+              </Button>
+              <Button
+                type="button"
+                variant={formData.type === 'product' ? "default" : "outline"}
+                className={formData.type === 'product' ? "bg-brand-gradient" : ""}
+                onClick={() => handleInputChange('type', 'product')}
+              >
+                <Box className="h-4 w-4 mr-2" />
+                Produto
+              </Button>
+            </div>
           </div>
 
           {/* Cliente */}
@@ -202,7 +230,7 @@ export function CashierModal({ open, onOpenChange, onSave }: CashierModalProps) 
                   <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
                 </Button>
               </PopoverTrigger>
-              <PopoverContent className="w-[450px] p-0">
+              <PopoverContent className="w-full p-0">
                 <Command>
                   <CommandInput placeholder="Buscar cliente..." />
                   <CommandEmpty>Nenhum cliente encontrado.</CommandEmpty>
@@ -236,7 +264,7 @@ export function CashierModal({ open, onOpenChange, onSave }: CashierModalProps) 
                   <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
                 </Button>
               </PopoverTrigger>
-              <PopoverContent className="w-[450px] p-0">
+              <PopoverContent className="w-full p-0">
                 <Command>
                   <CommandInput placeholder={`Buscar ${getItemTypeName()}...`} />
                   <CommandEmpty>{`Nenhum ${getItemTypeName()} encontrado.`}</CommandEmpty>
@@ -274,7 +302,7 @@ export function CashierModal({ open, onOpenChange, onSave }: CashierModalProps) 
 
           {/* Valor */}
           <div className="space-y-2">
-            <Label htmlFor="price">Valor da Venda (R$) *</Label>
+            <Label htmlFor="price">Valor (R$) *</Label>
             <Input 
               id="price" 
               type="number" 
@@ -288,37 +316,36 @@ export function CashierModal({ open, onOpenChange, onSave }: CashierModalProps) 
 
           {/* Forma de Pagamento */}
           <div className="space-y-2">
-            <Label>Forma de Pagamento *</Label>
-            <Select value={formData.payment_method} onValueChange={(value) => handleInputChange('payment_method', value)}>
-              <SelectTrigger>
-                <SelectValue>
-                  <div className="flex items-center gap-2">
-                    {getPaymentMethodIcon(formData.payment_method)}
-                    {getPaymentMethodName(formData.payment_method)}
-                  </div>
-                </SelectValue>
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="dinheiro">
-                  <div className="flex items-center gap-2">
-                    <Banknote className="h-4 w-4" />
-                    Dinheiro
-                  </div>
-                </SelectItem>
-                <SelectItem value="pix">
-                  <div className="flex items-center gap-2">
-                    <QrCode className="h-4 w-4" />
-                    PIX
-                  </div>
-                </SelectItem>
-                <SelectItem value="cartao">
-                  <div className="flex items-center gap-2">
-                    <CreditCard className="h-4 w-4" />
-                    Cartão
-                  </div>
-                </SelectItem>
-              </SelectContent>
-            </Select>
+            <Label>Forma de Pagamento</Label>
+            <div className="grid grid-cols-3 gap-2">
+              <Button
+                type="button"
+                variant={formData.payment_method === 'dinheiro' ? "default" : "outline"}
+                className={formData.payment_method === 'dinheiro' ? "bg-yellow-500" : ""}
+                onClick={() => handleInputChange('payment_method', 'dinheiro')}
+              >
+                <Banknote className="h-4 w-4 mr-2" />
+                Dinheiro
+              </Button>
+              <Button
+                type="button"
+                variant={formData.payment_method === 'cartao' ? "default" : "outline"}
+                className={formData.payment_method === 'cartao' ? "bg-blue-500" : ""}
+                onClick={() => handleInputChange('payment_method', 'cartao')}
+              >
+                <CreditCard className="h-4 w-4 mr-2" />
+                Cartão
+              </Button>
+              <Button
+                type="button"
+                variant={formData.payment_method === 'pix' ? "default" : "outline"}
+                className={formData.payment_method === 'pix' ? "bg-green-500" : ""}
+                onClick={() => handleInputChange('payment_method', 'pix')}
+              >
+                <QrCode className="h-4 w-4 mr-2" />
+                PIX
+              </Button>
+            </div>
           </div>
 
           {/* Observações */}
@@ -328,15 +355,17 @@ export function CashierModal({ open, onOpenChange, onSave }: CashierModalProps) 
               id="notes" 
               value={formData.notes} 
               onChange={(e) => handleInputChange('notes', e.target.value)} 
-              rows={3} 
+              rows={2} 
               placeholder="Observações sobre a venda..."
             />
           </div>
 
           <div className="flex gap-3 pt-4">
-            <Button type="button" variant="outline" onClick={() => onOpenChange(false)} className="flex-1">Cancelar</Button>
+            <Button type="button" variant="outline" onClick={() => onOpenChange(false)} className="flex-1">
+              Cancelar
+            </Button>
             <Button type="submit" className="flex-1 bg-brand-gradient hover:opacity-90">
-              Registrar Venda
+              Finalizar Venda
             </Button>
           </div>
         </form>

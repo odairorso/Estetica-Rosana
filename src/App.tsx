@@ -8,11 +8,11 @@ import Dashboard from "./pages/Dashboard";
 import Clients from "./pages/Clients";
 import Appointments from "./pages/Appointments";
 import Packages from "./pages/Packages";
-import Services from "./pages/Services";
+import Procedures from "./pages/Procedures"; // ✅ Nova importação
 import Inventory from "./pages/Inventory";
 import Finance from "./pages/Finance";
 import Settings from "./pages/Settings";
-import Cashier from "./pages/Cashier"; // ✅ Nova importação
+import Cashier from "./pages/Cashier";
 import { HelmetProvider } from "react-helmet-async";
 import AppLayout from "./components/layout/AppLayout";
 import { ThemeProvider } from "./components/ThemeProvider";
@@ -41,8 +41,8 @@ const App = () => {
                   <Route path="/clientes" element={<Clients />} />
                   <Route path="/agendamentos" element={<Appointments />} />
                   <Route path="/pacotes" element={<Packages />} />
-                  <Route path="/caixa" element={<Cashier />} /> {/* ✅ Nova rota */}
-                  <Route path="/servicos" element={<Services />} />
+                  <Route path="/caixa" element={<Cashier />} />
+                  <Route path="/procedimentos" element={<Procedures />} /> {/* ✅ Nova rota */}
                   <Route path="/estoque" element={<Inventory />} />
                   <Route path="/financeiro" element={<Finance />} />
                   <Route path="/configuracoes" element={<Settings />} />

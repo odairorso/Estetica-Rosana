@@ -15,8 +15,8 @@ import {
   Users2,
   CalendarClock,
   Package2,
-  ShoppingCart, // ✅ Ícone para Caixa
-  Sparkles,
+  ShoppingCart,
+  Sparkles, // ✅ Ícone para Procedimentos
   Boxes,
   CreditCard,
   Settings2,
@@ -28,8 +28,8 @@ const items = [
   { title: "Clientes", url: "/clientes", icon: Users2 },
   { title: "Agendamentos", url: "/agendamentos", icon: CalendarClock },
   { title: "Pacotes", url: "/pacotes", icon: Package2 },
-  { title: "Caixa", url: "/caixa", icon: ShoppingCart }, // ✅ Nova entrada
-  { title: "Serviços", url: "/servicos", icon: Sparkles },
+  { title: "Caixa", url: "/caixa", icon: ShoppingCart },
+  { title: "Procedimentos", url: "/procedimentos", icon: Sparkles }, // ✅ Nova entrada
   { title: "Estoque", url: "/estoque", icon: Boxes },
   { title: "Financeiro", url: "/financeiro", icon: CreditCard },
   { title: "Configurações", url: "/configuracoes", icon: Settings2 },

@@ -14,7 +14,7 @@ import { useToast } from "@/hooks/use-toast";
 
 const categories = ["Todos", "Facial", "Corporal"];
 
-export default function Services() {
+export default function Procedures() {
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedCategory, setSelectedCategory] = useState("Todos");
   const [modalOpen, setModalOpen] = useState(false);
@@ -48,14 +48,14 @@ export default function Services() {
     if (editingService) {
       updateService(serviceData);
       toast({
-        title: "Serviço atualizado!",
-        description: "O serviço foi atualizado com sucesso.",
+        title: "Procedimento atualizado!",
+        description: "O procedimento foi atualizado com sucesso.",
       });
     } else {
       addService(serviceData);
       toast({
-        title: "Serviço criado!",
-        description: "O novo serviço foi adicionado com sucesso.",
+        title: "Procedimento criado!",
+        description: "O novo procedimento foi adicionado com sucesso.",
       });
     }
   };
@@ -88,26 +88,26 @@ export default function Services() {
   return (
     <>
       <Helmet>
-        <title>Serviços | Gestão de Clínica Estética</title>
+        <title>Procedimentos | Gestão de Clínica Estética</title>
         <meta name="description" content="Catálogo de procedimentos e tratamentos com preços e duração." />
-        <link rel="canonical" href="/servicos" />
+        <link rel="canonical" href="/procedimentos" />
       </Helmet>
 
       <div className="space-y-6">
         {/* Header */}
         <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
           <div>
-            <h1 className="text-2xl font-bold text-gradient-brand">Serviços</h1>
+            <h1 className="text-2xl font-bold text-gradient-brand">Procedimentos</h1>
             <p className="text-muted-foreground">Catálogo de procedimentos e tratamentos</p>
           </div>
           <div className="flex gap-3">
             <SearchBar 
-              placeholder="Buscar serviços..."
+              placeholder="Buscar procedimentos..."
               value={searchTerm}
               onChange={setSearchTerm}
             />
             <NeonButton icon={Plus} onClick={handleAddService}>
-              Novo Serviço
+              Novo Procedimento
             </NeonButton>
           </div>
         </div>
@@ -129,14 +129,14 @@ export default function Services() {
           ))}
         </div>
 
-        {/* Grid de serviços */}
+        {/* Grid de procedimentos */}
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
           {filteredServices.map((service) => {
             const IconComponent = getServiceIcon(service.icon);
             return (
               <GlassCard key={service.id} className="transition-all hover:scale-[1.02] p-4">
                 <div className="space-y-3">
-                  {/* Header do serviço */}
+                  {/* Header do procedimento */}
                   <div className="flex items-start justify-between mb-2">
                     <div className="flex items-start gap-3 flex-1 min-w-0">
                       <div className="rounded-full bg-primary p-2 shadow-lg flex-shrink-0">
@@ -220,21 +220,21 @@ export default function Services() {
                 <Plus className="h-8 w-8 text-muted-foreground" />
               </div>
               <div>
-                <h3 className="font-semibold">Nenhum serviço encontrado</h3>
+                <h3 className="font-semibold">Nenhum procedimento encontrado</h3>
                 <p className="text-muted-foreground text-sm">
-                  {searchTerm ? "Tente ajustar sua busca" : "Cadastre seu primeiro serviço"}
+                  {searchTerm ? "Tente ajustar sua busca" : "Cadastre seu primeiro procedimento"}
                 </p>
               </div>
               {!searchTerm && (
                 <NeonButton icon={Plus} onClick={handleAddService}>
-                  Cadastrar Primeiro Serviço
+                  Cadastrar Primeiro Procedimento
                 </NeonButton>
               )}
             </div>
           </GlassCard>
         )}
 
-        {/* Modal de serviço */}
+        {/* Modal de procedimento */}
         <ServiceModal
           open={modalOpen}
           onOpenChange={setModalOpen}

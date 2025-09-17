@@ -27,6 +27,7 @@ export default function Appointments() {
   const { toast } = useToast();
 
   const filteredAppointments = appointments.filter(apt => {
+    if (!apt.appointment_date) return false;
     const aptDate = parseISO(apt.appointment_date);
     if (!isValid(aptDate)) return false;
     return format(aptDate, 'yyyy-MM-dd') === format(selectedDate, 'yyyy-MM-dd');

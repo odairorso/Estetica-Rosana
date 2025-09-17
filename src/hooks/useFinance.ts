@@ -87,7 +87,7 @@ export function useFinance() {
         type: 'income' as const,
         description: `Serviço: ${a.serviceName} (${a.clientName})`,
         amount: a.price,
-        date: a.date,
+        date: a.appointment_date,
         category: 'Serviços'
       }));
   }, [appointments]);
@@ -98,27 +98,30 @@ export function useFinance() {
       type: 'income' as const,
       description: `Pacote: ${p.name} (${p.clientName})`,
       amount: p.price,
-      date: p.createdAt,
+      date: p.created_at,
       category: 'Pacotes'
     }));
   }, [packages]);
 
   const allTransactions = useMemo(() => {
     const all = [...manualTransactions, ...incomeFromAppointments, ...incomeFromPackages];
-    return all.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+    return all.sort((a, b) => {
+      if (!a.date || !b.date) return 0;
+      return new Date(b.date).getTime() - new Date(a.date).getTime()
+    });
   }, [manualTransactions, incomeFromAppointments, incomeFromPackages]);
 
   const getMetrics = () => {
     const todayIncome = allTransactions
-      .filter(t => t.type === 'income' && isToday(parseISO(t.date)))
+      .filter(t => t.type === 'income' && t.date && isToday(parseISO(t.date)))
       .reduce((sum, t) => sum + t.amount, 0);
 
     const monthIncome = allTransactions
-      .filter(t => t.type === 'income' && isThisMonth(parseISO(t.date)))
+      .filter(t => t.type === 'income' && t.date && isThisMonth(parseISO(t.date)))
       .reduce((sum, t) => sum + t.amount, 0);
       
     const monthExpense = allTransactions
-      .filter(t => t.type === 'expense' && isThisMonth(parseISO(t.date)))
+      .filter(t => t.type === 'expense' && t.date && isThisMonth(parseISO(t.date)))
       .reduce((sum, t) => sum + t.amount, 0);
 
     const pendingAppointmentsValue = appointments

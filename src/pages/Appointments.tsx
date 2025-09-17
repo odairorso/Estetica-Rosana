@@ -290,9 +290,6 @@ export default function Appointments() {
 
           {/* Lista de agendamentos */}
           <div className="lg:col-span-2 space-y-4">
-            <h2 className="text-xl font-semibold">
-              {format(selectedDate, "dd 'de' MMMM", { locale: ptBR })}
-            </h2>
             {renderContent()}
           </div>
         </div>

@@ -88,7 +88,12 @@ export function AppointmentModal({ open, onOpenChange, service, onSave }: Appoin
       return;
     }
 
-    onSave(formData);
+    const formattedData = {
+      ...formData,
+      date: format(formData.date, 'yyyy-MM-dd'),
+    };
+
+    onSave(formattedData);
     onOpenChange(false);
   };
 

@@ -1,6 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
-import { supabase } from '@/lib/supabase';
-import { toast } from './use-toast';
+import { useState, useEffect } from 'react';
 
 export interface Client {
   id: number;
@@ -18,150 +16,111 @@ export interface Client {
     zipCode: string;
   };
   avatar: string | null;
-  lastVisit: string | null;
+  lastVisit: string;
   totalVisits: number;
   activePackages: number;
   nextAppointment: string | null;
   createdAt: string;
 }
 
-// Função para transformar dados planos do Supabase para o formato aninhado do app
-const fromSupabase = (data: any): Client => ({
-  id: data.id,
-  name: data.name,
-  email: data.email,
-  phone: data.phone,
-  cpf: data.cpf,
-  address: {
-    street: data.street || '',
-    number: data.number || '',
-    complement: data.complement || '',
-    neighborhood: data.neighborhood || '',
-    city: data.city || '',
-    state: data.state || '',
-    zipCode: data.zip_code || '',
-  },
-  avatar: data.avatar,
-  lastVisit: data.last_visit,
-  totalVisits: data.total_visits || 0,
-  activePackages: data.active_packages || 0,
-  nextAppointment: data.next_appointment,
-  createdAt: data.created_at,
-});
-
-// Função para transformar dados do app para o formato plano do Supabase
-const toSupabase = (client: Partial<Client>) => {
-  const { address, ...rest } = client;
-  const flatData: Record<string, any> = { ...rest };
-
-  if (address) {
-    flatData.street = address.street;
-    flatData.number = address.number;
-    flatData.complement = address.complement;
-    flatData.neighborhood = address.neighborhood;
-    flatData.city = address.city;
-    flatData.state = address.state;
-    flatData.zip_code = address.zipCode;
-  }
-  
-  // Remove o objeto address para não ser enviado
-  delete flatData.address;
-  // Remove campos que o banco de dados gerencia
-  delete flatData.id;
-  delete flatData.createdAt;
-
-  return flatData;
-};
-
+const CLIENTS_STORAGE_KEY = 'clinic-clients';
 
 export function useClients() {
   const [clients, setClients] = useState<Client[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
-  const fetchClients = useCallback(async () => {
-    if (!supabase) {
-      console.warn("Supabase client not available. Running in offline mode.");
-      setIsLoading(false);
-      return;
-    }
+  // Load clients from localStorage on mount
+  useEffect(() => {
+    const loadClients = () => {
+      try {
+        const stored = localStorage.getItem(CLIENTS_STORAGE_KEY);
+        if (stored) {
+          setClients(JSON.parse(stored));
+        } else {
+          // Initialize with sample data if empty
+          const sampleClients: Client[] = [
+            {
+              id: 1,
+              name: "Ana Silva",
+              email: "ana.silva@email.com",
+              phone: "(11) 98765-4321",
+              cpf: "123.456.789-00",
+              address: {
+                street: "Rua das Flores",
+                number: "123",
+                complement: "Apto 101",
+                neighborhood: "Centro",
+                city: "São Paulo",
+                state: "SP",
+                zipCode: "01234-567"
+              },
+              avatar: null,
+              lastVisit: "2023-05-15",
+              totalVisits: 5,
+              activePackages: 1,
+              nextAppointment: "2023-06-10T14:00:00",
+              createdAt: "2023-01-15"
+            },
+            {
+              id: 2,
+              name: "Carlos Oliveira",
+              email: "carlos.oliveira@email.com",
+              phone: "(11) 99876-5432",
+              cpf: "987.654.321-00",
+              address: {
+                street: "Av. Paulista",
+                number: "1000",
+                neighborhood: "Bela Vista",
+                city: "São Paulo",
+                state: "SP",
+                zipCode: "01310-100"
+              },
+              avatar: null,
+              lastVisit: "2023-05-20",
+              totalVisits: 3,
+              activePackages: 0,
+              nextAppointment: null,
+              createdAt: "2023-02-10"
+            }
+          ];
+          setClients(sampleClients);
+          localStorage.setItem(CLIENTS_STORAGE_KEY, JSON.stringify(sampleClients));
+        }
+      } catch (error) {
+        console.error('Error loading clients:', error);
+      } finally {
+        setIsLoading(false);
+      }
+    };
 
-    setIsLoading(true);
-    const { data, error } = await supabase.from('clients').select('*').order('name', { ascending: true });
-
-    if (error) {
-      console.error('Error fetching clients:', error);
-      toast({
-        title: "Erro ao buscar clientes",
-        description: "Não foi possível carregar os dados dos clientes.",
-        variant: "destructive",
-      });
-    } else {
-      setClients(data.map(fromSupabase));
-    }
-    setIsLoading(false);
+    loadClients();
   }, []);
 
+  // Save clients to localStorage whenever they change
   useEffect(() => {
-    fetchClients();
-  }, [fetchClients]);
-
-  const addClient = async (clientData: Omit<Client, 'id' | 'createdAt' | 'lastVisit' | 'totalVisits'>) => {
-    if (!supabase) return null;
-
-    const supabaseData = toSupabase(clientData);
-    
-    const { data, error } = await supabase.from('clients').insert(supabaseData).select().single();
-
-    if (error) {
-      console.error('Error adding client:', error);
-      toast({
-        title: "Erro ao adicionar cliente",
-        description: "Não foi possível salvar o novo cliente.",
-        variant: "destructive",
-      });
-      return null;
+    if (clients.length > 0) {
+      localStorage.setItem(CLIENTS_STORAGE_KEY, JSON.stringify(clients));
     }
+  }, [clients]);
 
-    const newClient = fromSupabase(data);
-    setClients(prev => [...prev, newClient].sort((a, b) => a.name.localeCompare(b.name)));
+  const addClient = (clientData: Omit<Client, 'id' | 'createdAt'>) => {
+    const newClient: Client = {
+      ...clientData,
+      id: Math.max(0, ...clients.map(c => c.id)) + 1,
+      createdAt: new Date().toISOString().split('T')[0]
+    };
+    setClients([...clients, newClient]);
     return newClient;
   };
 
-  const updateClient = async (id: number, clientData: Partial<Client>) => {
-    if (!supabase) return;
-
-    const supabaseData = toSupabase(clientData);
-
-    const { data, error } = await supabase.from('clients').update(supabaseData).eq('id', id).select().single();
-
-    if (error) {
-      console.error('Error updating client:', error);
-      toast({
-        title: "Erro ao atualizar cliente",
-        description: "As alterações não puderam ser salvas.",
-        variant: "destructive",
-      });
-    } else {
-      const updatedClient = fromSupabase(data);
-      setClients(prev => prev.map(c => (c.id === id ? updatedClient : c)));
-    }
+  const updateClient = (id: number, clientData: Partial<Client>) => {
+    setClients(clients.map(client => 
+      client.id === id ? { ...client, ...clientData } : client
+    ));
   };
 
-  const deleteClient = async (id: number) => {
-    if (!supabase) return;
-
-    const { error } = await supabase.from('clients').delete().eq('id', id);
-
-    if (error) {
-      console.error('Error deleting client:', error);
-      toast({
-        title: "Erro ao excluir cliente",
-        description: "O cliente não pôde ser removido.",
-        variant: "destructive",
-      });
-    } else {
-      setClients(prev => prev.filter(c => c.id !== id));
-    }
+  const deleteClient = (id: number) => {
+    setClients(clients.filter(client => client.id !== id));
   };
 
   const getClient = (id: number) => {
@@ -175,6 +134,5 @@ export function useClients() {
     updateClient,
     deleteClient,
     getClient,
-    refetch: fetchClients,
   };
 }

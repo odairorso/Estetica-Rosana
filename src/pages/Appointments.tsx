@@ -5,8 +5,6 @@ import { GlassCard } from "@/components/ui/glass-card";
 import { NeonButton } from "@/components/ui/neon-button";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Calendar } from "@/components/ui/calendar";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -15,15 +13,17 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { AppointmentModal } from "@/components/services/AppointmentModal";
 import { useAppointments, Appointment } from "@/hooks/useAppointments";
-import { useToast } from "@/hooks/use-toast";
+import { useServices } from "@/hooks/useServices";
+import { toast } from "@/hooks/use-toast";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 
 export default function Appointments() {
+  const { services } = useServices();
   const { appointments, addAppointment, updateAppointment } = useAppointments();
   const [selectedDate, setSelectedDate] = useState(new Date());
   const [modalOpen, setModalOpen] = useState(false);
-  const { toast } = useToast();
+  const [selectedService, setSelectedService] = useState(null);
 
   const todayAppointments = appointments
     .filter(apt => format(new Date(apt.date), 'yyyy-MM-dd') === format(selectedDate, 'yyyy-MM-dd'))
@@ -72,23 +72,9 @@ export default function Appointments() {
         <div className="flex flex-col gap-4 md:flex-row md:justify-between md:items-center">
           <div>
             <h1 className="text-3xl font-bold text-gradient-brand">Agendamentos</h1>
-            <Popover>
-              <PopoverTrigger asChild>
-                <Button variant="outline" className="mt-2 text-lg p-6">
-                  <CalendarIcon className="mr-3 h-5 w-5" />
-                  {format(selectedDate, "dd 'de' MMMM 'de' yyyy", { locale: ptBR })}
-                </Button>
-              </PopoverTrigger>
-              <PopoverContent className="w-auto p-0">
-                <Calendar
-                  mode="single"
-                  selected={selectedDate}
-                  onSelect={(date) => date && setSelectedDate(date)}
-                  initialFocus
-                  locale={ptBR}
-                />
-              </PopoverContent>
-            </Popover>
+            <p className="text-foreground/80 font-medium">
+              Data: {format(selectedDate, "dd 'de' MMMM 'de' yyyy", { locale: ptBR })}
+            </p>
           </div>
           
           <NeonButton icon={Plus} variant="primary" onClick={() => setModalOpen(true)}>
@@ -138,8 +124,8 @@ export default function Appointments() {
           {todayAppointments.length === 0 && (
             <GlassCard className="text-center py-12">
               <CalendarIcon className="h-12 w-12 text-brand-start mx-auto mb-4" />
-              <h3 className="text-xl font-semibold text-foreground mb-2">Nenhum agendamento para esta data</h3>
-              <p className="text-foreground/70">Selecione outra data ou crie um novo agendamento</p>
+              <h3 className="text-xl font-semibold text-foreground mb-2">Nenhum agendamento hoje</h3>
+              <p className="text-foreground/70">Clique em "Novo Agendamento" para começar</p>
             </GlassCard>
           )}
         </div>
@@ -148,6 +134,7 @@ export default function Appointments() {
       <AppointmentModal
         open={modalOpen}
         onOpenChange={setModalOpen}
+        service={selectedService}
         onSave={handleSaveAppointment}
       />
     </>

@@ -16,7 +16,7 @@ import {
 import { AppointmentModal } from "@/components/services/AppointmentModal";
 import { useAppointments, Appointment } from "@/hooks/useAppointments";
 import { useToast } from "@/hooks/use-toast";
-import { format, parseISO, isToday, isAfter } from "date-fns";
+import { format, parseISO, isToday } from "date-fns";
 import { ptBR } from "date-fns/locale";
 
 export default function Appointments() {
@@ -254,6 +254,7 @@ export default function Appointments() {
         open={modalOpen}
         onOpenChange={setModalOpen}
         onSave={handleSaveAppointment}
+        service={null} // Corrigido: passe null como serviço quando não há serviço específico
       />
     </>
   );

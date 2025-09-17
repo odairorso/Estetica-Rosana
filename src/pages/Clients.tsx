@@ -1,6 +1,6 @@
 import { Helmet } from "react-helmet-async";
 import { useState } from "react";
-import { Plus, Camera, AlertTriangle } from "lucide-react";
+import { Plus, Camera } from "lucide-react";
 import { SearchBar } from "@/components/ui/search-bar";
 import { GlassCard } from "@/components/ui/glass-card";
 import { NeonButton } from "@/components/ui/neon-button";
@@ -8,7 +8,6 @@ import { useClients, Client } from "@/hooks/useClients";
 import { ClientCard } from "@/components/clients/ClientCard";
 import { ClientModal } from "@/components/clients/ClientModal";
 import { useToast } from "@/hooks/use-toast";
-import { supabase } from "@/lib/supabase";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -28,36 +27,6 @@ export default function Clients() {
   const [editingClient, setEditingClient] = useState<Client | null>(null);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [clientToDelete, setClientToDelete] = useState<number | null>(null);
-
-  if (!supabase) {
-    return (
-      <>
-        <Helmet>
-          <title>Clientes | Gestão de Clínica Estética</title>
-        </Helmet>
-        <div className="space-y-6">
-          <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
-            <div>
-              <h1 className="text-2xl font-bold text-gradient-brand">Clientes</h1>
-              <p className="text-muted-foreground">Gerencie sua base de clientes</p>
-            </div>
-          </div>
-          <GlassCard className="text-center py-12">
-            <div className="space-y-4">
-              <AlertTriangle className="mx-auto h-12 w-12 text-destructive" />
-              <h3 className="font-semibold text-xl text-destructive">Erro de Configuração</h3>
-              <p className="text-muted-foreground">
-                A conexão com o banco de dados (Supabase) não foi configurada.
-              </p>
-              <p className="text-sm text-muted-foreground max-w-md mx-auto">
-                Para corrigir, por favor, crie um arquivo <code>.env.local</code> na raiz do projeto e adicione suas credenciais, como explicado no arquivo <code>README.md</code>.
-              </p>
-            </div>
-          </GlassCard>
-        </div>
-      </>
-    );
-  }
 
   const filteredClients = clients.filter(client =>
     client.name.toLowerCase().includes(searchTerm.toLowerCase()) ||

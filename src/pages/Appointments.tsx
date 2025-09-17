@@ -175,12 +175,6 @@ export default function Appointments() {
                     <p className="font-bold text-lg text-foreground">{apt.appointment_time}</p>
                     <p className="text-xs text-muted-foreground">{apt.duration} min</p>
                   </div>
-                  {/* Data formatada legível */}
-                  <div className="text-sm text-muted-foreground">
-                    {format(parseISO(apt.appointment_date), "dd 'de' MMMM", {
-                      locale: ptBR,
-                    })}
-                  </div>
                 </div>
 
                 {/* Cliente e Serviço */}
@@ -247,7 +241,7 @@ export default function Appointments() {
 
       <div className="space-y-6">
         {/* Header */}
-        <div className="flex flex-col gap-4 md:flex-row md:justify-between md:items-center">
+        <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
           <div>
             <h1 className="text-3xl font-bold text-gradient-brand">Agendamentos</h1>
             <p className="text-muted-foreground">Selecione uma data para ver os horários</p>

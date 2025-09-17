@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
-import { Calendar, Clock, Package } from "lucide-react";
+import { Calendar, Clock, Package, Sparkles } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -120,8 +120,8 @@ export function AppointmentModal({ open, onOpenChange, onSave }: AppointmentModa
       <DialogContent className="sm:max-w-[500px]">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
-            <Package className="h-5 w-5" />
-            Agendar Sessão de Pacote
+            <Calendar className="h-5 w-5" />
+            Pacotes ou Procedimentos
           </DialogTitle>
         </DialogHeader>
 

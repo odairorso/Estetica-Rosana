@@ -6,12 +6,13 @@ import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import NotFound from "./pages/NotFound";
 import Dashboard from "./pages/Dashboard";
 import Clients from "./pages/Clients";
-import Appointments from "./pages/Appointments"; // ✅ Verificar se esta importação existe
+import Appointments from "./pages/Appointments";
 import Packages from "./pages/Packages";
 import Services from "./pages/Services";
 import Inventory from "./pages/Inventory";
 import Finance from "./pages/Finance";
 import Settings from "./pages/Settings";
+import Sales from "./pages/Sales"; // ✅ Nova importação
 import { HelmetProvider } from "react-helmet-async";
 import AppLayout from "./components/layout/AppLayout";
 import { ThemeProvider } from "./components/ThemeProvider";
@@ -38,8 +39,9 @@ const App = () => {
                   <Route path="/" element={<Navigate to="/dashboard" replace />} />
                   <Route path="/dashboard" element={<Dashboard />} />
                   <Route path="/clientes" element={<Clients />} />
-                  <Route path="/agendamentos" element={<Appointments />} /> {/* ✅ Verificar se esta rota existe */}
+                  <Route path="/agendamentos" element={<Appointments />} />
                   <Route path="/pacotes" element={<Packages />} />
+                  <Route path="/vendas" element={<Sales />} /> {/* ✅ Nova rota */}
                   <Route path="/servicos" element={<Services />} />
                   <Route path="/estoque" element={<Inventory />} />
                   <Route path="/financeiro" element={<Finance />} />

@@ -120,23 +120,23 @@ export function AppointmentModal({ open, onOpenChange, onSave }: AppointmentModa
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[600px] max-h-[90vh] overflow-y-auto">
+      <DialogContent className="w-[95vw] max-w-[600px] max-h-[95vh] overflow-y-auto p-4 sm:p-6">
         <DialogHeader>
-          <DialogTitle className="flex items-center gap-2 text-xl">
-            <Calendar className="h-6 w-6 text-primary" />
+          <DialogTitle className="flex items-center gap-2 text-lg sm:text-xl">
+            <Calendar className="h-5 w-5 sm:h-6 sm:w-6 text-primary" />
             Novo Agendamento
           </DialogTitle>
         </DialogHeader>
         
-        <div className="space-y-6 py-4">
+        <div className="space-y-4 sm:space-y-6 py-2 sm:py-4">
           {/* Seleção de Serviço */}
-          <div className="space-y-3">
+          <div className="space-y-2 sm:space-y-3">
             <div className="flex items-center gap-2">
               <Sparkles className="h-4 w-4 text-primary" />
-              <Label className="text-base font-medium">Serviço *</Label>
+              <Label className="text-sm sm:text-base font-medium">Serviço *</Label>
             </div>
             <Select value={selectedServiceId} onValueChange={setSelectedServiceId}>
-              <SelectTrigger className="h-12">
+              <SelectTrigger className="h-11 sm:h-12">
                 <SelectValue placeholder="Escolha um serviço" />
               </SelectTrigger>
               <SelectContent>
@@ -166,13 +166,13 @@ export function AppointmentModal({ open, onOpenChange, onSave }: AppointmentModa
           </div>
 
           {/* Seleção de Cliente */}
-          <div className="space-y-3">
+          <div className="space-y-2 sm:space-y-3">
             <div className="flex items-center gap-2">
               <User className="h-4 w-4 text-primary" />
-              <Label className="text-base font-medium">Cliente *</Label>
+              <Label className="text-sm sm:text-base font-medium">Cliente *</Label>
             </div>
             <Select value={selectedClientId} onValueChange={setSelectedClientId}>
-              <SelectTrigger className="h-12">
+              <SelectTrigger className="h-11 sm:h-12">
                 <SelectValue placeholder="Selecione um cliente" />
               </SelectTrigger>
               <SelectContent>
@@ -201,21 +201,23 @@ export function AppointmentModal({ open, onOpenChange, onSave }: AppointmentModa
               <Label className="text-base font-medium">Data e Horário *</Label>
             </div>
             
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
               <div className="space-y-2">
-                <Label className="text-sm">Data do Agendamento</Label>
+                <Label className="text-sm font-medium">Data do Agendamento</Label>
                 <Popover>
                   <PopoverTrigger asChild>
                     <Button
                       variant="outline"
                       className={cn(
-                        "w-full h-12 justify-start text-left font-normal",
+                        "w-full h-11 sm:h-12 justify-start text-left font-normal text-sm",
                         !selectedDate && "text-muted-foreground"
                       )}
                     >
-                      <CalendarIcon className="mr-2 h-4 w-4" />
+                      <CalendarIcon className="mr-2 h-4 w-4 flex-shrink-0" />
                       {selectedDate ? (
-                        format(selectedDate, "dd 'de' MMMM 'de' yyyy", { locale: ptBR })
+                        <span className="truncate">
+                          {format(selectedDate, "dd/MM/yyyy", { locale: ptBR })}
+                        </span>
                       ) : (
                         <span>Selecione uma data</span>
                       )}
@@ -235,10 +237,10 @@ export function AppointmentModal({ open, onOpenChange, onSave }: AppointmentModa
               </div>
 
               <div className="space-y-2">
-                <Label className="text-sm">Horário</Label>
+                <Label className="text-sm font-medium">Horário</Label>
                 <Select value={selectedTime} onValueChange={setSelectedTime}>
-                  <SelectTrigger className="h-12">
-                    <SelectValue />
+                  <SelectTrigger className="h-11 sm:h-12">
+                    <SelectValue placeholder="Selecione o horário" />
                   </SelectTrigger>
                   <SelectContent>
                     {timeSlots.map((time) => (
@@ -253,17 +255,17 @@ export function AppointmentModal({ open, onOpenChange, onSave }: AppointmentModa
           </div>
 
           {/* Observações */}
-          <div className="space-y-3">
+          <div className="space-y-2 sm:space-y-3">
             <div className="flex items-center gap-2">
               <MessageSquare className="h-4 w-4 text-primary" />
-              <Label className="text-base font-medium">Observações</Label>
+              <Label className="text-sm sm:text-base font-medium">Observações</Label>
             </div>
             <Textarea
               value={notes}
               onChange={(e) => setNotes(e.target.value)}
               placeholder="Informações adicionais sobre o agendamento..."
               rows={3}
-              className="resize-none"
+              className="resize-none min-h-[80px] text-sm"
             />
           </div>
 
@@ -302,18 +304,18 @@ export function AppointmentModal({ open, onOpenChange, onSave }: AppointmentModa
         </div>
         
         {/* Ações */}
-        <div className="flex gap-3 pt-4 border-t">
+        <div className="flex flex-col sm:flex-row gap-2 sm:gap-3 pt-3 sm:pt-4 border-t">
           <Button 
             type="button" 
             variant="outline" 
             onClick={() => onOpenChange(false)} 
-            className="flex-1 h-12"
+            className="flex-1 h-11 sm:h-12 order-2 sm:order-1"
           >
             Cancelar
           </Button>
           <Button 
             onClick={handleSave} 
-            className="flex-1 h-12 bg-primary hover:bg-primary/90"
+            className="flex-1 h-11 sm:h-12 bg-primary hover:bg-primary/90 order-1 sm:order-2"
             disabled={!selectedServiceId || !selectedClientId}
           >
             Confirmar Agendamento

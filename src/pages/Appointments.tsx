@@ -51,7 +51,7 @@ export default function Appointments() {
 
   // Estado para o modal de histórico de pacotes
   const [historyModalOpen, setHistoryModalOpen] = useState(false);
-  const [selectedPackage setSelectedPackage] = useState<PackageType | null>(null);
+  const [selectedPackage, setSelectedPackage] = useState<PackageType | null>(null);
 
   const filteredAppointments = appointments
     .filter((apt) => {
@@ -163,8 +163,8 @@ export default function Appointments() {
       <div className="space-y-4">
         {filteredAppointments.map((apt) => {
           const statusProps = getStatusProps(apt.status);
-          const StatusIcon statusProps.icon;
-          const isPackage = !!apt.package_id; // campo opcional que indica ag de pacote
+          const StatusIcon = statusProps.icon;
+          const isPackage = !!apt.package_id; // indica se é agendamento de pacote
 
           return (
             <GlassCard key={apt.id} className="p-4">
@@ -175,7 +175,7 @@ export default function Appointments() {
                     <p className="font-bold text-lg text-foreground">{apt.appointment_time}</p>
                     <p className="text-xs text-muted-foreground">{apt.duration} min</p>
                   </div>
-                  {/* Data formatada de forma legível */}
+                  {/* Data formatada legível */}
                   <div className="text-sm text-muted-foreground">
                     {format(parseISO(apt.appointment_date), "dd 'de' MMMM", {
                       locale: ptBR,
@@ -185,12 +185,8 @@ export default function Appointments() {
 
                 {/* Cliente e Serviço */}
                 <div className="flex-1 min-w-0">
-                  <p className="font-semibold text-foreground truncate">
-                    {apt.client_name}
-                  </p>
-                  <p className="text-sm text-muted-foreground truncate">
-                    {apt.serviceName}
-                  </p>
+                  <p className="font-semibold text-foreground truncate">{apt.client_name}</p>
+                  <p className="text-sm text-muted-foreground truncate">{apt.serviceName}</p>
                 </div>
 
                 {/* Ações */}
@@ -219,15 +215,12 @@ export default function Appointments() {
                       </Button>
                     </DropdownMenuTrigger>
                     <DropdownMenuContent align="end">
-                      <DropdownMenuItem                        onClick={() => handleStatusChange(apt, "confirmado")}
-                      >
+                      <DropdownMenuItem onClick={() => handleStatusChange(apt, "confirmado")}>
                         Confirmar
                       </DropdownMenuItem>
-                      <DropdownMenuItem
-                        onClick={() => handleStatusChange(apt, "concluido")}
-                      >
+                      <DropdownMenuItem onClick={() => handleStatusChange(apt, "concluido")}>
                         Concluir
-                      </DropdownMenu>
+                      </DropdownMenuItem>
                       <DropdownMenuItem
                         onClick={() => handleStatusChange(apt, "cancelado")}
                         className="text-destructive"
@@ -256,12 +249,8 @@ export default function Appointments() {
         {/* Header */}
         <div className="flex flex-col gap-4 md:flex-row md:justify-between md:items-center">
           <div>
-            <h1 className="text-3xl font-bold text-gradient-brand">
-              Agendamentos
-            </h1>
-            <p className="text-muted-foreground">
-              Selecione uma data para ver os horários
-            </p>
+            <h1 className="text-3xl font-bold text-gradient-brand">Agendamentos</h1>
+            <p className="text-muted-foreground">Selecione uma data para ver os horários</p>
           </div>
           <NeonButton icon={Plus} onClick={() => setModalOpen(true)}>
             Novo Agendamento
@@ -278,7 +267,8 @@ export default function Appointments() {
             )}
             <AlertTitle>
               {error.includes("offline") ? "Modo Offline" : "Erro de Conexão"}
-            </AlertTitle <AlertDescription>
+            </AlertTitle>
+            <AlertDescription>
               {error}
               <Button
                 variant="link"
@@ -302,7 +292,7 @@ export default function Appointments() {
               locale={ptBR}
               className="p-0"
             />
-         GlassCard>
+          </GlassCard>
 
           {/* Lista de agendamentos */}
           <div className="lg:col-span-2 space-y-4">

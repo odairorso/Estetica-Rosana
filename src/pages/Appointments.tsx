@@ -38,14 +38,14 @@ export default function Appointments() {
   // Filtrar agendamentos para a data selecionada
   const filteredAppointments = appointments.filter(apt => {
     try {
-      const aptDate = normalizeDate(apt.appointment_date);
+      const aptDate = normalizeDate(apt.date);
       const selectedDateStr = format(selectedDate, 'yyyy-MM-dd');
       return aptDate === selectedDateStr;
     } catch (error) {
       console.error('Erro ao filtrar agendamentos:', error);
       return false;
     }
-  }).sort((a, b) => a.appointment_time.localeCompare(b.appointment_time));
+  }).sort((a, b) => a.time.localeCompare(b.time));
 
   const handleSaveAppointment = async (appointmentData: any) => {
     try {
@@ -58,8 +58,8 @@ export default function Appointments() {
         price: appointmentData.price,
         notes: appointmentData.notes || '',
         status: "agendado" as const,
-        appointment_date: format(appointmentData.date, 'yyyy-MM-dd'),
-        appointment_time: appointmentData.time,
+        date: format(appointmentData.date, 'yyyy-MM-dd'),
+        time: appointmentData.time,
       };
 
       const result = await addAppointment(dataToSave);
@@ -181,7 +181,7 @@ export default function Appointments() {
                   <div className="flex items-center gap-4 flex-1 min-w-0">
                     <div className="flex items-center gap-2 min-w-[80px]">
                       <Clock className="h-5 w-5 text-brand-start" />
-                      <span className="font-bold text-lg text-foreground">{apt.appointment_time}</span>
+                      <span className="font-bold text-lg text-foreground">{apt.time}</span>
                     </div>
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2 mb-1">

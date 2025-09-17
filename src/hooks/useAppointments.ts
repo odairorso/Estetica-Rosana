@@ -1,6 +1,5 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { format } from "date-fns";
-import { ptBR } from "date-fns/locale";
 
 export interface Appointment {
   id: number;
@@ -17,11 +16,59 @@ export interface Appointment {
   createdAt: Date;
 }
 
+const STORAGE_KEY = "clinic-appointments";
+
+const initialAppointments: Appointment[] = [
+  {
+    id: 1,
+    serviceId: 1,
+    serviceName: "Limpeza de Pele Profunda",
+    clientName: "Ana Silva",
+    clientPhone: "(11) 99999-9999",
+    date: new Date(),
+    time: "09:00",
+    duration: 60,
+    price: 120.00,
+    notes: "Cliente com pele sensível.",
+    status: "confirmado",
+    createdAt: new Date()
+  },
+  {
+    id: 2,
+    serviceId: 2,
+    serviceName: "Drenagem Linfática",
+    clientName: "Beatriz Santos",
+    clientPhone: "(11) 88888-8888",
+    date: new Date(),
+    time: "14:00",
+    duration: 45,
+    price: 80.00,
+    notes: "",
+    status: "agendado",
+    createdAt: new Date()
+  }
+];
+
 export function useAppointments() {
-  const [appointments, setAppointments] = useState<Appointment[]>([]);
+  const [appointments, setAppointments] = useState<Appointment[]>(() => {
+    const stored = localStorage.getItem(STORAGE_KEY);
+    if (stored) {
+      // Re-hydrate dates
+      return JSON.parse(stored).map((a: any) => ({
+        ...a,
+        date: new Date(a.date),
+        createdAt: new Date(a.createdAt)
+      }));
+    }
+    return initialAppointments;
+  });
+
+  useEffect(() => {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(appointments));
+  }, [appointments]);
 
   const addAppointment = (newAppointment: Omit<Appointment, 'id' | 'createdAt'>) => {
-    const id = Math.max(...appointments.map(a => a.id), 0) + 1;
+    const id = Date.now();
     const appointment: Appointment = {
       ...newAppointment,
       id,
@@ -39,7 +86,7 @@ export function useAppointments() {
   };
 
   const deleteAppointment = (id: number) => {
-    setAppointments(prev => prev.filter(appointment => appointment.id !== id));
+    setAppointments(prev => prev.filter(appointment.id !== id));
   };
 
   const getAppointmentsByDate = (date: Date) => {

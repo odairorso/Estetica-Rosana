@@ -26,7 +26,7 @@ export default function Appointments() {
   const { toast } = useToast();
 
   const todayAppointments = appointments
-    .filter(apt => format(new Date(apt.appointment_date), 'yyyy-MM-dd') === format(selectedDate, 'yyyy-MM-dd'))
+    .filter(apt => apt.appointment_date === format(selectedDate, 'yyyy-MM-dd'))
     .sort((a, b) => a.appointment_time.localeCompare(b.appointment_time));
 
   const handleSaveAppointment = (appointmentData: any) => {

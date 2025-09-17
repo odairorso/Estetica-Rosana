@@ -1,5 +1,5 @@
 import { Helmet } from "react-helmet-async";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Plus, ShoppingCart, DollarSign, Calendar, User, Receipt, Trash2, Package, Sparkles, Box } from "lucide-react";
 import { GlassCard } from "@/components/ui/glass-card";
 import { NeonButton } from "@/components/ui/neon-button";
@@ -9,59 +9,35 @@ import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { useToast } from "@/hooks/use-toast";
 import { CashierModal } from "@/components/cashier/CashierModal";
-
-interface CartItem {
-  id: number;
-  type: 'service' | 'package' | 'product';
-  item_id: number;
-  itemName: string;
-  price: number;
-  quantity: number;
-}
-
-interface Sale {
-  id: number;
-  client_id: number;
-  clientName: string;
-  items: CartItem[];
-  total: number;
-  sale_date: string;
-  payment_method: string;
-  notes: string;
-}
+import { useSales, Sale } from "@/hooks/useSales";
 
 export default function Cashier() {
   const { toast } = useToast();
+  const { sales, isLoading, addSale, deleteSale } = useSales();
   const [modalOpen, setModalOpen] = useState(false);
-  const [sales, setSales] = useState<Sale[]>([]);
 
-  const handleSaveSale = (saleData: any) => {
-    const newSale: Sale = {
-      id: Math.max(0, ...sales.map(s => s.id)) + 1,
+  const handleSaveSale = async (saleData: any) => {
+    const result = await addSale({
       client_id: saleData.client_id,
       clientName: saleData.clientName,
       items: saleData.items,
-      total: saleData.items.reduce((sum: number, item: CartItem) => sum + (item.price * item.quantity), 0),
+      total: saleData.items.reduce((sum: number, item: any) => sum + (item.price * item.quantity), 0),
       sale_date: new Date().toISOString().split('T')[0],
       payment_method: saleData.payment_method,
       notes: saleData.notes
-    };
-    
-    setSales([...sales, newSale]);
-    
-    toast({
-      title: "Venda registrada!",
-      description: `Venda para ${saleData.clientName} registrada com sucesso.`,
     });
-    setModalOpen(false);
+    
+    if (result) {
+      toast({
+        title: "Venda registrada!",
+        description: `Venda para ${saleData.clientName} registrada com sucesso.`,
+      });
+      setModalOpen(false);
+    }
   };
 
-  const handleDeleteSale = (id: number) => {
-    setSales(sales.filter(sale => sale.id !== id));
-    toast({
-      title: "Venda removida",
-      description: "A venda foi removida com sucesso.",
-    });
+  const handleDeleteSale = async (id: number) => {
+    await deleteSale(id);
   };
 
   const getItemIcon = (type: string) => {
@@ -101,6 +77,16 @@ export default function Cashier() {
   };
 
   const totalRevenue = sales.reduce((sum, sale) => sum + sale.total, 0);
+
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="text-center">
+          <p className="text-muted-foreground">Carregando vendas...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <>
@@ -142,7 +128,7 @@ export default function Cashier() {
                       <User className="h-4 w-4 text-white" />
                     </div>
                     <div>
-                      <h3 className="font-semibold text-foreground text-lg">{sale.clientName}</h3>
+                      <h3 className="font-semibold text-foreground text-lg">{sale.client_name}</h3>
                       <div className="flex items-center gap-4 text-sm text-muted-foreground">
                         <div className="flex items-center gap-1">
                           <Calendar className="h-3 w-3" />
@@ -157,7 +143,7 @@ export default function Cashier() {
 
                   {/* Itens da venda */}
                   <div className="space-y-2">
-                    {sale.items.map((item, index) => (
+                    {sale.items.map((item: any, index: number) => (
                       <div key={index} className="flex items-center justify-between text-sm">
                         <div className="flex items-center gap-2">
                           {getItemIcon(item.type)}

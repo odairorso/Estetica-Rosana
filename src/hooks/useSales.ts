@@ -47,7 +47,13 @@ export function useSales() {
 
       if (error) throw error;
       
-      setSales(data || []);
+      // Convert JSONB items back to array
+      const formattedData = (data || []).map(sale => ({
+        ...sale,
+        items: sale.items || []
+      }));
+      
+      setSales(formattedData as any);
     } catch (error) {
       console.error('❌ Erro ao carregar vendas:', error);
       toast({
@@ -79,7 +85,15 @@ export function useSales() {
     try {
       const { data, error } = await supabase
         .from('sales')
-        .insert([saleData])
+        .insert([{
+          client_id: saleData.client_id,
+          client_name: saleData.clientName,
+          items: saleData.items,
+          total: saleData.total,
+          sale_date: saleData.sale_date,
+          payment_method: saleData.payment_method,
+          notes: saleData.notes
+        }])
         .select()
         .single();
 

@@ -19,7 +19,7 @@ import { useToast } from "@/hooks/use-toast";
 import { format, parseISO, isToday } from "date-fns";
 import { ptBR } from "date-fns/locale";
 
-export default function Appointments() {
+export default function Appointments() { // ✅ Export default explícito
   const { appointments, addAppointment, updateAppointment, isLoading } = useAppointments();
   const [selectedDate, setSelectedDate] = useState(new Date());
   const [modalOpen, setModalOpen] = useState(false);

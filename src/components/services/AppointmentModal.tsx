@@ -252,19 +252,18 @@ export function AppointmentModal({ open, onOpenChange, service, onSave }: Appoin
           {/* Data e Horário */}
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
-              <Label>Data</Label>
+              <Label htmlFor="date">Data *</Label>
               <Popover>
                 <PopoverTrigger asChild>
                   <Button
                     variant="outline"
                     className={cn(
-                      "w-full justify-start text-left font-normal",
-                      !formData.date && "text-muted-foreground",
-                      "border-input bg-background hover:bg-accent hover:text-accent-foreground"
+                      "w-full justify-start text-left font-normal h-10 px-3 py-2 text-sm",
+                      !formData.date && "text-muted-foreground"
                     )}
                   >
                     <CalendarIcon className="mr-2 h-4 w-4" />
-                    {formData.date ? format(formData.date, "dd/MM/yyyy") : <span>Selecione</span>}
+                    {formData.date ? format(formData.date, "dd/MM/yyyy") : <span>Selecione a data</span>}
                   </Button>
                 </PopoverTrigger>
                 <PopoverContent className="w-auto p-0">
@@ -279,11 +278,17 @@ export function AppointmentModal({ open, onOpenChange, service, onSave }: Appoin
               </Popover>
             </div>
             <div className="space-y-2">
-              <Label htmlFor="time">Horário</Label>
-              <Select value={formData.time} onValueChange={(v) => handleChange("time", v)}>
-                <SelectTrigger><SelectValue /></SelectTrigger>
+              <Label htmlFor="time">Horário *</Label>
+              <Select value={formData.time} onValueChange={(v) => handleChange("time", v)} required>
+                <SelectTrigger>
+                  <SelectValue placeholder="Selecione o horário" />
+                </SelectTrigger>
                 <SelectContent>
-                  {timeSlots.map((time) => (<SelectItem key={time} value={time}>{time}</SelectItem>))}
+                  {timeSlots.map((time) => (
+                    <SelectItem key={time} value={time}>
+                      {time}
+                    </SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
             </div>
@@ -292,13 +297,24 @@ export function AppointmentModal({ open, onOpenChange, service, onSave }: Appoin
           {/* Preço */}
           <div className="space-y-2">
             <Label htmlFor="price">Valor do Agendamento (R$)</Label>
-            <Input id="price" type="number" value={formData.price} onChange={(e) => handleChange("price", parseFloat(e.target.value))} disabled={appointmentType === 'package'} />
+            <Input 
+              id="price" 
+              type="number" 
+              value={formData.price} 
+              onChange={(e) => handleChange("price", parseFloat(e.target.value))} 
+              disabled={appointmentType === 'package'} 
+            />
           </div>
 
           {/* Observações */}
           <div className="space-y-2">
             <Label htmlFor="notes">Observações</Label>
-            <Textarea id="notes" value={formData.notes} onChange={(e) => handleChange("notes", e.target.value)} rows={2} />
+            <Textarea 
+              id="notes" 
+              value={formData.notes} 
+              onChange={(e) => handleChange("notes", e.target.value)} 
+              rows={2} 
+            />
           </div>
 
           <div className="flex gap-3 pt-4">

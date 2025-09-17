@@ -8,8 +8,18 @@
 - Clique em "New Project"
 - Selecione o repositório: `odairorso/Estetica-Rosana`
 
-### 2. Configurar Variáveis de Ambiente
-Na seção "Environment Variables" da Vercel, adicione as seguintes variáveis:
+### 2. Configurar Framework
+- A Vercel deve detectar automaticamente que é um projeto Vite
+- Se perguntado, confirme:
+  - **Framework Preset:** Vite
+  - **Build Command:** `npm run build`
+  - **Output Directory:** `dist`
+  - **Install Command:** `npm install`
+
+### 3. Configurar Variáveis de Ambiente
+⚠️ **CRÍTICO:** Configure as variáveis ANTES de fazer o primeiro deploy!
+
+Na seção "Environment Variables" da Vercel, adicione:
 
 **Nome:** `VITE_SUPABASE_URL`  
 **Valor:** `https://zojtuknkuwvkbnaorfqd.supabase.co`
@@ -17,9 +27,9 @@ Na seção "Environment Variables" da Vercel, adicione as seguintes variáveis:
 **Nome:** `VITE_SUPABASE_ANON_KEY`  
 **Valor:** `eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InpvanR1a25rdXd2a2JuYW9yZnFkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTgwNTMyNDksImV4cCI6MjA3MzYyOTI0OX0.RpA1fg0EMLK0mBrGBVljgzozi6c6J7tFw_S90LjxaiI`
 
-⚠️ **IMPORTANTE:** Certifique-se de adicionar essas variáveis para todos os ambientes (Production, Preview, Development).
+✅ **IMPORTANTE:** Adicione essas variáveis para todos os ambientes (Production, Preview, Development).
 
-### 3. Deploy
+### 4. Deploy
 - Clique em "Deploy"
 - Aguarde o build completar
 - Acesse sua aplicação no link fornecido

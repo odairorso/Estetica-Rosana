@@ -1,125 +1,88 @@
-import { useState, useEffect } from 'react';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { supabase } from '@/lib/supabase';
 
 export interface Client {
-  id: number;
+  id: string;
   name: string;
   email: string;
   phone: string;
   cpf: string;
-  address?: {
-    street?: string;
-    number?: string;
+  address: {
+    street: string;
+    number: string;
     complement?: string;
-    neighborhood?: string;
-    city?: string;
-    state?: string;
-    zipCode?: string;
+    neighborhood: string;
+    city: string;
+    state: string;
+    zipCode: string;
   };
-  avatar?: string | null;
-  lastVisit: string;
-  totalVisits: number;
-  activePackages: number;
-  nextAppointment?: string | null;
+  avatar: string | null;
+  last_visit: string;
+  total_visits: number;
+  active_packages: number;
+  next_appointment: string | null;
+  created_at: string;
 }
 
-const MOCK_CLIENTS: Client[] = [
-  {
-    id: 1,
-    name: "Ana Silva",
-    email: "ana.silva@email.com",
-    phone: "(11) 99999-9999",
-    cpf: "123.456.789-00",
-    address: {
-      street: "Rua das Flores",
-      number: "123",
-      complement: "Apto 101",
-      neighborhood: "Centro",
-      city: "São Paulo",
-      state: "SP",
-      zipCode: "01001-000"
-    },
-    avatar: null,
-    lastVisit: "2023-05-15",
-    totalVisits: 5,
-    activePackages: 2,
-    nextAppointment: "2023-06-20T14:00:00"
-  },
-  {
-    id: 2,
-    name: "Carlos Oliveira",
-    email: "carlos.oliveira@email.com",
-    phone: "(11) 88888-8888",
-    cpf: "987.654.321-00",
-    address: {
-      street: "Av. Paulista",
-      number: "1000",
-      neighborhood: "Bela Vista",
-      city: "São Paulo",
-      state: "SP",
-      zipCode: "01310-100"
-    },
-    avatar: null,
-    lastVisit: "2023-05-20",
-    totalVisits: 3,
-    activePackages: 1,
-    nextAppointment: null
-  }
-];
+const fetchClients = async () => {
+  const { data, error } = await supabase.from('clients').select('*').order('name');
+  if (error) throw new Error(error.message);
+  return data;
+};
+
+const addClient = async (clientData: Omit<Client, 'id' | 'created_at'>) => {
+  const { data, error } = await supabase.from('clients').insert([clientData]).select();
+  if (error) throw new Error(error.message);
+  return data[0];
+};
+
+const updateClient = async (clientData: Partial<Client> & { id: string }) => {
+  const { id, ...updateData } = clientData;
+  const { data, error } = await supabase.from('clients').update(updateData).eq('id', id).select();
+  if (error) throw new Error(error.message);
+  return data[0];
+};
+
+const deleteClient = async (id: string) => {
+  const { error } = await supabase.from('clients').delete().eq('id', id);
+  if (error) throw new Error(error.message);
+};
 
 export function useClients() {
-  const [clients, setClients] = useState<Client[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
+  const queryClient = useQueryClient();
 
-  useEffect(() => {
-    // Simulate API call
-    setTimeout(() => {
-      const storedClients = localStorage.getItem('clients');
-      if (storedClients) {
-        setClients(JSON.parse(storedClients));
-      } else {
-        setClients(MOCK_CLIENTS);
-        localStorage.setItem('clients', JSON.stringify(MOCK_CLIENTS));
-      }
-      setIsLoading(false);
-    }, 500);
-  }, []);
+  const { data: clients = [], isLoading } = useQuery<Client[]>({
+    queryKey: ['clients'],
+    queryFn: fetchClients,
+  });
 
-  const addClient = (clientData: Omit<Client, 'id'>) => {
-    const newClient = {
-      ...clientData,
-      id: Date.now()
-    };
-    const updatedClients = [...clients, newClient];
-    setClients(updatedClients);
-    localStorage.setItem('clients', JSON.stringify(updatedClients));
-    return newClient;
-  };
+  const addMutation = useMutation({
+    mutationFn: addClient,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['clients'] });
+    },
+  });
 
-  const updateClient = (id: number, clientData: Partial<Client>) => {
-    const updatedClients = clients.map(client => 
-      client.id === id ? { ...client, ...clientData } : client
-    );
-    setClients(updatedClients);
-    localStorage.setItem('clients', JSON.stringify(updatedClients));
-    return updatedClients.find(client => client.id === id);
-  };
+  const updateMutation = useMutation({
+    mutationFn: updateClient,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['clients'] });
+    },
+  });
 
-  const deleteClient = (id: number) => {
-    const updatedClients = clients.filter(client => client.id !== id);
-    setClients(updatedClients);
-    localStorage.setItem('clients', JSON.stringify(updatedClients));
-  };
-
-  const getClient = (id: number) => {
-    return clients.find(client => client.id === id);
-  };
+  const deleteMutation = useMutation({
+    mutationFn: deleteClient,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['clients'] });
+    },
+  });
 
   return {
     clients,
     isLoading,
-    addClient,
-    updateClient,
-    deleteClient,
-    getClient
+    addClient: addMutation.mutate,
+    updateClient: updateMutation.mutate,
+    deleteClient: deleteMutation.mutate,
+    getClient: (id: string) => clients.find(c => c.id === id),
   };
 }

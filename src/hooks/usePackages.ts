@@ -1,4 +1,5 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
+import { supabase } from '@/lib/supabase';
 
 export interface SessionHistoryEntry {
   id: string;
@@ -10,147 +11,98 @@ export interface Package {
   id: number;
   name: string;
   description: string;
-  clientId: number;
-  clientName: string;
-  totalSessions: number;
-  usedSessions: number;
+  client_id: number;
+  clientName?: string; // Opcional, pode ser preenchido com um join
+  total_sessions: number;
+  used_sessions: number;
   price: number;
-  validUntil: string;
-  lastUsed: string | null;
+  valid_until: string;
+  last_used: string | null;
   status: "active" | "expiring" | "completed" | "expired";
-  createdAt: string;
-  sessionHistory: SessionHistoryEntry[];
+  created_at: string;
+  session_history: SessionHistoryEntry[];
+  remaining_sessions: number;
 }
-
-const PACKAGES_STORAGE_KEY = 'clinic-packages';
 
 export function usePackages() {
   const [packages, setPackages] = useState<Package[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
-  // Load packages from localStorage on mount
-  useEffect(() => {
-    const loadPackages = () => {
-      try {
-        const stored = localStorage.getItem(PACKAGES_STORAGE_KEY);
-        if (stored) {
-          setPackages(JSON.parse(stored));
-        } else {
-          // Initialize with sample data if empty
-          const samplePackages: Package[] = [
-            {
-              id: 1,
-              name: "Pacote Limpeza de Pele Premium",
-              description: "10 sessões de limpeza de pele com hidratação profunda",
-              clientId: 1,
-              clientName: "Ana Silva",
-              totalSessions: 10,
-              usedSessions: 3,
-              price: 900,
-              validUntil: "2023-12-31",
-              lastUsed: "2023-05-20",
-              status: "active",
-              createdAt: "2023-01-15",
-              sessionHistory: [
-                { id: "1", date: "2023-03-15", notes: "Primeira sessão" },
-                { id: "2", date: "2023-04-15", notes: "Segunda sessão" },
-                { id: "3", date: "2023-05-20", notes: "Terceira sessão" }
-              ]
-            },
-            {
-              id: 2,
-              name: "Pacote Botox Express",
-              description: "5 aplicações de botox para região da testa",
-              clientId: 2,
-              clientName: "Carlos Oliveira",
-              totalSessions: 5,
-              usedSessions: 5,
-              price: 1500,
-              validUntil: "2023-08-31",
-              lastUsed: "2023-05-15",
-              status: "completed",
-              createdAt: "2023-02-01",
-              sessionHistory: [
-                { id: "1", date: "2023-02-15", notes: "Aplicação inicial" },
-                { id: "2", date: "2023-03-01", notes: "Reforço" },
-                { id: "3", date: "2023-03-20", notes: "Manutenção" },
-                { id: "4", date: "2023-04-10", notes: "Ajuste" },
-                { id: "5", date: "2023-05-15", notes: "Finalização" }
-              ]
-            }
-          ];
-          setPackages(samplePackages);
-          localStorage.setItem(PACKAGES_STORAGE_KEY, JSON.stringify(samplePackages));
-        }
-      } catch (error) {
-        console.error('Error loading packages:', error);
-      } finally {
-        setIsLoading(false);
-      }
-    };
+  const loadPackages = useCallback(async () => {
+    if (!supabase) {
+      setIsLoading(false);
+      return;
+    }
+    setIsLoading(true);
+    try {
+      const { data, error } = await supabase
+        .from('packages')
+        .select(`
+          *,
+          clients (name)
+        `)
+        .order('created_at', { ascending: false });
 
-    loadPackages();
+      if (error) throw error;
+
+      const formattedData = data.map(p => ({
+        ...p,
+        clientName: p.clients.name,
+        remaining_sessions: p.total_sessions - p.used_sessions,
+        session_history: p.session_history || [],
+      }));
+      
+      setPackages(formattedData as any);
+    } catch (error) {
+      console.error('Erro ao carregar pacotes:', error);
+    } finally {
+      setIsLoading(false);
+    }
   }, []);
 
-  // Save packages to localStorage whenever they change
   useEffect(() => {
-    if (packages.length > 0) {
-      localStorage.setItem(PACKAGES_STORAGE_KEY, JSON.stringify(packages));
+    loadPackages();
+  }, [loadPackages]);
+
+  const addPackage = async (packageData: any) => {
+    if (!supabase) return null;
+    const { clientName, ...rest } = packageData;
+    const { data, error } = await supabase.from('packages').insert([rest]).select().single();
+    if (error) {
+      console.error('Erro ao adicionar pacote:', error);
+      return null;
     }
-  }, [packages]);
-
-  const addPackage = (packageData: Omit<Package, 'id' | 'createdAt' | 'usedSessions' | 'status' | 'sessionHistory'>) => {
-    const newPackage: Package = {
-      ...packageData,
-      id: Math.max(0, ...packages.map(p => p.id)) + 1,
-      usedSessions: 0,
-      status: 'active',
-      sessionHistory: [],
-      createdAt: new Date().toISOString().split('T')[0]
-    };
-    setPackages([...packages, newPackage]);
-    return newPackage;
+    await loadPackages();
+    return data;
   };
 
-  const updatePackage = (id: number, packageData: Partial<Package>) => {
-    setPackages(packages.map(pkg => 
-      pkg.id === id ? { ...pkg, ...packageData } : pkg
-    ));
+  const updatePackage = async (id: number, packageData: Partial<Package>) => {
+    if (!supabase) return;
+    const { error } = await supabase.from('packages').update(packageData).eq('id', id);
+    if (error) console.error('Erro ao atualizar pacote:', error);
+    else await loadPackages();
   };
 
-  const deletePackage = (id: number) => {
-    setPackages(packages.filter(pkg => pkg.id !== id));
+  const deletePackage = async (id: number) => {
+    if (!supabase) return;
+    const { error } = await supabase.from('packages').delete().eq('id', id);
+    if (error) console.error('Erro ao excluir pacote:', error);
+    else await loadPackages();
   };
 
-  const getPackage = (id: number) => {
-    return packages.find(p => p.id === id);
-  };
-
-  const useSession = (id: number, notes?: string) => {
+  const useSession = async (id: number, notes?: string) => {
+    // Esta lógica precisará de uma função no Supabase para ser transacional
+    // Por enquanto, faremos no lado do cliente
     const pkg = packages.find(p => p.id === id);
-    if (!pkg || pkg.usedSessions >= pkg.totalSessions) return;
+    if (!pkg || pkg.used_sessions >= pkg.total_sessions) return;
 
-    const newSessionEntry: SessionHistoryEntry = {
-      id: Date.now().toString(),
-      date: new Date().toISOString().split('T')[0],
-      notes: notes || `Sessão ${pkg.usedSessions + 1}`,
-    };
+    const used_sessions = pkg.used_sessions + 1;
+    const status = used_sessions >= pkg.total_sessions ? 'completed' : pkg.status;
 
-    const usedSessions = pkg.usedSessions + 1;
-    const remainingSessions = pkg.totalSessions - usedSessions;
-    let status: Package['status'] = pkg.status;
-    
-    if (remainingSessions <= 0) {
-      status = 'completed';
-    } else if (remainingSessions <= 2) {
-      status = 'expiring';
-    }
-
-    updatePackage(id, {
-      usedSessions,
+    await updatePackage(id, {
+      used_sessions,
       status,
-      lastUsed: newSessionEntry.date,
-      sessionHistory: [...(pkg.sessionHistory || []), newSessionEntry],
+      last_used: new Date().toISOString(),
     });
   };
 
@@ -160,7 +112,6 @@ export function usePackages() {
     addPackage,
     updatePackage,
     deletePackage,
-    getPackage,
     useSession,
   };
 }

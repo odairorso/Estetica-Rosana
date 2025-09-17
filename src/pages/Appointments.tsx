@@ -26,11 +26,19 @@ export default function Appointments() {
   const { toast } = useToast();
 
   const todayAppointments = appointments
-    .filter(apt => format(new Date(apt.date), 'yyyy-MM-dd') === format(selectedDate, 'yyyy-MM-dd'))
-    .sort((a, b) => a.time.localeCompare(b.time));
+    .filter(apt => format(new Date(apt.appointment_date), 'yyyy-MM-dd') === format(selectedDate, 'yyyy-MM-dd'))
+    .sort((a, b) => a.appointment_time.localeCompare(b.appointment_time));
 
   const handleSaveAppointment = (appointmentData: any) => {
-    addAppointment(appointmentData);
+    const dataToSave = {
+      ...appointmentData,
+      appointment_date: format(appointmentData.date, 'yyyy-MM-dd'),
+      appointment_time: appointmentData.time,
+    };
+    delete dataToSave.date;
+    delete dataToSave.time;
+
+    addAppointment(dataToSave);
     toast({
       title: "Agendamento confirmado!",
       description: `${appointmentData.serviceName} agendado para ${appointmentData.clientName}.`,
@@ -38,10 +46,10 @@ export default function Appointments() {
   };
 
   const handleStatusChange = (appointment: Appointment, status: Appointment['status']) => {
-    updateAppointment({ ...appointment, status });
+    updateAppointment(appointment.id, { status });
     toast({
       title: "Status atualizado!",
-      description: `O agendamento de ${appointment.clientName} foi atualizado para "${status}".`,
+      description: `O agendamento de ${appointment.client_name} foi atualizado para "${status}".`,
     });
   };
 
@@ -105,11 +113,11 @@ export default function Appointments() {
                   <div className="flex items-center gap-6">
                     <div className="flex items-center gap-2">
                       <Clock className="h-5 w-5 text-brand-start icon-glow" />
-                      <span className="font-bold text-lg text-white">{apt.time}</span>
+                      <span className="font-bold text-lg text-white">{apt.appointment_time}</span>
                     </div>
                     <div className="flex items-center gap-2">
                       <User className="h-5 w-5 text-brand-end" />
-                      <span className="font-semibold text-white">{apt.clientName}</span>
+                      <span className="font-semibold text-white">{apt.client_name}</span>
                     </div>
                     <span className="text-gray-200 font-medium">{apt.serviceName}</span>
                   </div>

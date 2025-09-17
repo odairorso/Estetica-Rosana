@@ -1,4 +1,5 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
+import { supabase } from '@/lib/supabase';
 import { Sparkles, Heart, Droplet, Zap } from "lucide-react";
 
 export interface Service {
@@ -10,9 +11,8 @@ export interface Service {
   description: string;
   icon: string;
   popular: boolean;
+  active: boolean;
 }
-
-const SERVICES_STORAGE_KEY = 'clinic-services';
 
 const iconMap = {
   Sparkles,
@@ -25,86 +25,52 @@ export function useServices() {
   const [services, setServices] = useState<Service[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
-  // Load services from localStorage on mount
-  useEffect(() => {
-    const loadServices = () => {
-      try {
-        const stored = localStorage.getItem(SERVICES_STORAGE_KEY);
-        if (stored) {
-          setServices(JSON.parse(stored));
-        } else {
-          // Initialize with sample data if empty
-          const sampleServices: Service[] = [
-            {
-              id: 1,
-              name: "Limpeza de Pele",
-              category: "Facial",
-              price: 120,
-              duration: 60,
-              description: "Tratamento completo para limpeza e revitalização da pele do rosto",
-              icon: "Sparkles",
-              popular: true
-            },
-            {
-              id: 2,
-              name: "Drenagem Linfática",
-              category: "Corporal",
-              price: 80,
-              duration: 50,
-              description: "Massagem que estimula o sistema linfático para redução de inchaços",
-              icon: "Droplet",
-              popular: false
-            },
-            {
-              id: 3,
-              name: "Botox",
-              category: "Facial",
-              price: 350,
-              duration: 30,
-              description: "Aplicação de toxina botulínica para redução de rugas e expressões",
-              icon: "Zap",
-              popular: true
-            }
-          ];
-          setServices(sampleServices);
-          localStorage.setItem(SERVICES_STORAGE_KEY, JSON.stringify(sampleServices));
-        }
-      } catch (error) {
-        console.error('Error loading services:', error);
-      } finally {
-        setIsLoading(false);
-      }
-    };
-
-    loadServices();
+  const loadServices = useCallback(async () => {
+    if (!supabase) {
+      setIsLoading(false);
+      return;
+    }
+    setIsLoading(true);
+    try {
+      const { data, error } = await supabase.from('services').select('*').order('name');
+      if (error) throw error;
+      setServices(data || []);
+    } catch (error) {
+      console.error('Erro ao carregar serviços:', error);
+    } finally {
+      setIsLoading(false);
+    }
   }, []);
 
-  // Save services to localStorage whenever they change
   useEffect(() => {
-    if (services.length > 0) {
-      localStorage.setItem(SERVICES_STORAGE_KEY, JSON.stringify(services));
+    loadServices();
+  }, [loadServices]);
+
+  const addService = async (serviceData: Omit<Service, 'id'>) => {
+    if (!supabase) return null;
+    const { data, error } = await supabase.from('services').insert([serviceData]).select().single();
+    if (error) {
+      console.error('Erro ao adicionar serviço:', error);
+      return null;
     }
-  }, [services]);
-
-  const addService = (serviceData: Omit<Service, 'id'>) => {
-    const newService: Service = {
-      ...serviceData,
-      id: Math.max(0, ...services.map(s => s.id)) + 1
-    };
-    setServices([...services, newService]);
-    return newService;
+    await loadServices();
+    return data;
   };
 
-  const updateService = (serviceData: Service) => {
-    setServices(services.map(service => 
-      service.id === serviceData.id ? serviceData : service
-    ));
+  const updateService = async (serviceData: Service) => {
+    if (!supabase) return;
+    const { error } = await supabase.from('services').update(serviceData).eq('id', serviceData.id);
+    if (error) console.error('Erro ao atualizar serviço:', error);
+    else await loadServices();
   };
 
-  const deleteService = (id: number) => {
-    setServices(services.filter(service => service.id !== id));
+  const deleteService = async (id: number) => {
+    if (!supabase) return;
+    const { error } = await supabase.from('services').delete().eq('id', id);
+    if (error) console.error('Erro ao excluir serviço:', error);
+    else await loadServices();
   };
-
+  
   const getServiceIcon = (iconName: string) => {
     return iconMap[iconName as keyof typeof iconMap] || Sparkles;
   };

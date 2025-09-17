@@ -16,11 +16,11 @@ import { useClients } from "@/hooks/useClients";
 
 interface Appointment {
   id?: number;
-  serviceId: number;
+  service_id: number;
   serviceName: string;
-  clientId: number;
-  clientName: string;
-  clientPhone: string;
+  client_id: number;
+  client_name: string;
+  client_phone: string;
   date: Date;
   time: string;
   duration: number;
@@ -49,11 +49,11 @@ export function AppointmentModal({ open, onOpenChange, service, onSave }: Appoin
   const [selectedServiceId, setSelectedServiceId] = useState<string>("");
 
   const [formData, setFormData] = useState<Omit<Appointment, 'id'>>({
-    serviceId: 0,
+    service_id: 0,
     serviceName: "",
-    clientId: 0,
-    clientName: "",
-    clientPhone: "",
+    client_id: 0,
+    client_name: "",
+    client_phone: "",
     date: new Date(),
     time: "09:00",
     duration: 60,
@@ -71,11 +71,11 @@ export function AppointmentModal({ open, onOpenChange, service, onSave }: Appoin
       setSelectedClientId("");
 
       setFormData({
-        serviceId: initialService?.id || 0,
+        service_id: initialService?.id || 0,
         serviceName: initialService?.name || "",
-        clientId: 0,
-        clientName: "",
-        clientPhone: "",
+        client_id: 0,
+        client_name: "",
+        client_phone: "",
         date: new Date(),
         time: "09:00",
         duration: initialService?.duration || 60,
@@ -88,7 +88,7 @@ export function AppointmentModal({ open, onOpenChange, service, onSave }: Appoin
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!formData.clientName || !formData.serviceId || !formData.date || !formData.time) {
+    if (!formData.client_name || !formData.service_id || !formData.date || !formData.time) {
       return;
     }
     onSave(formData);
@@ -103,9 +103,9 @@ export function AppointmentModal({ open, onOpenChange, service, onSave }: Appoin
     setSelectedClientId(clientId);
     const selectedClient = clients.find(c => c.id.toString() === clientId);
     if (selectedClient) {
-      handleChange("clientId", selectedClient.id);
-      handleChange("clientName", selectedClient.name);
-      handleChange("clientPhone", selectedClient.phone);
+      handleChange("client_id", selectedClient.id);
+      handleChange("client_name", selectedClient.name);
+      handleChange("client_phone", selectedClient.phone);
     }
   };
 
@@ -113,14 +113,14 @@ export function AppointmentModal({ open, onOpenChange, service, onSave }: Appoin
     setSelectedServiceId(serviceId);
     const selectedService = services.find(s => s.id.toString() === serviceId);
     if (selectedService) {
-      handleChange("serviceId", selectedService.id);
+      handleChange("service_id", selectedService.id);
       handleChange("serviceName", selectedService.name);
       handleChange("duration", selectedService.duration);
       handleChange("price", selectedService.price);
     }
   };
 
-  const currentService = services.find(s => s.id === formData.serviceId);
+  const currentService = services.find(s => s.id === formData.service_id);
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>

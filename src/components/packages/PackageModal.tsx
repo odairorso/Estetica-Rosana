@@ -23,11 +23,10 @@ export function PackageModal({ open, onOpenChange, package: pkg, onSave, mode }:
   const [formData, setFormData] = useState({
     name: '',
     description: '',
-    clientId: 0,
-    clientName: '',
-    totalSessions: 1,
+    client_id: 0,
+    total_sessions: 1,
     price: 0,
-    validUntil: ''
+    valid_until: ''
   });
 
   useEffect(() => {
@@ -35,11 +34,10 @@ export function PackageModal({ open, onOpenChange, package: pkg, onSave, mode }:
       setFormData({
         name: pkg.name,
         description: pkg.description,
-        clientId: pkg.clientId,
-        clientName: pkg.clientName,
-        totalSessions: pkg.totalSessions,
+        client_id: pkg.client_id,
+        total_sessions: pkg.total_sessions,
         price: pkg.price,
-        validUntil: pkg.validUntil
+        valid_until: pkg.valid_until
       });
     } else if (mode === 'create') {
       const futureDate = new Date();
@@ -47,11 +45,10 @@ export function PackageModal({ open, onOpenChange, package: pkg, onSave, mode }:
       setFormData({
         name: '',
         description: '',
-        clientId: 0,
-        clientName: '',
-        totalSessions: 1,
+        client_id: 0,
+        total_sessions: 1,
         price: 0,
-        validUntil: futureDate.toISOString().split('T')[0]
+        valid_until: futureDate.toISOString().split('T')[0]
       });
     }
   }, [pkg, mode, open]);
@@ -59,7 +56,7 @@ export function PackageModal({ open, onOpenChange, package: pkg, onSave, mode }:
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (!formData.name.trim() || !formData.clientId || !formData.totalSessions || !formData.price) {
+    if (!formData.name.trim() || !formData.client_id || !formData.total_sessions || !formData.price) {
       toast({
         title: "Erro",
         description: "Por favor, preencha todos os campos obrigatórios.",
@@ -68,7 +65,7 @@ export function PackageModal({ open, onOpenChange, package: pkg, onSave, mode }:
       return;
     }
 
-    const selectedClient = clients.find(c => c.id === formData.clientId);
+    const selectedClient = clients.find(c => c.id === formData.client_id);
     if (!selectedClient) {
       toast({
         title: "Erro",
@@ -78,12 +75,7 @@ export function PackageModal({ open, onOpenChange, package: pkg, onSave, mode }:
       return;
     }
 
-    const packageData = {
-      ...formData,
-      clientName: selectedClient.name,
-    };
-
-    onSave(packageData);
+    onSave(formData);
     onOpenChange(false);
     
     toast({
@@ -100,11 +92,9 @@ export function PackageModal({ open, onOpenChange, package: pkg, onSave, mode }:
 
   const handleClientChange = (clientId: string) => {
     const id = parseInt(clientId);
-    const client = clients.find(c => c.id === id);
     setFormData(prev => ({ 
       ...prev, 
-      clientId: id,
-      clientName: client?.name || ''
+      client_id: id,
     }));
   };
 
@@ -142,7 +132,7 @@ export function PackageModal({ open, onOpenChange, package: pkg, onSave, mode }:
           
           <div className="space-y-2">
             <Label htmlFor="client">Cliente *</Label>
-            <Select value={formData.clientId.toString()} onValueChange={handleClientChange}>
+            <Select value={formData.client_id.toString()} onValueChange={handleClientChange}>
               <SelectTrigger>
                 <SelectValue placeholder="Selecione um cliente" />
               </SelectTrigger>
@@ -158,13 +148,13 @@ export function PackageModal({ open, onOpenChange, package: pkg, onSave, mode }:
 
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
-              <Label htmlFor="totalSessions">Total de sessões *</Label>
+              <Label htmlFor="total_sessions">Total de sessões *</Label>
               <Input
-                id="totalSessions"
+                id="total_sessions"
                 type="number"
                 min="1"
-                value={formData.totalSessions}
-                onChange={(e) => handleInputChange('totalSessions', parseInt(e.target.value) || 1)}
+                value={formData.total_sessions}
+                onChange={(e) => handleInputChange('total_sessions', parseInt(e.target.value) || 1)}
                 required
               />
             </div>
@@ -185,12 +175,12 @@ export function PackageModal({ open, onOpenChange, package: pkg, onSave, mode }:
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="validUntil">Válido até *</Label>
+            <Label htmlFor="valid_until">Válido até *</Label>
             <Input
-              id="validUntil"
+              id="valid_until"
               type="date"
-              value={formData.validUntil}
-              onChange={(e) => handleInputChange('validUntil', e.target.value)}
+              value={formData.valid_until}
+              onChange={(e) => handleInputChange('valid_until', e.target.value)}
               required
             />
           </div>

@@ -33,8 +33,9 @@ export default function Packages() {
   const [selectedPackageHistory, setSelectedPackageHistory] = useState<PackageType | null>(null);
 
   const filteredPackages = packages.filter(pkg => {
+    const clientName = pkg.clientName || '';
     const matchesSearch = pkg.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         pkg.clientName.toLowerCase().includes(searchTerm.toLowerCase());
+                         clientName.toLowerCase().includes(searchTerm.toLowerCase());
     
     if (filter === "all") return matchesSearch;
     if (filter === "active") return matchesSearch && pkg.status === "active";
@@ -84,7 +85,7 @@ export default function Packages() {
 
   const handleUseSession = (id: number) => {
     const pkg = packages.find(p => p.id === id);
-    if (pkg && pkg.remainingSessions > 0) {
+    if (pkg && pkg.remaining_sessions > 0) {
       useSession(id);
       toast({
         title: "Sessão utilizada",

@@ -45,7 +45,7 @@ export function PackageCard({ package: pkg, onEdit, onDelete, onUseSession, onVi
     return new Date(dateString).toLocaleDateString('pt-BR');
   };
 
-  const canUseSession = pkg.status === "active" && pkg.remainingSessions > 0;
+  const canUseSession = pkg.status === "active" && pkg.remaining_sessions > 0;
 
   return (
     <GlassCard className="relative transition-all hover:scale-[1.02]">
@@ -100,7 +100,7 @@ export function PackageCard({ package: pkg, onEdit, onDelete, onUseSession, onVi
               </p>
               <p className="text-xs text-blue-600 mt-1 flex items-center gap-1">
                 <History className="h-3 w-3" />
-                {(pkg.sessionHistory || []).length} sessões registradas - clique para ver histórico
+                {(pkg.session_history || []).length} sessões registradas - clique para ver histórico
               </p>
             </div>
           </div>
@@ -125,16 +125,16 @@ export function PackageCard({ package: pkg, onEdit, onDelete, onUseSession, onVi
           <div className="flex items-center justify-between text-sm">
             <span className="text-muted-foreground">Sessões utilizadas</span>
             <span className="font-medium">
-              {pkg.usedSessions}/{pkg.totalSessions}
+              {pkg.used_sessions}/{pkg.total_sessions}
             </span>
           </div>
           <Progress 
-            value={(pkg.usedSessions / pkg.totalSessions) * 100} 
+            value={(pkg.used_sessions / pkg.total_sessions) * 100} 
             className="h-2"
           />
           <div className="text-center">
             <span className="text-lg font-bold text-brand-start">
-              {pkg.remainingSessions}
+              {pkg.remaining_sessions}
             </span>
             <span className="text-sm text-muted-foreground ml-1">
               sessões restantes
@@ -152,7 +152,7 @@ export function PackageCard({ package: pkg, onEdit, onDelete, onUseSession, onVi
           </div>
           <div className="flex items-center justify-between">
             <span className="text-muted-foreground">Última sessão:</span>
-            <span>{formatDate(pkg.lastUsed)}</span>
+            <span>{formatDate(pkg.last_used)}</span>
           </div>
           <div className="flex items-center justify-between">
             <span className="text-muted-foreground">Válido até:</span>
@@ -160,7 +160,7 @@ export function PackageCard({ package: pkg, onEdit, onDelete, onUseSession, onVi
               pkg.status === "expiring" ? "text-yellow-600" : ""
             }`}>
               {pkg.status === "expiring" && <AlertCircle className="h-3 w-3" />}
-              {formatDate(pkg.validUntil)}
+              {formatDate(pkg.valid_until)}
             </span>
           </div>
         </div>
@@ -175,12 +175,12 @@ export function PackageCard({ package: pkg, onEdit, onDelete, onUseSession, onVi
           </div>
         )}
 
-        {pkg.remainingSessions <= 2 && pkg.status === "active" && (
+        {pkg.remaining_sessions <= 2 && pkg.status === "active" && (
           <div className="rounded-lg bg-blue-500/10 border border-blue-500/20 p-3 text-sm">
             <div className="flex items-center gap-2 text-blue-600">
               <Calendar className="h-4 w-4" />
               <span className="font-medium">
-                {pkg.remainingSessions === 0 ? "Pacote finalizado!" : "Poucas sessões restantes"}
+                {pkg.remaining_sessions === 0 ? "Pacote finalizado!" : "Poucas sessões restantes"}
               </span>
             </div>
           </div>

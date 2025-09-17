@@ -21,7 +21,7 @@ export function SessionHistoryModal({ open, onOpenChange, package: pkg }: Sessio
     return new Date(dateString).toLocaleDateString('pt-BR');
   };
 
-  const sortedHistory = [...(pkg.sessionHistory || [])].sort((a, b) => 
+  const sortedHistory = [...(pkg.session_history || [])].sort((a, b) => 
     new Date(b.date).getTime() - new Date(a.date).getTime()
   );
 
@@ -47,7 +47,7 @@ export function SessionHistoryModal({ open, onOpenChange, package: pkg }: Sessio
               </div>
               <div>
                 <span className="text-muted-foreground">Progresso:</span>
-                <p className="font-medium">{pkg.usedSessions}/{pkg.totalSessions} sessões</p>
+                <p className="font-medium">{pkg.used_sessions}/{pkg.total_sessions} sessões</p>
               </div>
               <div>
                 <span className="text-muted-foreground">Valor do pacote:</span>
@@ -55,7 +55,7 @@ export function SessionHistoryModal({ open, onOpenChange, package: pkg }: Sessio
               </div>
               <div>
                 <span className="text-muted-foreground">Válido até:</span>
-                <p className="font-medium">{formatDate(pkg.validUntil)}</p>
+                <p className="font-medium">{formatDate(pkg.valid_until)}</p>
               </div>
             </div>
           </GlassCard>
@@ -125,13 +125,13 @@ export function SessionHistoryModal({ open, onOpenChange, package: pkg }: Sessio
                 <div>
                   <span className="text-muted-foreground">Valor por sessão:</span>
                   <p className="font-medium text-green-600">
-                    R$ {(pkg.price / pkg.totalSessions).toFixed(2).replace('.', ',')}
+                    R$ {(pkg.price / pkg.total_sessions).toFixed(2).replace('.', ',')}
                   </p>
                 </div>
                 <div>
                   <span className="text-muted-foreground">Sessões restantes:</span>
                   <p className="font-medium text-brand-start">
-                    {pkg.remainingSessions}
+                    {pkg.remaining_sessions}
                   </p>
                 </div>
               </div>

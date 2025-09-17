@@ -7,6 +7,7 @@ import { NeonButton } from "@/components/ui/neon-button";
 import { usePackages, Package as PackageType } from "@/hooks/usePackages";
 import { PackageCard } from "@/components/packages/PackageCard";
 import { PackageModal } from "@/components/packages/PackageModal";
+import { SessionSchedulingModal } from "@/components/packages/SessionSchedulingModal";
 import { SessionHistoryModal } from "@/components/packages/SessionHistoryModal";
 import { useToast } from "@/hooks/use-toast";
 import {
@@ -26,6 +27,7 @@ export default function Packages() {
   const [searchTerm, setSearchTerm] = useState("");
   const [filter, setFilter] = useState("all");
   const [modalOpen, setModalOpen] = useState(false);
+  const [schedulingModalOpen, setSchedulingModalOpen] = useState(false);
   const [editingPackage, setEditingPackage] = useState<PackageType | null>(null);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [packageToDelete, setPackageToDelete] = useState<number | null>(null);
@@ -88,6 +90,18 @@ export default function Packages() {
     setHistoryModalOpen(true);
   };
 
+  const handleScheduleSession = () => {
+    setSchedulingModalOpen(true);
+  };
+
+  const handleSaveSession = (sessionData: any) => {
+    console.log("Sessão agendada:", sessionData);
+    toast({
+      title: "Sessão agendada!",
+      description: `Sessão do pacote "${sessionData.serviceName}" agendada com sucesso.`,
+    });
+  };
+
   return (
     <>
       <Helmet>
@@ -111,6 +125,9 @@ export default function Packages() {
             />
             <NeonButton icon={Plus} onClick={handleNewPackage}>
               Novo Pacote
+            </NeonButton>
+            <NeonButton icon={Package} onClick={handleScheduleSession} variant="secondary">
+              Agendar Sessão
             </NeonButton>
           </div>
         </div>
@@ -180,6 +197,13 @@ export default function Packages() {
           package={editingPackage}
           onSave={handleSavePackage}
           mode={editingPackage ? 'edit' : 'create'}
+        />
+
+        {/* Modal de agendamento de sessão */}
+        <SessionSchedulingModal
+          open={schedulingModalOpen}
+          onOpenChange={setSchedulingModalOpen}
+          onSave={handleSaveSession}
         />
 
         {/* Modal de histórico de sessões */}

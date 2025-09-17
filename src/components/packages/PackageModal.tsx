@@ -43,7 +43,7 @@ export function PackageModal({ open, onOpenChange, package: pkg, onSave, mode }:
         client_id: pkg.client_id,
         total_sessions: pkg.total_sessions,
         price: pkg.price,
-        gross_price: pkg.price, // Em modo de edição, o preço salvo é o bruto inicial
+        gross_price: pkg.price,
         discount: 0,
         valid_until: pkg.valid_until
       });
@@ -63,7 +63,6 @@ export function PackageModal({ open, onOpenChange, package: pkg, onSave, mode }:
     }
   }, [pkg, mode, open]);
 
-  // Calcula o preço final automaticamente
   useEffect(() => {
     const gross = Number(formData.gross_price) || 0;
     const disc = Number(formData.discount) || 0;

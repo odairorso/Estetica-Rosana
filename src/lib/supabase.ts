@@ -7,7 +7,13 @@ let supabase: ReturnType<typeof createClient> | null = null;
 
 // Verificação mais robusta para garantir que a URL seja válida antes de criar o cliente
 if (supabaseUrl && supabaseUrl.startsWith('http') && supabaseAnonKey) {
-  supabase = createClient(supabaseUrl, supabaseAnonKey)
+  supabase = createClient(supabaseUrl, supabaseAnonKey, {
+    auth: {
+      persistSession: true,
+      autoRefreshToken: true,
+      detectSessionInUrl: true
+    }
+  })
 } else {
   console.warn("Credenciais do Supabase não encontradas ou inválidas. Executando em modo offline.");
   supabase = null;

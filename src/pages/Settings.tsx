@@ -9,8 +9,16 @@ import { useTheme } from "@/components/ThemeProvider";
 import { toast } from "@/hooks/use-toast";
 
 export default function Settings() {
-  const { settings, updateClinicInfo } = useSettings();
+  const { settings, updateClinicInfo, isLoading } = useSettings();
   const { theme, setTheme } = useTheme();
+
+  // Valores padrão caso settings seja null
+  const clinicInfo = settings?.clinicInfo || {
+    name: "Clínica Rosana Turci",
+    phone: "(11) 99999-9999",
+    email: "contato@rosanaturci.com.br",
+    address: "Rua Exemplo, 123 - Centro, São Paulo - SP"
+  };
 
   const handleInfoChange = (field: string, value: string) => {
     updateClinicInfo({ [field]: value });
@@ -22,6 +30,17 @@ export default function Settings() {
       description: "As informações da clínica foram atualizadas.",
     });
   };
+
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center min-h-[calc(100vh-3.5rem)]">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-brand-start mx-auto mb-4"></div>
+          <p>Carregando configurações...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <>
@@ -44,16 +63,18 @@ export default function Settings() {
                 <Label htmlFor="clinicName">Nome da Clínica</Label>
                 <Input
                   id="clinicName"
-                  value={settings.clinicInfo.name}
+                  value={clinicInfo.name}
                   onChange={(e) => handleInfoChange('name', e.target.value)}
+                  placeholder="Digite o nome da clínica"
                 />
               </div>
               <div className="space-y-2">
                 <Label htmlFor="clinicPhone">Telefone</Label>
                 <Input
                   id="clinicPhone"
-                  value={settings.clinicInfo.phone}
+                  value={clinicInfo.phone}
                   onChange={(e) => handleInfoChange('phone', e.target.value)}
+                  placeholder="(11) 99999-9999"
                 />
               </div>
             </div>
@@ -62,16 +83,18 @@ export default function Settings() {
               <Input
                 id="clinicEmail"
                 type="email"
-                value={settings.clinicInfo.email}
+                value={clinicInfo.email}
                 onChange={(e) => handleInfoChange('email', e.target.value)}
+                placeholder="contato@clinica.com.br"
               />
             </div>
             <div className="space-y-2">
               <Label htmlFor="clinicAddress">Endereço</Label>
               <Input
                 id="clinicAddress"
-                value={settings.clinicInfo.address}
+                value={clinicInfo.address}
                 onChange={(e) => handleInfoChange('address', e.target.value)}
+                placeholder="Rua, número, bairro, cidade - estado"
               />
             </div>
             <div className="flex justify-end">

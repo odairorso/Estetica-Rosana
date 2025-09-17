@@ -1,0 +1,213 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Verificação de Ambiente - Estética Rosana</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            background: white;
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        .status {
+            padding: 10px;
+            margin: 10px 0;
+            border-radius: 5px;
+            font-weight: bold;
+        }
+        .success {
+            background-color: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+        .error {
+            background-color: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+        .warning {
+            background-color: #fff3cd;
+            color: #856404;
+            border: 1px solid #ffeaa7;
+        }
+        .info {
+            background-color: #d1ecf1;
+            color: #0c5460;
+            border: 1px solid #bee5eb;
+        }
+        pre {
+            background-color: #f8f9fa;
+            padding: 15px;
+            border-radius: 5px;
+            overflow-x: auto;
+        }
+        button {
+            background-color: #007bff;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 5px;
+            cursor: pointer;
+            margin: 5px;
+        }
+        button:hover {
+            background-color: #0056b3;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🔍 Verificação de Ambiente - Estética Rosana</h1>
+        
+        <div id="results">
+            <div class="info">
+                <strong>Carregando verificações...</strong>
+            </div>
+        </div>
+
+        <button onclick="runTests()">🔄 Executar Testes Novamente</button>
+        <button onclick="testSupabase()">🗄️ Testar Supabase</button>
+        <button onclick="showEnvironment()">🌍 Mostrar Ambiente</button>
+    </div>
+
+    <script type="module">
+        let supabase = null;
+
+        async function loadSupabase() {
+            try {
+                const { createClient } = await import('https://cdn.skypack.dev/@supabase/supabase-js');
+                
+                // Verificar variáveis de ambiente
+                const supabaseUrl = import.meta.env?.VITE_SUPABASE_URL || window.VITE_SUPABASE_URL;
+                const supabaseKey = import.meta.env?.VITE_SUPABASE_ANON_KEY || window.VITE_SUPABASE_ANON_KEY;
+                
+                if (supabaseUrl && supabaseKey) {
+                    supabase = createClient(supabaseUrl, supabaseKey);
+                    return { success: true, url: supabaseUrl, key: supabaseKey };
+                } else {
+                    return { success: false, url: supabaseUrl, key: supabaseKey };
+                }
+            } catch (error) {
+                return { success: false, error: error.message };
+            }
+        }
+
+        async function runTests() {
+            const results = document.getElementById('results');
+            results.innerHTML = '<div class="info"><strong>Executando testes...</strong></div>';
+
+            let html = '<h2>📋 Resultados dos Testes</h2>';
+
+            // Teste 1: Verificar ambiente
+            html += '<h3>🌍 Ambiente</h3>';
+            html += `<div class="info">
+                <strong>URL atual:</strong> ${window.location.href}<br>
+                <strong>User Agent:</strong> ${navigator.userAgent}<br>
+                <strong>Protocolo:</strong> ${window.location.protocol}<br>
+                <strong>Host:</strong> ${window.location.host}
+            </div>`;
+
+            // Teste 2: Verificar variáveis de ambiente
+            html += '<h3>🔧 Variáveis de Ambiente</h3>';
+            const envCheck = await loadSupabase();
+            
+            if (envCheck.success) {
+                html += '<div class="success">✅ Variáveis de ambiente configuradas corretamente</div>';
+                html += `<div class="info">
+                    <strong>Supabase URL:</strong> ${envCheck.url ? envCheck.url.substring(0, 30) + '...' : 'Não definida'}<br>
+                    <strong>Supabase Key:</strong> ${envCheck.key ? envCheck.key.substring(0, 20) + '...' : 'Não definida'}
+                </div>`;
+            } else {
+                html += '<div class="error">❌ Variáveis de ambiente não configuradas</div>';
+                html += `<div class="warning">
+                    <strong>VITE_SUPABASE_URL:</strong> ${envCheck.url || 'Não definida'}<br>
+                    <strong>VITE_SUPABASE_ANON_KEY:</strong> ${envCheck.key || 'Não definida'}
+                </div>`;
+            }
+
+            // Teste 3: Testar conectividade
+            if (supabase) {
+                html += '<h3>🔗 Conectividade com Supabase</h3>';
+                try {
+                    const { data, error } = await supabase.from('services').select('count', { count: 'exact', head: true });
+                    
+                    if (error) {
+                        html += `<div class="error">❌ Erro na conexão: ${error.message}</div>`;
+                    } else {
+                        html += '<div class="success">✅ Conexão com Supabase estabelecida</div>';
+                    }
+                } catch (error) {
+                    html += `<div class="error">❌ Erro de rede: ${error.message}</div>`;
+                }
+            }
+
+            // Teste 4: Verificar roteamento
+            html += '<h3>🛣️ Roteamento</h3>';
+            const currentPath = window.location.pathname;
+            if (currentPath === '/' || currentPath === '/check-env.html') {
+                html += '<div class="success">✅ Página carregada corretamente</div>';
+            } else {
+                html += `<div class="warning">⚠️ Caminho atual: ${currentPath}</div>`;
+            }
+
+            results.innerHTML = html;
+        }
+
+        async function testSupabase() {
+            if (!supabase) {
+                alert('Supabase não está configurado');
+                return;
+            }
+
+            try {
+                const { data, error } = await supabase.from('services').select('*').limit(1);
+                if (error) {
+                    alert(`Erro: ${error.message}`);
+                } else {
+                    alert('✅ Supabase funcionando! Dados encontrados.');
+                }
+            } catch (error) {
+                alert(`Erro de rede: ${error.message}`);
+            }
+        }
+
+        function showEnvironment() {
+            const env = {
+                location: window.location,
+                navigator: {
+                    userAgent: navigator.userAgent,
+                    language: navigator.language,
+                    platform: navigator.platform
+                },
+                screen: {
+                    width: screen.width,
+                    height: screen.height
+                },
+                env_vars: {
+                    VITE_SUPABASE_URL: import.meta.env?.VITE_SUPABASE_URL || 'Não definida',
+                    VITE_SUPABASE_ANON_KEY: import.meta.env?.VITE_SUPABASE_ANON_KEY ? 'Definida' : 'Não definida'
+                }
+            };
+            
+            alert(JSON.stringify(env, null, 2));
+        }
+
+        // Executar testes automaticamente
+        window.runTests = runTests;
+        window.testSupabase = testSupabase;
+        window.showEnvironment = showEnvironment;
+        
+        // Executar ao carregar
+        runTests();
+    </script>
+</body>
+</html>

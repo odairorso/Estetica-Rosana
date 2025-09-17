@@ -28,12 +28,17 @@ export function useClients() {
 
   const loadClients = useCallback(async () => {
     setIsLoading(true);
+    if (!supabase) {
+      console.warn("Cliente Supabase não disponível. Não é possível carregar clientes.");
+      setIsLoading(false);
+      return;
+    }
     try {
       const { data, error } = await supabase.from('clients').select('*').order('name', { ascending: true });
       if (error) throw error;
       setClients(data || []);
     } catch (error) {
-      console.error('Error loading clients:', error);
+      console.error('Erro ao carregar clientes:', error);
     } finally {
       setIsLoading(false);
     }
@@ -44,6 +49,10 @@ export function useClients() {
   }, [loadClients]);
 
   const addClient = async (clientData: Omit<Client, 'id' | 'created_at'>) => {
+    if (!supabase) {
+      console.error("Cliente Supabase não disponível. Não é possível adicionar cliente.");
+      return null;
+    }
     try {
       const { data, error } = await supabase.from('clients').insert([clientData]).select();
       if (error) throw error;
@@ -52,12 +61,16 @@ export function useClients() {
       }
       return data ? data[0] : null;
     } catch (error) {
-      console.error('Error adding client:', error);
+      console.error('Erro ao adicionar cliente:', error);
       return null;
     }
   };
 
   const updateClient = async (id: number, clientData: Partial<Client>) => {
+    if (!supabase) {
+      console.error("Cliente Supabase não disponível. Não é possível atualizar cliente.");
+      return;
+    }
     try {
       const { data, error } = await supabase.from('clients').update(clientData).eq('id', id).select();
       if (error) throw error;
@@ -65,17 +78,21 @@ export function useClients() {
         setClients(prev => prev.map(client => (client.id === id ? data[0] : client)));
       }
     } catch (error) {
-      console.error('Error updating client:', error);
+      console.error('Erro ao atualizar cliente:', error);
     }
   };
 
   const deleteClient = async (id: number) => {
+    if (!supabase) {
+      console.error("Cliente Supabase não disponível. Não é possível excluir cliente.");
+      return;
+    }
     try {
       const { error } = await supabase.from('clients').delete().eq('id', id);
       if (error) throw error;
       setClients(prev => prev.filter(client => client.id !== id));
     } catch (error) {
-      console.error('Error deleting client:', error);
+      console.error('Erro ao excluir cliente:', error);
     }
   };
 

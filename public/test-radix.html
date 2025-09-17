@@ -1,0 +1,149 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Teste Radix UI</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            padding: 20px;
+            background: #f0f0f0;
+        }
+        
+        .test-container {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            margin: 20px 0;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        
+        button {
+            background: #007bff;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 4px;
+            cursor: pointer;
+            margin: 10px;
+        }
+        
+        button:hover {
+            background: #0056b3;
+        }
+        
+        .dropdown-content {
+            background: white;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            padding: 8px 0;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+            min-width: 160px;
+        }
+        
+        .dropdown-item {
+            padding: 8px 16px;
+            cursor: pointer;
+            border: none;
+            background: none;
+            width: 100%;
+            text-align: left;
+        }
+        
+        .dropdown-item:hover {
+            background: #f8f9fa;
+        }
+        
+        /* Forçar visibilidade para debug */
+        [data-radix-dropdown-menu-content] {
+            background: red !important;
+            border: 3px solid yellow !important;
+            z-index: 9999 !important;
+            opacity: 1 !important;
+            visibility: visible !important;
+            display: block !important;
+        }
+        
+        [data-radix-dropdown-menu-item] {
+            background: blue !important;
+            color: white !important;
+            border: 1px solid green !important;
+        }
+    </style>
+</head>
+<body>
+    <h1>Teste de Dropdown - Radix UI</h1>
+    
+    <div class="test-container">
+        <h2>Teste 1: Dropdown HTML Simples</h2>
+        <div style="position: relative; display: inline-block;">
+            <button onclick="toggleDropdown('simple')">Dropdown Simples</button>
+            <div id="simple" class="dropdown-content" style="display: none; position: absolute; top: 100%; left: 0; z-index: 1000;">
+                <div class="dropdown-item" onclick="selectItem('Item 1')">Item 1</div>
+                <div class="dropdown-item" onclick="selectItem('Item 2')">Item 2</div>
+                <div class="dropdown-item" onclick="selectItem('Item 3')">Item 3</div>
+            </div>
+        </div>
+        <p id="selected">Nenhum item selecionado</p>
+    </div>
+    
+    <div class="test-container">
+        <h2>Teste 2: Elementos com data-radix</h2>
+        <div style="position: relative; display: inline-block;">
+            <button data-radix-dropdown-menu-trigger onclick="toggleDropdown('radix')">Dropdown Radix-like</button>
+            <div id="radix" data-radix-dropdown-menu-content class="dropdown-content" style="display: none; position: absolute; top: 100%; left: 0; z-index: 1000;">
+                <div data-radix-dropdown-menu-item class="dropdown-item" onclick="selectItem('Radix Item 1')">Radix Item 1</div>
+                <div data-radix-dropdown-menu-item class="dropdown-item" onclick="selectItem('Radix Item 2')">Radix Item 2</div>
+                <div data-radix-dropdown-menu-item class="dropdown-item" onclick="selectItem('Radix Item 3')">Radix Item 3</div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="test-container">
+        <h2>Teste 3: Portal Simulation</h2>
+        <button onclick="createPortal()">Criar Portal</button>
+        <div id="portal-container"></div>
+    </div>
+    
+    <script>
+        function toggleDropdown(id) {
+            const dropdown = document.getElementById(id);
+            const isVisible = dropdown.style.display !== 'none';
+            
+            // Fechar todos os dropdowns
+            document.querySelectorAll('.dropdown-content').forEach(d => d.style.display = 'none');
+            
+            // Abrir o dropdown clicado se estava fechado
+            if (!isVisible) {
+                dropdown.style.display = 'block';
+                console.log('Dropdown aberto:', id, dropdown);
+            }
+        }
+        
+        function selectItem(item) {
+            document.getElementById('selected').textContent = 'Selecionado: ' + item;
+            document.querySelectorAll('.dropdown-content').forEach(d => d.style.display = 'none');
+        }
+        
+        function createPortal() {
+            const portal = document.createElement('div');
+            portal.setAttribute('data-radix-portal', '');
+            portal.style.cssText = 'position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); background: white; border: 2px solid red; padding: 20px; z-index: 10000;';
+            portal.innerHTML = '<p>Portal criado!</p><button onclick="this.parentElement.remove()">Fechar</button>';
+            document.body.appendChild(portal);
+        }
+        
+        // Debug inicial
+        console.log('Página carregada');
+        console.log('Elementos com data-radix:', document.querySelectorAll('[data-radix-dropdown-menu-content]').length);
+        
+        // Fechar dropdowns ao clicar fora
+        document.addEventListener('click', function(e) {
+            if (!e.target.closest('[data-radix-dropdown-menu-trigger]') && !e.target.closest('button')) {
+                document.querySelectorAll('.dropdown-content').forEach(d => d.style.display = 'none');
+            }
+        });
+    </script>
+</body>
+</html>

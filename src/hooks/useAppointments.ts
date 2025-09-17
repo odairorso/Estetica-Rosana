@@ -18,6 +18,7 @@ export interface Appointment {
 }
 
 // Dados mock para fallback quando Supabase falhar
+const today = new Date().toISOString().split('T')[0]; // Data de hoje no formato YYYY-MM-DD
 const MOCK_APPOINTMENTS: Appointment[] = [
   {
     id: 1,
@@ -25,13 +26,13 @@ const MOCK_APPOINTMENTS: Appointment[] = [
     client_id: 1,
     client_name: "Ana Silva",
     client_phone: "(11) 99999-9999",
-    appointment_date: "2024-01-15",
+    appointment_date: today,
     appointment_time: "14:00",
     duration: 60,
     price: 150,
     notes: "Cliente preferencial",
     status: "confirmado",
-    created_at: "2024-01-10T10:00:00Z",
+    created_at: "2025-09-15T10:00:00Z",
     serviceName: "Limpeza de Pele"
   },
   {
@@ -40,14 +41,44 @@ const MOCK_APPOINTMENTS: Appointment[] = [
     client_id: 2,
     client_name: "Beatriz Costa",
     client_phone: "(11) 98888-8888",
-    appointment_date: "2024-01-16",
+    appointment_date: today,
     appointment_time: "15:30",
     duration: 90,
     price: 200,
     notes: "",
     status: "agendado",
-    created_at: "2024-01-11T11:00:00Z",
+    created_at: "2025-09-15T11:00:00Z",
     serviceName: "Drenagem Linfática"
+  },
+  {
+    id: 3,
+    service_id: 3,
+    client_id: 3,
+    client_name: "Carla Mendes",
+    client_phone: "(11) 97777-7777",
+    appointment_date: today,
+    appointment_time: "16:00",
+    duration: 120,
+    price: 250,
+    notes: "Primeira sessão",
+    status: "agendado",
+    created_at: "2025-09-16T09:00:00Z",
+    serviceName: "Massagem Relaxante"
+  },
+  {
+    id: 4,
+    service_id: 1,
+    client_id: 4,
+    client_name: "Diana Santos",
+    client_phone: "(11) 96666-6666",
+    appointment_date: today,
+    appointment_time: "10:00",
+    duration: 60,
+    price: 150,
+    notes: "",
+    status: "agendado",
+    created_at: "2025-09-16T14:00:00Z",
+    serviceName: "Limpeza de Pele"
   }
 ];
 
@@ -92,6 +123,7 @@ export function useAppointments() {
         // Formatar dados corretamente com serviceName do JOIN
         const formattedData = (data || []).map(a => ({
           ...a,
+          appointment_time: a.appointment_time ? a.appointment_time.substring(0, 5) : '00:00', // Remove segundos
           serviceName: a.services ? a.services.name : 'Serviço Removido',
         }));
         

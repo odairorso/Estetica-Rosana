@@ -59,7 +59,7 @@
     --accent-green: 160 50% 45%;
     
     /* Efeitos glassmorphism */
-    --glass-bg: hsl(210 50% 98% / 0.95);
+    --glass-bg: hsl(210 50% 98% / 1);
     --glass-border: hsl(210 30% 85% / 0.4);
     --glass-shadow: 0 8px 32px hsl(var(--brand-start) / 0.15);
 
@@ -112,7 +112,7 @@
     --brand-glow: 195 90% 65%;
 
     /* Glass (dark mode) */
-    --glass-bg: hsl(220 15% 16% / 0.9);
+    --glass-bg: hsl(220 15% 16% / 0.95);
     --glass-border: hsl(220 15% 30% / 0.5);
     --glass-shadow: 0 8px 32px hsl(var(--brand-end) / 0.35);
 
@@ -147,7 +147,7 @@
     background: var(--glass-bg);
     border: 1px solid var(--glass-border);
     box-shadow: var(--glass-shadow);
-    backdrop-filter: blur(10px);
+
   }
   .neon-glow {
     box-shadow: 0 0 20px hsl(var(--brand-start) / 0.5), 0 0 40px hsl(var(--brand-end) / 0.3);
@@ -162,4 +162,3 @@
     transform: translateY(-2px);
     box-shadow: 0 10px 25px hsl(var(--brand-start) / 0.2);
   }
-}

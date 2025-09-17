@@ -1,5 +1,5 @@
 import { Helmet } from "react-helmet-async";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Plus, Calendar as CalendarIcon, Clock, User, CheckCircle, XCircle, MoreVertical, Hourglass } from "lucide-react";
 import { GlassCard } from "@/components/ui/glass-card";
 import { NeonButton } from "@/components/ui/neon-button";
@@ -23,7 +23,22 @@ export default function Appointments() {
   const { appointments, addAppointment, updateAppointment, isLoading } = useAppointments();
   const [selectedDate, setSelectedDate] = useState(new Date());
   const [modalOpen, setModalOpen] = useState(false);
+  const [testDropdownOpen, setTestDropdownOpen] = useState(false);
+  const [openDropdown, setOpenDropdown] = useState<string | null>(null);
   const { toast } = useToast();
+
+
+
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (openDropdown) {
+        setOpenDropdown(null);
+      }
+    };
+
+    document.addEventListener('click', handleClickOutside);
+    return () => document.removeEventListener('click', handleClickOutside);
+  }, [openDropdown]);
 
   // Função segura para normalizar datas
   const normalizeDate = (dateString: string) => {
@@ -38,14 +53,14 @@ export default function Appointments() {
   // Filtrar agendamentos para a data selecionada
   const filteredAppointments = appointments.filter(apt => {
     try {
-      const aptDate = normalizeDate(apt.date);
+      const aptDate = normalizeDate(apt.appointment_date);
       const selectedDateStr = format(selectedDate, 'yyyy-MM-dd');
       return aptDate === selectedDateStr;
     } catch (error) {
       console.error('Erro ao filtrar agendamentos:', error);
       return false;
     }
-  }).sort((a, b) => a.time.localeCompare(b.time));
+  }).sort((a, b) => a.appointment_time.localeCompare(b.appointment_time));
 
   const handleSaveAppointment = async (appointmentData: any) => {
     try {
@@ -58,8 +73,8 @@ export default function Appointments() {
         price: appointmentData.price,
         notes: appointmentData.notes || '',
         status: "agendado" as const,
-        date: format(appointmentData.date, 'yyyy-MM-dd'),
-        time: appointmentData.time,
+        appointment_date: format(appointmentData.date, 'yyyy-MM-dd'),
+        appointment_time: appointmentData.time,
       };
 
       const result = await addAppointment(dataToSave);
@@ -143,6 +158,8 @@ export default function Appointments() {
       </Helmet>
 
       <div className="space-y-6">
+
+
         <div className="flex flex-col gap-4 md:flex-row md:justify-between md:items-center">
           <div>
             <h1 className="text-3xl font-bold text-gradient-brand">Agendamentos</h1>
@@ -181,7 +198,7 @@ export default function Appointments() {
                   <div className="flex items-center gap-4 flex-1 min-w-0">
                     <div className="flex items-center gap-2 min-w-[80px]">
                       <Clock className="h-5 w-5 text-brand-start" />
-                      <span className="font-bold text-lg text-foreground">{apt.time}</span>
+                      <span className="font-bold text-lg text-foreground">{apt.appointment_time}</span>
                     </div>
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2 mb-1">
@@ -200,33 +217,55 @@ export default function Appointments() {
                       <StatusIcon className="h-3 w-3" />
                       {statusProps.text}
                     </Badge>
-                    <DropdownMenu>
-                      <DropdownMenuTrigger asChild>
-                        <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
-                          <MoreVertical className="h-4 w-4" />
-                        </Button>
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent align="end">
-                        {apt.status !== 'confirmado' && (
-                          <DropdownMenuItem onClick={() => handleStatusChange(apt, 'confirmado')}>
-                            Confirmar
-                          </DropdownMenuItem>
-                        )}
-                        {apt.status !== 'concluido' && (
-                          <DropdownMenuItem onClick={() => handleStatusChange(apt, 'concluido')}>
-                            Concluir
-                          </DropdownMenuItem>
-                        )}
-                        {apt.status !== 'cancelado' && (
-                          <DropdownMenuItem 
-                            onClick={() => handleStatusChange(apt, 'cancelado')} 
-                            className="text-destructive"
-                          >
-                            Cancelar
-                          </DropdownMenuItem>
-                        )}
-                      </DropdownMenuContent>
-                    </DropdownMenu>
+                    <div className="relative">
+                      <Button 
+                        variant="ghost" 
+                        size="sm" 
+                        className="h-8 w-8 p-0"
+                        onClick={() => setOpenDropdown(openDropdown === apt.id ? null : apt.id)}
+                      >
+                        <MoreVertical className="h-4 w-4" />
+                      </Button>
+                      {openDropdown === apt.id && (
+                        <div className="absolute right-0 top-full mt-1 bg-white border border-gray-200 rounded-md shadow-lg z-50 min-w-[120px]">
+                          <div className="py-1">
+                            {apt.status !== 'confirmado' && (
+                              <button 
+                                className="block w-full text-left px-3 py-2 text-sm hover:bg-gray-100"
+                                onClick={() => {
+                                  handleStatusChange(apt, 'confirmado');
+                                  setOpenDropdown(null);
+                                }}
+                              >
+                                Confirmar
+                              </button>
+                            )}
+                            {apt.status !== 'concluido' && (
+                              <button 
+                                className="block w-full text-left px-3 py-2 text-sm hover:bg-gray-100"
+                                onClick={() => {
+                                  handleStatusChange(apt, 'concluido');
+                                  setOpenDropdown(null);
+                                }}
+                              >
+                                Concluir
+                              </button>
+                            )}
+                            {apt.status !== 'cancelado' && (
+                              <button 
+                                className="block w-full text-left px-3 py-2 text-sm hover:bg-gray-100 text-red-600"
+                                onClick={() => {
+                                  handleStatusChange(apt, 'cancelado');
+                                  setOpenDropdown(null);
+                                }}
+                              >
+                                Cancelar
+                              </button>
+                            )}
+                          </div>
+                        </div>
+                      )}
+                    </div>
                   </div>
                 </div>
               </GlassCard>

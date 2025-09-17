@@ -7,80 +7,15 @@ export interface Appointment {
   client_id: number;
   client_name: string;
   client_phone: string;
-  appointment_date: string; // YYYY-MM-DD
+  appointment_date: string;
   appointment_time: string;
   duration: number;
   price: number;
   notes: string;
   status: "agendado" | "confirmado" | "concluido" | "cancelado";
   created_at: string;
-  serviceName?: string; // Opcional - vem do JOIN
+  serviceName?: string;
 }
-
-// Dados mock para fallback quando Supabase falhar
-const today = new Date().toISOString().split('T')[0]; // Data de hoje no formato YYYY-MM-DD
-const MOCK_APPOINTMENTS: Appointment[] = [
-  {
-    id: 1,
-    service_id: 1,
-    client_id: 1,
-    client_name: "Ana Silva",
-    client_phone: "(11) 99999-9999",
-    appointment_date: today,
-    appointment_time: "14:00",
-    duration: 60,
-    price: 150,
-    notes: "Cliente preferencial",
-    status: "confirmado",
-    created_at: "2025-09-15T10:00:00Z",
-    serviceName: "Limpeza de Pele"
-  },
-  {
-    id: 2,
-    service_id: 2,
-    client_id: 2,
-    client_name: "Beatriz Costa",
-    client_phone: "(11) 98888-8888",
-    appointment_date: today,
-    appointment_time: "15:30",
-    duration: 90,
-    price: 200,
-    notes: "",
-    status: "agendado",
-    created_at: "2025-09-15T11:00:00Z",
-    serviceName: "Drenagem Linfática"
-  },
-  {
-    id: 3,
-    service_id: 3,
-    client_id: 3,
-    client_name: "Carla Mendes",
-    client_phone: "(11) 97777-7777",
-    appointment_date: today,
-    appointment_time: "16:00",
-    duration: 120,
-    price: 250,
-    notes: "Primeira sessão",
-    status: "agendado",
-    created_at: "2025-09-16T09:00:00Z",
-    serviceName: "Massagem Relaxante"
-  },
-  {
-    id: 4,
-    service_id: 1,
-    client_id: 4,
-    client_name: "Diana Santos",
-    client_phone: "(11) 96666-6666",
-    appointment_date: today,
-    appointment_time: "10:00",
-    duration: 60,
-    price: 150,
-    notes: "",
-    status: "agendado",
-    created_at: "2025-09-16T14:00:00Z",
-    serviceName: "Limpeza de Pele"
-  }
-];
 
 export function useAppointments() {
   const [appointments, setAppointments] = useState<Appointment[]>([]);
@@ -88,51 +23,28 @@ export function useAppointments() {
   const [error, setError] = useState<string | null>(null);
 
   const loadAppointments = useCallback(async () => {
-    console.log('🔄 Tentando carregar agendamentos...');
-    console.log('📡 Supabase disponível:', !!supabase);
-    
-    if (!supabase) {
-      console.warn('⚠️ Supabase não disponível, usando dados mock');
-      setError('Conexão offline - usando dados locais');
-      setAppointments(MOCK_APPOINTMENTS);
-      setIsLoading(false);
-      return;
-    }
-    
     setIsLoading(true);
     setError(null);
-    
     try {
-      // Usar JOIN correto com a tabela services
       const { data, error } = await supabase
         .from('appointments')
-        .select(`
-          *,
-          services (name)
-        `)
-        .order('appointment_date', { ascending: false })
-        .order('appointment_time', { ascending: false });
+        .select('*, services(name)')
+        .order('appointment_date', { ascending: true })
+        .order('appointment_time', { ascending: true });
 
-      if (error) {
-        console.error('❌ Erro ao carregar agendamentos:', error);
-        setError('Erro ao carregar dados do servidor');
-        setAppointments(MOCK_APPOINTMENTS); // Fallback
-      } else {
-        console.log('✅ Agendamentos carregados com sucesso:', data?.length);
-        
-        // Formatar dados corretamente com serviceName do JOIN
-        const formattedData = (data || []).map(a => ({
-          ...a,
-          appointment_time: a.appointment_time ? a.appointment_time.substring(0, 5) : '00:00', // Remove segundos
-          serviceName: a.services ? a.services.name : 'Serviço Removido',
-        }));
-        
-        setAppointments(formattedData as any);
-      }
-    } catch (error) {
-      console.error('❌ Erro crítico ao carregar agendamentos:', error);
-      setError('Erro de conexão - usando dados locais');
-      setAppointments(MOCK_APPOINTMENTS); // Fallback
+      if (error) throw error;
+      
+      // Use 'any' to avoid TS errors from Supabase type inference
+      const formattedData = (data as any[]).map(apt => ({
+        ...apt,
+        appointment_time: apt.appointment_time.substring(0, 5),
+        serviceName: apt.services?.name ?? 'Serviço não encontrado'
+      }));
+
+      setAppointments(formattedData);
+    } catch (err: any) {
+      console.error("Erro ao carregar agendamentos:", err);
+      setError("Falha ao buscar dados. Tente novamente.");
     } finally {
       setIsLoading(false);
     }
@@ -142,79 +54,27 @@ export function useAppointments() {
     loadAppointments();
   }, [loadAppointments]);
 
-  const addAppointment = async (appointmentData: any) => {
-    if (!supabase) {
-      console.warn('⚠️ Supabase não disponível, adicionando localmente');
-      const newAppointment = {
-        ...appointmentData,
-        id: Math.max(...appointments.map(a => a.id)) + 1,
-        created_at: new Date().toISOString(),
-        serviceName: 'Serviço Local'
-      };
-      setAppointments(prev => [newAppointment, ...prev]);
-      return newAppointment;
-    }
-    
+  const addAppointment = async (appointmentData: Omit<Appointment, 'id' | 'created_at' | 'serviceName'>) => {
     try {
-      const { data, error } = await supabase.from('appointments').insert([appointmentData]).select().single();
-      if (error) {
-        console.error('❌ Erro ao adicionar:', error);
-        return null;
-      }
+      const { data, error } = await supabase.from('appointments').insert([appointmentData] as any).select();
+      if (error) throw error;
       await loadAppointments();
       return data;
-    } catch (error) {
-      console.error('❌ Erro crítico ao adicionar:', error);
+    } catch (err: any) {
+      console.error("Erro ao adicionar agendamento:", err);
       return null;
     }
   };
 
-  const updateAppointment = async (id: number, appointmentData: Partial<Appointment>) => {
-    if (!supabase) {
-      console.warn('⚠️ Supabase não disponível, atualizando localmente');
-      setAppointments(prev => prev.map(apt => 
-        apt.id === id ? { ...apt, ...appointmentData } : apt
-      ));
-      return;
-    }
-    
+  const updateAppointment = async (id: number, appointmentData: Partial<Omit<Appointment, 'serviceName'>>) => {
     try {
-      const { error } = await supabase.from('appointments').update(appointmentData).eq('id', id);
-      if (error) {
-        console.error('❌ Erro ao atualizar:', error);
-        return;
-      }
+      const { error } = await supabase.from('appointments').update(appointmentData as any).eq('id', id);
+      if (error) throw error;
       await loadAppointments();
-    } catch (error) {
-      console.error('❌ Erro crítico ao atualizar:', error);
+    } catch (err: any) {
+      console.error("Erro ao atualizar agendamento:", err);
     }
   };
 
-  const deleteAppointment = async (id: number) => {
-    if (!supabase) {
-      console.warn('⚠️ Supabase não disponível, removendo localmente');
-      setAppointments(prev => prev.filter(apt => apt.id !== id));
-      return;
-    }
-    
-    try {
-      const { error } = await supabase.from('appointments').delete().eq('id', id);
-      if (error) {
-        console.error('❌ Erro ao excluir:', error);
-        return;
-      }
-      await loadAppointments();
-    } catch (error) {
-      console.error('❌ Erro crítico ao excluir:', error);
-    }
-  };
-
-  return {
-    appointments,
-    isLoading,
-    error,
-    addAppointment,
-    updateAppointment,
-    deleteAppointment,
-  };
+  return { appointments, isLoading, error, addAppointment, updateAppointment };
 }

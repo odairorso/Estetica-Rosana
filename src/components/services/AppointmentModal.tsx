@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
-import { Calendar, Clock, User, MessageSquare, CalendarIcon } from "lucide-react";
+import { Calendar, Clock, User, MessageSquare, CalendarIcon, Sparkles } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -11,19 +11,18 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Calendar as CalendarComponent } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { cn } from "@/lib/utils";
-import { Service } from "@/hooks/useServices";
+import { useServices } from "@/hooks/useServices";
 import { useClients } from "@/hooks/useClients";
-import { useAppointments } from "@/hooks/useAppointments";
+import { useToast } from "@/hooks/use-toast";
 
 interface Appointment {
   id?: number;
-  serviceId: number;
-  serviceName: string;
-  clientId: number;
-  clientName: string;
-  clientPhone: string;
-  date: Date;
-  time: string;
+  service_id: number;
+  client_id: number;
+  client_name: string;
+  client_phone: string;
+  appointment_date: string;
+  appointment_time: string;
   duration: number;
   price: number;
   notes: string;
@@ -33,7 +32,6 @@ interface Appointment {
 interface AppointmentModalProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  service: Service | null;
   onSave: (appointment: Omit<Appointment, 'id'>) => void;
 }
 
@@ -44,159 +42,180 @@ const timeSlots = Array.from({ length: 21 }, (_, i) => {
   return `${hour.toString().padStart(2, '0')}:${minute.toString().padStart(2, '0')}`;
 });
 
-export function AppointmentModal({ open, onOpenChange, service, onSave }: AppointmentModalProps) {
-  const { clients } = useClients();
-  const { appointments } = useAppointments();
+export function AppointmentModal({ open, onOpenChange, onSave }: AppointmentModalProps) {
+  const { services, isLoading: servicesLoading } = useServices();
+  const { clients, isLoading: clientsLoading } = useClients();
+  const { toast } = useToast();
+  
+  const [selectedDate, setSelectedDate] = useState<Date>(new Date());
+  const [selectedServiceId, setSelectedServiceId] = useState<string>("");
   const [selectedClientId, setSelectedClientId] = useState<string>("");
-  const [formData, setFormData] = useState<Omit<Appointment, 'id'>>({
-    serviceId: 0,
-    serviceName: "",
-    clientId: 0,
-    clientName: "",
-    clientPhone: "",
-    date: new Date(),
-    time: "09:00",
-    duration: 60,
-    price: 0,
-    notes: "",
-    status: "agendado"
-  });
+  const [selectedTime, setSelectedTime] = useState<string>("09:00");
+  const [notes, setNotes] = useState<string>("");
 
+  // Reset form when modal opens
   useEffect(() => {
-    if (service && open) {
-      setFormData({
-        serviceId: service.id,
-        serviceName: service.name,
-        clientId: 0,
-        clientName: "",
-        clientPhone: "",
-        date: new Date(),
-        time: "09:00",
-        duration: service.duration,
-        price: service.price,
-        notes: "",
-        status: "agendado"
-      });
+    if (open) {
+      setSelectedDate(new Date());
+      setSelectedServiceId("");
       setSelectedClientId("");
+      setSelectedTime("09:00");
+      setNotes("");
     }
-  }, [service, open]);
+  }, [open]);
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    
-    if (!formData.clientName || !formData.clientPhone || !formData.date || !formData.time) {
+  const selectedService = services.find(s => s.id === selectedServiceId);
+  const selectedClient = clients.find(c => c.id === selectedClientId);
+
+  const handleSave = () => {
+    // Validações
+    if (!selectedServiceId) {
+      toast({
+        title: "Erro",
+        description: "Por favor, selecione um serviço.",
+        variant: "destructive",
+      });
       return;
     }
 
-    const formattedData = {
-      ...formData,
-      date: format(formData.date, 'yyyy-MM-dd'),
-    };
-
-    onSave(formattedData);
-    onOpenChange(false);
-  };
-
-  const handleChange = (field: keyof Omit<Appointment, 'id'>, value: any) => {
-    setFormData(prev => ({ ...prev, [field]: value }));
-  };
-
-  const handleClientSelect = (clientId: string) => {
-    setSelectedClientId(clientId);
-    const selectedClient = clients.find(c => c.id.toString() === clientId);
-    if (selectedClient) {
-      handleChange("clientId", selectedClient.id);
-      handleChange("clientName", selectedClient.name);
-      handleChange("clientPhone", selectedClient.phone);
+    if (!selectedClientId) {
+      toast({
+        title: "Erro",
+        description: "Por favor, selecione um cliente.",
+        variant: "destructive",
+      });
+      return;
     }
-  };
 
-  if (!service) return null;
+    if (!selectedDate) {
+      toast({
+        title: "Erro",
+        description: "Por favor, selecione uma data.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    const appointment: Omit<Appointment, 'id'> = {
+      service_id: parseInt(selectedServiceId),
+      client_id: parseInt(selectedClientId),
+      client_name: selectedClient?.name || "",
+      client_phone: selectedClient?.phone || "",
+      appointment_date: format(selectedDate, 'yyyy-MM-dd'),
+      appointment_time: selectedTime,
+      duration: selectedService?.duration || 60,
+      price: selectedService?.price || 0,
+      notes: notes,
+      status: "agendado"
+    };
+    
+    onSave(appointment);
+    onOpenChange(false);
+    
+    toast({
+      title: "Sucesso!",
+      description: "Agendamento criado com sucesso.",
+    });
+  };
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-[600px] max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle className="flex items-center gap-2">
-            <Calendar className="h-5 w-5" />
-            Agendar {service.name}
+          <DialogTitle className="flex items-center gap-2 text-xl">
+            <Calendar className="h-6 w-6 text-primary" />
+            Novo Agendamento
           </DialogTitle>
         </DialogHeader>
-
-        <form onSubmit={handleSubmit} className="space-y-6">
-          {/* Informações do Serviço */}
-          <div className="p-4 bg-muted/50 rounded-lg">
-            <h4 className="font-medium mb-2">Detalhes do Serviço</h4>
-            <div className="grid grid-cols-3 gap-4 text-sm">
-              <div>
-                <span className="text-muted-foreground">Serviço:</span>
-                <p className="font-medium">{service.name}</p>
-              </div>
-              <div>
-                <span className="text-muted-foreground">Duração:</span>
-                <p className="font-medium">{service.duration} min</p>
-              </div>
-              <div>
-                <span className="text-muted-foreground">Preço:</span>
-                <p className="font-medium">R$ {service.price.toFixed(2).replace('.', ',')}</p>
-              </div>
+        
+        <div className="space-y-6 py-4">
+          {/* Seleção de Serviço */}
+          <div className="space-y-3">
+            <div className="flex items-center gap-2">
+              <Sparkles className="h-4 w-4 text-primary" />
+              <Label className="text-base font-medium">Serviço *</Label>
             </div>
+            <Select value={selectedServiceId} onValueChange={setSelectedServiceId}>
+              <SelectTrigger className="h-12">
+                <SelectValue placeholder="Escolha um serviço" />
+              </SelectTrigger>
+              <SelectContent>
+                {servicesLoading ? (
+                  <SelectItem value="loading" disabled>Carregando serviços...</SelectItem>
+                ) : services.length === 0 ? (
+                  <SelectItem value="empty" disabled>Nenhum serviço cadastrado</SelectItem>
+                ) : (
+                  services.map((service) => (
+                    <SelectItem key={service.id} value={service.id}>
+                      <div className="flex flex-col">
+                        <span className="font-medium">{service.name}</span>
+                        <span className="text-xs text-muted-foreground">
+                          {service.duration}min • R$ {service.price.toFixed(2).replace('.', ',')}
+                        </span>
+                      </div>
+                    </SelectItem>
+                  ))
+                )}
+              </SelectContent>
+            </Select>
+            {selectedService && (
+              <div className="p-3 bg-primary/5 rounded-lg border border-primary/20">
+                <p className="text-sm text-muted-foreground">{selectedService.description}</p>
+              </div>
+            )}
           </div>
 
-          {/* Dados do Cliente */}
-          <div className="space-y-4">
-            <h4 className="font-medium flex items-center gap-2">
-              <User className="h-4 w-4" />
-              Dados do Cliente
-            </h4>
-            
-            <div className="space-y-2">
-              <Label htmlFor="client">Cliente *</Label>
-              <Select value={selectedClientId} onValueChange={handleClientSelect} required>
-                <SelectTrigger>
-                  <SelectValue placeholder="Selecione um cliente" />
-                </SelectTrigger>
-                <SelectContent>
-                  {clients.map((client) => (
-                    <SelectItem key={client.id} value={client.id.toString()}>
+          {/* Seleção de Cliente */}
+          <div className="space-y-3">
+            <div className="flex items-center gap-2">
+              <User className="h-4 w-4 text-primary" />
+              <Label className="text-base font-medium">Cliente *</Label>
+            </div>
+            <Select value={selectedClientId} onValueChange={setSelectedClientId}>
+              <SelectTrigger className="h-12">
+                <SelectValue placeholder="Selecione um cliente" />
+              </SelectTrigger>
+              <SelectContent>
+                {clientsLoading ? (
+                  <SelectItem value="loading" disabled>Carregando clientes...</SelectItem>
+                ) : clients.length === 0 ? (
+                  <SelectItem value="empty" disabled>Nenhum cliente cadastrado</SelectItem>
+                ) : (
+                  clients.map((client) => (
+                    <SelectItem key={client.id} value={client.id}>
                       <div className="flex flex-col">
                         <span className="font-medium">{client.name}</span>
                         <span className="text-xs text-muted-foreground">{client.phone}</span>
                       </div>
                     </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              {clients.length === 0 && (
-                <p className="text-xs text-muted-foreground mt-1">
-                  Nenhum cliente cadastrado. Vá para a aba Clientes primeiro.
-                </p>
-              )}
-            </div>
+                  ))
+                )}
+              </SelectContent>
+            </Select>
           </div>
 
           {/* Data e Horário */}
-          <div className="space-y-4">
-            <h4 className="font-medium flex items-center gap-2">
-              <Clock className="h-4 w-4" />
-              Data e Horário
-            </h4>
+          <div className="space-y-3">
+            <div className="flex items-center gap-2">
+              <Clock className="h-4 w-4 text-primary" />
+              <Label className="text-base font-medium">Data e Horário *</Label>
+            </div>
             
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label>Data do Agendamento</Label>
+                <Label className="text-sm">Data do Agendamento</Label>
                 <Popover>
                   <PopoverTrigger asChild>
                     <Button
                       variant="outline"
                       className={cn(
-                        "w-full justify-start text-left font-normal",
-                        !formData.date && "text-muted-foreground"
+                        "w-full h-12 justify-start text-left font-normal",
+                        !selectedDate && "text-muted-foreground"
                       )}
                     >
                       <CalendarIcon className="mr-2 h-4 w-4" />
-                      {formData.date ? (
-                        format(formData.date, "dd 'de' MMMM 'de' yyyy", { locale: ptBR })
+                      {selectedDate ? (
+                        format(selectedDate, "dd 'de' MMMM 'de' yyyy", { locale: ptBR })
                       ) : (
                         <span>Selecione uma data</span>
                       )}
@@ -205,11 +224,10 @@ export function AppointmentModal({ open, onOpenChange, service, onSave }: Appoin
                   <PopoverContent className="w-auto p-0" align="start">
                     <CalendarComponent
                       mode="single"
-                      selected={formData.date}
-                      onSelect={(date) => date && handleChange("date", date)}
+                      selected={selectedDate}
+                      onSelect={(date) => date && setSelectedDate(date)}
                       disabled={(date) => date < new Date()}
                       initialFocus
-                      className={cn("p-3 pointer-events-auto")}
                       locale={ptBR}
                     />
                   </PopoverContent>
@@ -217,9 +235,9 @@ export function AppointmentModal({ open, onOpenChange, service, onSave }: Appoin
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="time">Horário</Label>
-                <Select value={formData.time} onValueChange={(value) => handleChange("time", value)}>
-                  <SelectTrigger>
+                <Label className="text-sm">Horário</Label>
+                <Select value={selectedTime} onValueChange={setSelectedTime}>
+                  <SelectTrigger className="h-12">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
@@ -235,42 +253,72 @@ export function AppointmentModal({ open, onOpenChange, service, onSave }: Appoin
           </div>
 
           {/* Observações */}
-          <div className="space-y-2">
-            <Label htmlFor="notes" className="flex items-center gap-2">
-              <MessageSquare className="h-4 w-4" />
-              Observações (opcional)
-            </Label>
+          <div className="space-y-3">
+            <div className="flex items-center gap-2">
+              <MessageSquare className="h-4 w-4 text-primary" />
+              <Label className="text-base font-medium">Observações</Label>
+            </div>
             <Textarea
-              id="notes"
-              value={formData.notes}
-              onChange={(e) => handleChange("notes", e.target.value)}
+              value={notes}
+              onChange={(e) => setNotes(e.target.value)}
               placeholder="Informações adicionais sobre o agendamento..."
               rows={3}
+              className="resize-none"
             />
           </div>
 
           {/* Resumo */}
-          <div className="p-4 bg-primary/5 rounded-lg border border-primary/20">
-            <h4 className="font-medium mb-2">Resumo do Agendamento</h4>
-            <div className="space-y-1 text-sm">
-              <p><span className="text-muted-foreground">Cliente:</span> {formData.clientName || "Selecione um cliente"}</p>
-              <p><span className="text-muted-foreground">Telefone:</span> {formData.clientPhone || "Selecione um cliente"}</p>
-              <p><span className="text-muted-foreground">Data:</span> {formData.date ? format(formData.date, "dd/MM/yyyy", { locale: ptBR }) : "Data não selecionada"} às {formData.time}</p>
-              <p><span className="text-muted-foreground">Duração:</span> {formData.duration} minutos</p>
-              <p><span className="text-muted-foreground">Valor:</span> R$ {formData.price.toFixed(2).replace('.', ',')}</p>
+          {selectedService && selectedClient && (
+            <div className="p-4 bg-gradient-to-r from-primary/5 to-primary/10 rounded-lg border border-primary/20">
+              <h4 className="font-semibold mb-3 text-primary">Resumo do Agendamento</h4>
+              <div className="space-y-2 text-sm">
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">Cliente:</span>
+                  <span className="font-medium">{selectedClient.name}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">Telefone:</span>
+                  <span>{selectedClient.phone}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">Serviço:</span>
+                  <span className="font-medium">{selectedService.name}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">Data:</span>
+                  <span>{format(selectedDate, "dd/MM/yyyy", { locale: ptBR })} às {selectedTime}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">Duração:</span>
+                  <span>{selectedService.duration} minutos</span>
+                </div>
+                <div className="flex justify-between font-semibold text-primary">
+                  <span>Valor:</span>
+                  <span>R$ {selectedService.price.toFixed(2).replace('.', ',')}</span>
+                </div>
+              </div>
             </div>
-          </div>
-
-          {/* Ações */}
-          <div className="flex gap-3 pt-4">
-            <Button type="button" variant="outline" onClick={() => onOpenChange(false)} className="flex-1">
-              Cancelar
-            </Button>
-            <Button type="submit" className="flex-1">
-              Confirmar Agendamento
-            </Button>
-          </div>
-        </form>
+          )}
+        </div>
+        
+        {/* Ações */}
+        <div className="flex gap-3 pt-4 border-t">
+          <Button 
+            type="button" 
+            variant="outline" 
+            onClick={() => onOpenChange(false)} 
+            className="flex-1 h-12"
+          >
+            Cancelar
+          </Button>
+          <Button 
+            onClick={handleSave} 
+            className="flex-1 h-12 bg-primary hover:bg-primary/90"
+            disabled={!selectedServiceId || !selectedClientId}
+          >
+            Confirmar Agendamento
+          </Button>
+        </div>
       </DialogContent>
     </Dialog>
   );

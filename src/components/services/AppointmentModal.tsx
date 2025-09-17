@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
-import { Calendar, Clock, User, MessageSquare, CalendarIcon } from "lucide-react";
+import { Calendar, Clock, User, MessageSquare, CalendarIcon, Sparkles } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -11,9 +11,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Calendar as CalendarComponent } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { cn } from "@/lib/utils";
-import { Service } from "@/hooks/useServices";
+import { Service, useServices } from "@/hooks/useServices";
 import { useClients } from "@/hooks/useClients";
-import { useAppointments } from "@/hooks/useAppointments";
 
 interface Appointment {
   id?: number;
@@ -33,11 +32,10 @@ interface Appointment {
 interface AppointmentModalProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  service: Service | null;
+  service?: Service | null;
   onSave: (appointment: Omit<Appointment, 'id'>) => void;
 }
 
-// Horários disponíveis (8h às 18h, intervalos de 30 min)
 const timeSlots = Array.from({ length: 21 }, (_, i) => {
   const hour = Math.floor(i / 2) + 8;
   const minute = (i % 2) * 30;
@@ -46,8 +44,10 @@ const timeSlots = Array.from({ length: 21 }, (_, i) => {
 
 export function AppointmentModal({ open, onOpenChange, service, onSave }: AppointmentModalProps) {
   const { clients } = useClients();
-  const { appointments } = useAppointments();
+  const { services } = useServices();
   const [selectedClientId, setSelectedClientId] = useState<string>("");
+  const [selectedServiceId, setSelectedServiceId] = useState<string>("");
+
   const [formData, setFormData] = useState<Omit<Appointment, 'id'>>({
     serviceId: 0,
     serviceName: "",
@@ -63,31 +63,34 @@ export function AppointmentModal({ open, onOpenChange, service, onSave }: Appoin
   });
 
   useEffect(() => {
-    if (service && open) {
+    if (open) {
+      const initialService = service || null;
+      const initialServiceId = initialService ? initialService.id.toString() : "";
+      
+      setSelectedServiceId(initialServiceId);
+      setSelectedClientId("");
+
       setFormData({
-        serviceId: service.id,
-        serviceName: service.name,
+        serviceId: initialService?.id || 0,
+        serviceName: initialService?.name || "",
         clientId: 0,
         clientName: "",
         clientPhone: "",
         date: new Date(),
         time: "09:00",
-        duration: service.duration,
-        price: service.price,
+        duration: initialService?.duration || 60,
+        price: initialService?.price || 0,
         notes: "",
         status: "agendado"
       });
-      setSelectedClientId("");
     }
   }, [service, open]);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    
-    if (!formData.clientName || !formData.clientPhone || !formData.date || !formData.time) {
+    if (!formData.clientName || !formData.serviceId || !formData.date || !formData.time) {
       return;
     }
-
     onSave(formData);
     onOpenChange(false);
   };
@@ -106,7 +109,18 @@ export function AppointmentModal({ open, onOpenChange, service, onSave }: Appoin
     }
   };
 
-  if (!service) return null;
+  const handleServiceSelect = (serviceId: string) => {
+    setSelectedServiceId(serviceId);
+    const selectedService = services.find(s => s.id.toString() === serviceId);
+    if (selectedService) {
+      handleChange("serviceId", selectedService.id);
+      handleChange("serviceName", selectedService.name);
+      handleChange("duration", selectedService.duration);
+      handleChange("price", selectedService.price);
+    }
+  };
+
+  const currentService = services.find(s => s.id === formData.serviceId);
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -114,28 +128,48 @@ export function AppointmentModal({ open, onOpenChange, service, onSave }: Appoin
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <Calendar className="h-5 w-5" />
-            Agendar {service.name}
+            {currentService ? `Agendar ${currentService.name}` : "Novo Agendamento"}
           </DialogTitle>
         </DialogHeader>
 
         <form onSubmit={handleSubmit} className="space-y-6">
           {/* Informações do Serviço */}
           <div className="p-4 bg-muted/50 rounded-lg">
-            <h4 className="font-medium mb-2">Detalhes do Serviço</h4>
-            <div className="grid grid-cols-3 gap-4 text-sm">
-              <div>
-                <span className="text-muted-foreground">Serviço:</span>
-                <p className="font-medium">{service.name}</p>
+            <h4 className="font-medium mb-2 flex items-center gap-2">
+              <Sparkles className="h-4 w-4" />
+              Serviço
+            </h4>
+            {!service && (
+              <div className="space-y-2 mb-4">
+                <Label htmlFor="service">Selecione o Serviço *</Label>
+                <Select value={selectedServiceId} onValueChange={handleServiceSelect} required>
+                  <SelectTrigger><SelectValue placeholder="Escolha um serviço" /></SelectTrigger>
+                  <SelectContent>
+                    {services.map((s) => (
+                      <SelectItem key={s.id} value={s.id.toString()}>{s.name}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
-              <div>
-                <span className="text-muted-foreground">Duração:</span>
-                <p className="font-medium">{service.duration} min</p>
+            )}
+            {currentService ? (
+              <div className="grid grid-cols-3 gap-4 text-sm">
+                <div>
+                  <span className="text-muted-foreground">Serviço:</span>
+                  <p className="font-medium">{currentService.name}</p>
+                </div>
+                <div>
+                  <span className="text-muted-foreground">Duração:</span>
+                  <p className="font-medium">{currentService.duration} min</p>
+                </div>
+                <div>
+                  <span className="text-muted-foreground">Preço:</span>
+                  <p className="font-medium">R$ {currentService.price.toFixed(2).replace('.', ',')}</p>
+                </div>
               </div>
-              <div>
-                <span className="text-muted-foreground">Preço:</span>
-                <p className="font-medium">R$ {service.price.toFixed(2).replace('.', ',')}</p>
-              </div>
-            </div>
+            ) : (
+              <p className="text-sm text-muted-foreground">Selecione um serviço para ver os detalhes.</p>
+            )}
           </div>
 
           {/* Dados do Cliente */}
@@ -144,13 +178,10 @@ export function AppointmentModal({ open, onOpenChange, service, onSave }: Appoin
               <User className="h-4 w-4" />
               Dados do Cliente
             </h4>
-            
             <div className="space-y-2">
               <Label htmlFor="client">Cliente *</Label>
               <Select value={selectedClientId} onValueChange={handleClientSelect} required>
-                <SelectTrigger>
-                  <SelectValue placeholder="Selecione um cliente" />
-                </SelectTrigger>
+                <SelectTrigger><SelectValue placeholder="Selecione um cliente" /></SelectTrigger>
                 <SelectContent>
                   {clients.map((client) => (
                     <SelectItem key={client.id} value={client.id.toString()}>
@@ -162,11 +193,6 @@ export function AppointmentModal({ open, onOpenChange, service, onSave }: Appoin
                   ))}
                 </SelectContent>
               </Select>
-              {clients.length === 0 && (
-                <p className="text-xs text-muted-foreground mt-1">
-                  Nenhum cliente cadastrado. Vá para a aba Clientes primeiro.
-                </p>
-              )}
             </div>
           </div>
 
@@ -176,7 +202,6 @@ export function AppointmentModal({ open, onOpenChange, service, onSave }: Appoin
               <Clock className="h-4 w-4" />
               Data e Horário
             </h4>
-            
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label>Data do Agendamento</Label>
@@ -184,17 +209,10 @@ export function AppointmentModal({ open, onOpenChange, service, onSave }: Appoin
                   <PopoverTrigger asChild>
                     <Button
                       variant="outline"
-                      className={cn(
-                        "w-full justify-start text-left font-normal",
-                        !formData.date && "text-muted-foreground"
-                      )}
+                      className={cn("w-full justify-start text-left font-normal", !formData.date && "text-muted-foreground")}
                     >
                       <CalendarIcon className="mr-2 h-4 w-4" />
-                      {formData.date ? (
-                        format(formData.date, "dd 'de' MMMM 'de' yyyy", { locale: ptBR })
-                      ) : (
-                        <span>Selecione uma data</span>
-                      )}
+                      {formData.date ? format(formData.date, "dd 'de' MMMM 'de' yyyy", { locale: ptBR }) : <span>Selecione uma data</span>}
                     </Button>
                   </PopoverTrigger>
                   <PopoverContent className="w-auto p-0" align="start">
@@ -202,27 +220,19 @@ export function AppointmentModal({ open, onOpenChange, service, onSave }: Appoin
                       mode="single"
                       selected={formData.date}
                       onSelect={(date) => date && handleChange("date", date)}
-                      disabled={(date) => date < new Date()}
+                      disabled={(date) => date < new Date(new Date().setDate(new Date().getDate() - 1))}
                       initialFocus
-                      className={cn("p-3 pointer-events-auto")}
                       locale={ptBR}
                     />
                   </PopoverContent>
                 </Popover>
               </div>
-
               <div className="space-y-2">
                 <Label htmlFor="time">Horário</Label>
                 <Select value={formData.time} onValueChange={(value) => handleChange("time", value)}>
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
+                  <SelectTrigger><SelectValue /></SelectTrigger>
                   <SelectContent>
-                    {timeSlots.map((time) => (
-                      <SelectItem key={time} value={time}>
-                        {time}
-                      </SelectItem>
-                    ))}
+                    {timeSlots.map((time) => (<SelectItem key={time} value={time}>{time}</SelectItem>))}
                   </SelectContent>
                 </Select>
               </div>
@@ -242,18 +252,6 @@ export function AppointmentModal({ open, onOpenChange, service, onSave }: Appoin
               placeholder="Informações adicionais sobre o agendamento..."
               rows={3}
             />
-          </div>
-
-          {/* Resumo */}
-          <div className="p-4 bg-primary/5 rounded-lg border border-primary/20">
-            <h4 className="font-medium mb-2">Resumo do Agendamento</h4>
-            <div className="space-y-1 text-sm">
-              <p><span className="text-muted-foreground">Cliente:</span> {formData.clientName || "Selecione um cliente"}</p>
-              <p><span className="text-muted-foreground">Telefone:</span> {formData.clientPhone || "Selecione um cliente"}</p>
-              <p><span className="text-muted-foreground">Data:</span> {formData.date ? format(formData.date, "dd/MM/yyyy", { locale: ptBR }) : "Data não selecionada"} às {formData.time}</p>
-              <p><span className="text-muted-foreground">Duração:</span> {formData.duration} minutos</p>
-              <p><span className="text-muted-foreground">Valor:</span> R$ {formData.price.toFixed(2).replace('.', ',')}</p>
-            </div>
           </div>
 
           {/* Ações */}

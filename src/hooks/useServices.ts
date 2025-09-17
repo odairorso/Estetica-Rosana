@@ -1,8 +1,9 @@
-import { useState } from "react";
-import { Sparkles, Clock, DollarSign, Tag, Heart, Droplet, Zap } from "lucide-react";
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { supabase } from '@/lib/supabase';
+import { Sparkles, Heart, Droplet, Zap } from "lucide-react";
 
 export interface Service {
-  id: number;
+  id: string;
   name: string;
   category: string;
   price: number;
@@ -19,96 +20,69 @@ const iconMap = {
   Zap,
 };
 
-const initialServices: Service[] = [
-  {
-    id: 1,
-    name: "Limpeza de Pele Profunda",
-    category: "Facial",
-    price: 120.00,
-    duration: 60,
-    description: "Limpeza completa com extração e hidratação",
-    icon: "Sparkles",
-    popular: true
-  },
-  {
-    id: 2,
-    name: "Drenagem Linfática",
-    category: "Corporal",
-    price: 80.00,
-    duration: 45,
-    description: "Massagem para redução de inchaço e retenção",
-    icon: "Droplet",
-    popular: false
-  },
-  {
-    id: 3,
-    name: "Hidratação Facial",
-    category: "Facial",
-    price: 90.00,
-    duration: 40,
-    description: "Tratamento hidratante com ácido hialurônico",
-    icon: "Heart",
-    popular: true
-  },
-  {
-    id: 4,
-    name: "Peeling Químico",
-    category: "Facial",
-    price: 150.00,
-    duration: 30,
-    description: "Renovação celular com ácidos específicos",
-    icon: "Zap",
-    popular: false
-  },
-  {
-    id: 5,
-    name: "Massagem Relaxante",
-    category: "Corporal",
-    price: 100.00,
-    duration: 50,
-    description: "Massagem terapêutica para alívio do estresse",
-    icon: "Heart",
-    popular: true
-  },
-  {
-    id: 6,
-    name: "Tratamento Anti-idade",
-    category: "Facial",
-    price: 200.00,
-    duration: 75,
-    description: "Protocolo completo contra sinais de envelhecimento",
-    icon: "Sparkles",
-    popular: false
-  }
-];
+const fetchServices = async () => {
+  const { data, error } = await supabase.from('services').select('*').order('name');
+  if (error) throw new Error(error.message);
+  return data;
+};
+
+const addService = async (serviceData: Omit<Service, 'id'>) => {
+  const { data, error } = await supabase.from('services').insert([serviceData]).select();
+  if (error) throw new Error(error.message);
+  return data[0];
+};
+
+const updateService = async (serviceData: Partial<Service> & { id: string }) => {
+  const { id, ...updateData } = serviceData;
+  const { data, error } = await supabase.from('services').update(updateData).eq('id', id).select();
+  if (error) throw new Error(error.message);
+  return data[0];
+};
+
+const deleteService = async (id: string) => {
+  const { error } = await supabase.from('services').delete().eq('id', id);
+  if (error) throw new Error(error.message);
+};
 
 export function useServices() {
-  const [services, setServices] = useState<Service[]>(initialServices);
+  const queryClient = useQueryClient();
 
-  const addService = (newService: Omit<Service, 'id'>) => {
-    const id = Math.max(...services.map(s => s.id), 0) + 1;
-    setServices(prev => [...prev, { ...newService, id }]);
-  };
+  const { data: services = [], isLoading } = useQuery<Service[]>({
+    queryKey: ['services'],
+    queryFn: fetchServices,
+  });
 
-  const updateService = (updatedService: Service) => {
-    setServices(prev => prev.map(service => 
-      service.id === updatedService.id ? updatedService : service
-    ));
-  };
+  const addMutation = useMutation({
+    mutationFn: addService,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['services'] });
+    },
+  });
 
-  const deleteService = (id: number) => {
-    setServices(prev => prev.filter(service => service.id !== id));
-  };
+  const updateMutation = useMutation({
+    mutationFn: updateService,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['services'] });
+    },
+  });
 
+  const deleteMutation = useMutation({
+    mutationFn: deleteService,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['services'] });
+    },
+  });
+  
   const getServiceIcon = (iconName: string) => {
     return iconMap[iconName as keyof typeof iconMap] || Sparkles;
   };
 
   return {
     services,
-    addService,
-    updateService,
-    deleteService,
+    isLoading,
+    addService: addMutation.mutate,
+    updateService: updateMutation.mutate,
+    deleteService: deleteMutation.mutate,
     getServiceIcon,
   };
 }

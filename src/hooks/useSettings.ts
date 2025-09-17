@@ -1,4 +1,5 @@
-import { useState, useEffect } from "react";
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { supabase } from '@/lib/supabase';
 
 export interface ClinicInfo {
   name: string;
@@ -8,45 +9,52 @@ export interface ClinicInfo {
 }
 
 export interface Settings {
-  clinicInfo: ClinicInfo;
+  clinic_info: ClinicInfo;
   theme: 'light' | 'dark' | 'system';
 }
 
-const STORAGE_KEY = "clinic-settings";
+const fetchSettings = async () => {
+  const { data, error } = await supabase.from('settings').select('*').eq('id', 1).single();
+  if (error) throw new Error(error.message);
+  return data;
+};
 
-const initialSettings: Settings = {
-  clinicInfo: {
-    name: "Rosana Turci Estética",
-    phone: "(11) 98765-4321",
-    email: "contato@rosanaturci.com",
-    address: "Av. Paulista, 1234, São Paulo - SP"
-  },
-  theme: 'dark'
+const updateSettings = async (settingsData: Partial<Settings>) => {
+  const { data, error } = await supabase.from('settings').update(settingsData).eq('id', 1).select();
+  if (error) throw new Error(error.message);
+  return data[0];
 };
 
 export function useSettings() {
-  const [settings, setSettings] = useState<Settings>(() => {
-    const stored = localStorage.getItem(STORAGE_KEY);
-    return stored ? JSON.parse(stored) : initialSettings;
+  const queryClient = useQueryClient();
+
+  const { data: settings, isLoading } = useQuery<Settings>({
+    queryKey: ['settings'],
+    queryFn: fetchSettings,
   });
 
-  useEffect(() => {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(settings));
-  }, [settings]);
+  const updateMutation = useMutation({
+    mutationFn: updateSettings,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['settings'] });
+    },
+  });
 
   const updateClinicInfo = (info: Partial<ClinicInfo>) => {
-    setSettings(prev => ({
-      ...prev,
-      clinicInfo: { ...prev.clinicInfo, ...info }
-    }));
+    if (settings) {
+      updateMutation.mutate({
+        clinic_info: { ...settings.clinic_info, ...info }
+      });
+    }
   };
 
   const updateTheme = (theme: 'light' | 'dark' | 'system') => {
-    setSettings(prev => ({ ...prev, theme }));
+    updateMutation.mutate({ theme });
   };
 
   return {
     settings,
+    isLoading,
     updateClinicInfo,
     updateTheme
   };

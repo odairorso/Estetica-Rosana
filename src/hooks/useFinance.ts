@@ -1,10 +1,12 @@
-import { useState, useEffect, useMemo } from "react";
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { supabase } from '@/lib/supabase';
 import { useAppointments } from "./useAppointments";
 import { usePackages } from "./usePackages";
+import { useMemo } from "react";
 import { isToday, isThisMonth, parseISO } from "date-fns";
 
 export interface Transaction {
-  id: number | string;
+  id: string;
   type: 'income' | 'expense';
   description: string;
   amount: number;
@@ -12,51 +14,46 @@ export interface Transaction {
   category: string;
 }
 
-const STORAGE_KEY = "clinic-transactions";
+const fetchTransactions = async () => {
+  const { data, error } = await supabase.from('transactions').select('*').order('date', { ascending: false });
+  if (error) throw new Error(error.message);
+  return data;
+};
 
-const initialTransactions: Transaction[] = [
-  {
-    id: 1,
-    type: 'expense',
-    description: 'Aluguel do espaço',
-    amount: 2500,
-    date: new Date(new Date().setDate(5)).toISOString().split('T')[0],
-    category: 'Infraestrutura'
-  },
-  {
-    id: 2,
-    type: 'expense',
-    description: 'Compra de material',
-    amount: 800,
-    date: new Date(new Date().setDate(2)).toISOString().split('T')[0],
-    category: 'Estoque'
-  }
-];
+const addTransaction = async (transactionData: Omit<Transaction, 'id'>) => {
+  const { data, error } = await supabase.from('transactions').insert([transactionData]).select();
+  if (error) throw new Error(error.message);
+  return data[0];
+};
+
+const deleteTransaction = async (id: string) => {
+  const { error } = await supabase.from('transactions').delete().eq('id', id);
+  if (error) throw new Error(error.message);
+};
 
 export function useFinance() {
+  const queryClient = useQueryClient();
   const { appointments } = useAppointments();
   const { packages } = usePackages();
 
-  const [manualTransactions, setManualTransactions] = useState<Transaction[]>(() => {
-    const stored = localStorage.getItem(STORAGE_KEY);
-    return stored ? JSON.parse(stored) : initialTransactions;
+  const { data: manualTransactions = [], isLoading } = useQuery<Transaction[]>({
+    queryKey: ['transactions'],
+    queryFn: fetchTransactions,
   });
 
-  useEffect(() => {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(manualTransactions));
-  }, [manualTransactions]);
+  const addMutation = useMutation({
+    mutationFn: addTransaction,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['transactions'] });
+    },
+  });
 
-  const addTransaction = (transactionData: Omit<Transaction, 'id'>) => {
-    const newTransaction: Transaction = {
-      ...transactionData,
-      id: Date.now(),
-    };
-    setManualTransactions(prev => [...prev, newTransaction]);
-  };
-
-  const deleteTransaction = (id: number) => {
-    setManualTransactions(prev => prev.filter(t => t.id !== id));
-  };
+  const deleteMutation = useMutation({
+    mutationFn: deleteTransaction,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['transactions'] });
+    },
+  });
 
   const incomeFromAppointments = useMemo(() => {
     return appointments
@@ -64,21 +61,20 @@ export function useFinance() {
       .map(a => ({
         id: `apt-${a.id}`,
         type: 'income' as const,
-        description: `Serviço: ${a.serviceName} (${a.clientName})`,
+        description: `Serviço: ${a.service_name} (${a.client_name})`,
         amount: a.price,
-        date: a.date.toISOString().split('T')[0],
+        date: a.date,
         category: 'Serviços'
       }));
   }, [appointments]);
 
   const incomeFromPackages = useMemo(() => {
-    // Assuming payment is made when the package is created
     return packages.map(p => ({
       id: `pkg-${p.id}`,
       type: 'income' as const,
-      description: `Pacote: ${p.name} (${p.clientName})`,
+      description: `Pacote: ${p.name} (${p.client_name})`,
       amount: p.price,
-      date: p.createdAt,
+      date: p.created_at.split('T')[0],
       category: 'Pacotes'
     }));
   }, [packages]);
@@ -101,7 +97,6 @@ export function useFinance() {
       .filter(t => t.type === 'expense' && isThisMonth(parseISO(t.date)))
       .reduce((sum, t) => sum + t.amount, 0);
 
-    // "A Receber" is a bit tricky without payment status. For now, let's assume all confirmed/scheduled appointments are pending payment.
     const pendingAppointmentsValue = appointments
       .filter(a => a.status === 'agendado' || a.status === 'confirmado')
       .reduce((sum, a) => sum + a.price, 0);
@@ -117,8 +112,9 @@ export function useFinance() {
 
   return {
     allTransactions,
-    addTransaction,
-    deleteTransaction,
+    isLoading,
+    addTransaction: addMutation.mutate,
+    deleteTransaction: deleteMutation.mutate,
     getMetrics,
   };
 }

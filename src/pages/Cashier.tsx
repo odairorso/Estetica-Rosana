@@ -1,6 +1,6 @@
 import { Helmet } from "react-helmet-async";
 import { useState } from "react";
-import { Plus, Sparkles, Package, User, Calendar, DollarSign } from "lucide-react";
+import { Plus, Sparkles, Package, User, Calendar, DollarSign, ShoppingCart, Box } from "lucide-react";
 import { SearchBar } from "@/components/ui/search-bar";
 import { GlassCard } from "@/components/ui/glass-card";
 import { NeonButton } from "@/components/ui/neon-button";
@@ -11,12 +11,13 @@ import { ptBR } from "date-fns/locale";
 import { useServices } from "@/hooks/useServices";
 import { usePackages } from "@/hooks/usePackages";
 import { useClients } from "@/hooks/useClients";
+import { useInventory } from "@/hooks/useInventory";
 import { useToast } from "@/hooks/use-toast";
 import { CashierModal } from "@/components/cashier/CashierModal";
 
 interface SaleItem {
   id: number;
-  type: 'service' | 'package';
+  type: 'service' | 'package' | 'product';
   item_id: number;
   client_id: number;
   clientName: string;
@@ -26,6 +27,7 @@ interface SaleItem {
   duration?: number; // Para serviços
   total_sessions?: number; // Para pacotes
   valid_until?: string; // Para pacotes
+  quantity?: number; // Para produtos
 }
 
 export default function Cashier() {
@@ -33,12 +35,13 @@ export default function Cashier() {
   const { services } = useServices();
   const { packages } = usePackages();
   const { clients } = useClients();
+  const { products } = useInventory();
   const [searchTerm, setSearchTerm] = useState("");
   const [modalOpen, setModalOpen] = useState(false);
-  const [saleType, setSaleType] = useState<'service' | 'package'>('service');
+  const [saleType, setSaleType] = useState<'service' | 'package' | 'product'>('service');
   const [sales] = useState<SaleItem[]>([]); // Em produção, isso viria de um hook useSales
 
-  // Simulando vendas a partir de serviços e pacotes existentes
+  // Simulando vendas a partir de serviços, pacotes e produtos existentes
   const simulatedSales: SaleItem[] = [
     ...services.map(s => ({
       id: s.id * 1000,
@@ -62,6 +65,17 @@ export default function Cashier() {
       sale_date: p.created_at.split('T')[0],
       total_sessions: p.total_sessions,
       valid_until: p.valid_until
+    })),
+    ...products.map(p => ({
+      id: p.id * 100000,
+      type: 'product' as const,
+      item_id: p.id,
+      client_id: 1, // Exemplo
+      clientName: "Ana Silva",
+      itemName: p.name,
+      price: p.costPrice,
+      sale_date: new Date().toISOString().split('T')[0],
+      quantity: 1
     }))
   ];
 
@@ -70,7 +84,7 @@ export default function Cashier() {
     sale.itemName.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
-  const handleNewSale = (type: 'service' | 'package') => {
+  const handleNewSale = (type: 'service' | 'package' | 'product') => {
     setSaleType(type);
     setModalOpen(true);
   };
@@ -80,7 +94,7 @@ export default function Cashier() {
     // Em produção, aqui você chamaria um hook como addSale(saleData)
     toast({
       title: "Venda registrada!",
-      description: `Venda de ${saleData.type === 'service' ? 'procedimento' : 'pacote'} "${saleData.itemName}" para ${saleData.clientName} registrada com sucesso.`,
+      description: `Venda de ${saleData.type === 'service' ? 'procedimento' : saleData.type === 'package' ? 'pacote' : 'produto'} "${saleData.itemName}" para ${saleData.clientName} registrada com sucesso.`,
     });
     setModalOpen(false);
   };
@@ -89,7 +103,7 @@ export default function Cashier() {
     <>
       <Helmet>
         <title>Caixa | Gestão de Clínica Estética</title>
-        <meta name="description" content="Registro de vendas de procedimentos avulsos e pacotes promocionais." />
+        <meta name="description" content="Registro de vendas de procedimentos avulsos, pacotes promocionais e produtos do estoque." />
         <link rel="canonical" href="/caixa" />
       </Helmet>
 
@@ -98,7 +112,7 @@ export default function Cashier() {
         <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
           <div>
             <h1 className="text-2xl font-bold text-gradient-brand">Caixa</h1>
-            <p className="text-muted-foreground">Registro de vendas de procedimentos e pacotes</p>
+            <p className="text-muted-foreground">Registro de vendas de procedimentos, pacotes e produtos</p>
           </div>
           <div className="flex gap-3">
             <SearchBar 
@@ -113,6 +127,9 @@ export default function Cashier() {
               <NeonButton icon={Package} onClick={() => handleNewSale('package')} size="sm">
                 Pacote
               </NeonButton>
+              <NeonButton icon={Box} onClick={() => handleNewSale('product')} size="sm">
+                Produto
+              </NeonButton>
             </div>
           </div>
         </div>
@@ -124,11 +141,17 @@ export default function Cashier() {
               <div className="space-y-3">
                 <div className="flex items-start justify-between">
                   <div className="flex items-center gap-3">
-                    <div className={`rounded-full p-2 ${sale.type === 'service' ? 'bg-primary' : 'bg-brand-gradient'}`}>
+                    <div className={`rounded-full p-2 ${
+                      sale.type === 'service' ? 'bg-primary' : 
+                      sale.type === 'package' ? 'bg-brand-gradient' : 
+                      'bg-secondary'
+                    }`}>
                       {sale.type === 'service' ? (
                         <Sparkles className="h-4 w-4 text-primary-foreground" />
-                      ) : (
+                      ) : sale.type === 'package' ? (
                         <Package className="h-4 w-4 text-white" />
+                      ) : (
+                        <Box className="h-4 w-4 text-secondary-foreground" />
                       )}
                     </div>
                     <div>
@@ -139,8 +162,13 @@ export default function Cashier() {
                       </p>
                     </div>
                   </div>
-                  <Badge className={sale.type === 'service' ? "bg-primary/20 text-primary" : "bg-green-500/20 text-green-600"}>
-                    {sale.type === 'service' ? 'Procedimento' : 'Pacote'}
+                  <Badge className={
+                    sale.type === 'service' ? "bg-primary/20 text-primary" : 
+                    sale.type === 'package' ? "bg-green-500/20 text-green-600" : 
+                    "bg-secondary/20 text-secondary"
+                  }>
+                    {sale.type === 'service' ? 'Procedimento' : 
+                     sale.type === 'package' ? 'Pacote' : 'Produto'}
                   </Badge>
                 </div>
 
@@ -178,6 +206,14 @@ export default function Cashier() {
                     </p>
                   </div>
                 )}
+
+                {sale.type === 'product' && sale.quantity && (
+                  <div className="pt-2 border-t border-border/30">
+                    <p className="text-xs text-muted-foreground">
+                      Quantidade: {sale.quantity}
+                    </p>
+                  </div>
+                )}
               </div>
             </GlassCard>
           ))}
@@ -188,7 +224,7 @@ export default function Cashier() {
           <GlassCard className="text-center py-12">
             <div className="space-y-4">
               <div className="mx-auto h-16 w-16 rounded-full bg-muted flex items-center justify-center">
-                <Plus className="h-8 w-8 text-muted-foreground" />
+                <ShoppingCart className="h-8 w-8 text-muted-foreground" />
               </div>
               <div>
                 <h3 className="font-semibold">Nenhuma venda registrada</h3>
@@ -203,6 +239,9 @@ export default function Cashier() {
                   </NeonButton>
                   <NeonButton icon={Package} onClick={() => handleNewSale('package')}>
                     Vender Pacote
+                  </NeonButton>
+                  <NeonButton icon={Box} onClick={() => handleNewSale('product')}>
+                    Vender Produto
                   </NeonButton>
                 </div>
               )}

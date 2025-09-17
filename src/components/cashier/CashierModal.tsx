@@ -6,7 +6,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Popover, PopoverTrigger, PopoverContent } from "@/components/ui/popover";
 import { Command, CommandInput, CommandEmpty, CommandGroup, CommandItem } from "@/components/ui/command";
-import { Check, ChevronsUpDown, CalendarIcon, Sparkles, Package, CreditCard, QrCode, Banknote } from "lucide-react";
+import { Check, ChevronsUpDown, CalendarIcon, Sparkles, Package, CreditCard, QrCode, Banknote, Box } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
@@ -14,13 +14,14 @@ import { Calendar } from "@/components/ui/calendar";
 import { useClients } from "@/hooks/useClients";
 import { useServices } from "@/hooks/useServices";
 import { usePackages } from "@/hooks/usePackages";
+import { useInventory } from "@/hooks/useInventory";
 import { useToast } from "@/hooks/use-toast";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 interface CashierModalProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  type: 'service' | 'package';
+  type: 'service' | 'package' | 'product';
   onSave: (saleData: any) => void;
 }
 
@@ -29,6 +30,7 @@ export function CashierModal({ open, onOpenChange, type, onSave }: CashierModalP
   const { clients } = useClients();
   const { services: availableServices } = useServices();
   const { packages: availablePackages } = usePackages();
+  const { products: availableProducts } = useInventory();
   const [clientComboboxOpen, setClientComboboxOpen] = useState(false);
   const [itemComboboxOpen, setItemComboboxOpen] = useState(false);
   const [datePickerOpen, setDatePickerOpen] = useState(false);
@@ -43,8 +45,9 @@ export function CashierModal({ open, onOpenChange, type, onSave }: CashierModalP
     duration: 0, // Para serviços
     total_sessions: 0, // Para pacotes
     valid_until: '', // Para pacotes
+    quantity: 1, // Para produtos
     notes: '',
-    payment_method: 'dinheiro' // ✅ Nova propriedade
+    payment_method: 'dinheiro'
   });
 
   useEffect(() => {
@@ -59,6 +62,7 @@ export function CashierModal({ open, onOpenChange, type, onSave }: CashierModalP
         duration: 0,
         total_sessions: 0,
         valid_until: '',
+        quantity: 1,
         notes: '',
         payment_method: 'dinheiro'
       });
@@ -88,8 +92,9 @@ export function CashierModal({ open, onOpenChange, type, onSave }: CashierModalP
       duration: formData.duration,
       total_sessions: formData.total_sessions,
       valid_until: formData.valid_until,
+      quantity: formData.quantity,
       notes: formData.notes,
-      payment_method: formData.payment_method // ✅ Incluindo no salvamento
+      payment_method: formData.payment_method
     };
 
     onSave(dataToSave);
@@ -121,7 +126,7 @@ export function CashierModal({ open, onOpenChange, type, onSave }: CashierModalP
           duration: service.duration
         }));
       }
-    } else {
+    } else if (type === 'package') {
       const pkg = availablePackages.find(p => p.id === id);
       if (pkg) {
         setFormData(prev => ({
@@ -133,6 +138,17 @@ export function CashierModal({ open, onOpenChange, type, onSave }: CashierModalP
           valid_until: pkg.valid_until
         }));
       }
+    } else {
+      const product = availableProducts.find(p => p.id === id);
+      if (product) {
+        setFormData(prev => ({
+          ...prev,
+          item_id: id,
+          itemName: product.name,
+          price: product.costPrice,
+          quantity: 1
+        }));
+      }
     }
     setItemComboboxOpen(false);
   };
@@ -141,7 +157,6 @@ export function CashierModal({ open, onOpenChange, type, onSave }: CashierModalP
     setFormData(prev => ({ ...prev, [field]: value }));
   };
 
-  // ✅ Função para obter o ícone da forma de pagamento
   const getPaymentMethodIcon = (method: string) => {
     switch (method) {
       case 'cartao': return <CreditCard className="h-4 w-4" />;
@@ -151,7 +166,6 @@ export function CashierModal({ open, onOpenChange, type, onSave }: CashierModalP
     }
   };
 
-  // ✅ Função para obter o nome da forma de pagamento
   const getPaymentMethodName = (method: string) => {
     switch (method) {
       case 'cartao': return 'Cartão';
@@ -166,8 +180,11 @@ export function CashierModal({ open, onOpenChange, type, onSave }: CashierModalP
       <DialogContent className="sm:max-w-[500px]">
         <DialogHeader>
           <DialogTitle className="text-gradient-brand flex items-center gap-2">
-            {type === 'service' ? <Sparkles className="h-5 w-5" /> : <Package className="h-5 w-5" />}
-            Nova Venda de {type === 'service' ? 'Procedimento' : 'Pacote'}
+            {type === 'service' ? <Sparkles className="h-5 w-5" /> : 
+             type === 'package' ? <Package className="h-5 w-5" /> : 
+             <Box className="h-5 w-5" />}
+            Nova Venda de {type === 'service' ? 'Procedimento' : 
+                          type === 'package' ? 'Pacote' : 'Produto'}
           </DialogTitle>
         </DialogHeader>
         
@@ -203,26 +220,34 @@ export function CashierModal({ open, onOpenChange, type, onSave }: CashierModalP
             </Popover>
           </div>
 
-          {/* Procedimento ou Pacote */}
+          {/* Item (Serviço, Pacote ou Produto) */}
           <div className="space-y-2">
-            <Label>{type === 'service' ? 'Procedimento' : 'Pacote'} *</Label>
+            <Label>{type === 'service' ? 'Procedimento' : 
+                   type === 'package' ? 'Pacote' : 'Produto'} *</Label>
             <Popover open={itemComboboxOpen} onOpenChange={setItemComboboxOpen}>
               <PopoverTrigger asChild>
                 <Button variant="outline" role="combobox" aria-expanded={itemComboboxOpen} className="w-full justify-between">
                   {formData.item_id ? 
-                    (type === 'service' 
-                      ? availableServices.find(s => s.id === formData.item_id)?.name 
-                      : availablePackages.find(p => p.id === formData.item_id)?.name)
-                    : `Selecione um ${type === 'service' ? 'procedimento' : 'pacote'}...`}
+                    (type === 'service' ? 
+                      availableServices.find(s => s.id === formData.item_id)?.name :
+                     type === 'package' ?
+                      availablePackages.find(p => p.id === formData.item_id)?.name :
+                      availableProducts.find(p => p.id === formData.item_id)?.name)
+                    : `Selecione um ${type === 'service' ? 'procedimento' : 
+                                      type === 'package' ? 'pacote' : 'produto'}...`}
                   <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
                 </Button>
               </PopoverTrigger>
               <PopoverContent className="w-[450px] p-0">
                 <Command>
-                  <CommandInput placeholder={`Buscar ${type === 'service' ? 'procedimento' : 'pacote'}...`} />
-                  <CommandEmpty>{`Nenhum ${type === 'service' ? 'procedimento' : 'pacote'} encontrado.`}</CommandEmpty>
+                  <CommandInput placeholder={`Buscar ${type === 'service' ? 'procedimento' : 
+                                                   type === 'package' ? 'pacote' : 'produto'}...`} />
+                  <CommandEmpty>{`Nenhum ${type === 'service' ? 'procedimento' : 
+                                           type === 'package' ? 'pacote' : 'produto'} encontrado.`}</CommandEmpty>
                   <CommandGroup>
-                    {(type === 'service' ? availableServices : availablePackages).map((item) => (
+                    {(type === 'service' ? availableServices : 
+                      type === 'package' ? availablePackages : 
+                      availableProducts).map((item) => (
                       <CommandItem
                         key={item.id}
                         value={item.name}
@@ -277,6 +302,21 @@ export function CashierModal({ open, onOpenChange, type, onSave }: CashierModalP
             />
           </div>
 
+          {/* Quantidade (apenas para produtos) */}
+          {type === 'product' && (
+            <div className="space-y-2">
+              <Label htmlFor="quantity">Quantidade *</Label>
+              <Input 
+                id="quantity" 
+                type="number" 
+                min="1" 
+                value={formData.quantity} 
+                onChange={(e) => handleInputChange('quantity', parseInt(e.target.value) || 1)} 
+                required 
+              />
+            </div>
+          )}
+
           {/* Forma de Pagamento */}
           <div className="space-y-2">
             <Label>Forma de Pagamento *</Label>
@@ -322,6 +362,12 @@ export function CashierModal({ open, onOpenChange, type, onSave }: CashierModalP
           {type === 'package' && formData.total_sessions > 0 && (
             <div className="text-sm text-muted-foreground">
               {formData.total_sessions} sessões - Válido até: {formData.valid_until ? format(new Date(formData.valid_until), "dd/MM/yyyy", { locale: ptBR }) : 'N/A'}
+            </div>
+          )}
+
+          {type === 'product' && formData.quantity > 0 && (
+            <div className="text-sm text-muted-foreground">
+              Quantidade: {formData.quantity}
             </div>
           )}
 

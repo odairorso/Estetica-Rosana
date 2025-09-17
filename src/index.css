@@ -16,51 +16,51 @@
     --popover: 0 0% 100%;
     --popover-foreground: 222 84% 5%;
 
-    --primary: 268 58% 42%; /* roxo principal */
-    --primary-foreground: 210 40% 98%;
+    --primary: 205 79% 46%; /* Azul profissional */
+    --primary-foreground: 0 0% 100%;
 
-    --secondary: 267 50% 96%;
-    --secondary-foreground: 268 58% 20%;
+    --secondary: 210 40% 96%;
+    --secondary-foreground: 215 20% 35%;
 
     --muted: 210 40% 96%;
     --muted-foreground: 215 16% 25%;
 
-    --accent: 267 50% 96%;
-    --accent-foreground: 268 58% 20%;
+    --accent: 210 40% 96%;
+    --accent-foreground: 215 20% 35%;
 
     --destructive: 0 75% 54%;
     --destructive-foreground: 210 40% 98%;
 
     --border: 214 32% 91%;
     --input: 214 32% 91%;
-    --ring: 268 58% 42%;
+    --ring: 205 79% 46%;
 
     --radius: 0.75rem;
 
     /* Sidebar */
     --sidebar-background: 0 0% 98%;
     --sidebar-foreground: 240 5% 26%;
-    --sidebar-primary: 268 58% 42%;
+    --sidebar-primary: 205 79% 46%;
     --sidebar-primary-foreground: 0 0% 98%;
-    --sidebar-accent: 267 50% 96%;
+    --sidebar-accent: 210 40% 96%;
     --sidebar-accent-foreground: 240 6% 10%;
     --sidebar-border: 220 13% 91%;
-    --sidebar-ring: 268 58% 42%;
+    --sidebar-ring: 205 79% 46%;
 
-    /* Brand tokens (cores fluorescentes) */
-    --brand-start: 300 100% 60%; /* rosa neon */
-    --brand-middle: 285 100% 65%; /* rosa-roxo */
-    --brand-end: 270 100% 70%; /* roxo neon */
-    --brand-glow: 300 100% 85%;
+    /* Brand tokens (cores profissionais) */
+    --brand-start: 190 81% 44%; /* Verde-azulado */
+    --brand-middle: 200 80% 45%;
+    --brand-end: 210 85% 51%; /* Azul claro */
+    --brand-glow: 190 81% 70%;
     
-    /* Cores neon extras */
-    --neon-pink: 330 100% 70%;
-    --neon-purple: 270 100% 75%;
-    --neon-cyan: 180 100% 70%;
+    /* Cores de destaque */
+    --accent-teal: 180 60% 40%;
+    --accent-blue: 210 70% 50%;
+    --accent-green: 160 50% 45%;
     
     /* Efeitos glassmorphism */
-    --glass-bg: hsl(270 50% 98% / 0.95);
-    --glass-border: hsl(270 30% 85% / 0.4);
+    --glass-bg: hsl(210 50% 98% / 0.95);
+    --glass-border: hsl(210 30% 85% / 0.4);
     --glass-shadow: 0 8px 32px hsl(var(--brand-start) / 0.15);
 
     /* Motion & sombras */
@@ -70,50 +70,50 @@
 
   .dark {
     /* Base (escuro) */
-    --background: 258 40% 10%;
+    --background: 220 20% 10%;
     --foreground: 210 40% 98%;
 
-    --card: 258 40% 12%;
+    --card: 220 20% 12%;
     --card-foreground: 210 40% 98%;
 
-    --popover: 258 40% 10%;
+    --popover: 220 20% 10%;
     --popover-foreground: 210 40% 98%;
 
-    --primary: 330 85% 60%; /* rosa destacado no escuro */
-    --primary-foreground: 258 40% 10%;
+    --primary: 195 85% 55%; /* Azul claro para destaque */
+    --primary-foreground: 210 50% 10%;
 
-    --secondary: 258 30% 18%;
+    --secondary: 220 15% 18%;
     --secondary-foreground: 210 40% 98%;
 
-    --muted: 258 30% 18%;
+    --muted: 220 15% 18%;
     --muted-foreground: 216 20% 75%;
 
-    --accent: 258 30% 18%;
+    --accent: 220 15% 18%;
     --accent-foreground: 210 40% 98%;
 
     --destructive: 0 62% 40%;
     --destructive-foreground: 210 40% 98%;
 
-    --border: 258 28% 22%;
-    --input: 258 28% 22%;
-    --ring: 330 85% 60%;
+    --border: 220 15% 22%;
+    --input: 220 15% 22%;
+    --ring: 195 85% 55%;
 
-    --sidebar-background: 258 40% 10%;
-    --sidebar-foreground: 240 5% 90%;
-    --sidebar-primary: 330 85% 60%;
-    --sidebar-primary-foreground: 258 40% 10%;
-    --sidebar-accent: 258 30% 18%;
-    --sidebar-accent-foreground: 240 5% 90%;
-    --sidebar-border: 258 28% 22%;
-    --sidebar-ring: 330 85% 60%;
+    --sidebar-background: 220 20% 10%;
+    --sidebar-foreground: 210 40% 90%;
+    --sidebar-primary: 195 85% 55%;
+    --sidebar-primary-foreground: 210 50% 10%;
+    --sidebar-accent: 220 15% 18%;
+    --sidebar-accent-foreground: 210 40% 90%;
+    --sidebar-border: 220 15% 22%;
+    --sidebar-ring: 195 85% 55%;
 
-    --brand-start: 268 75% 50%;
-    --brand-end: 330 85% 60%;
-    --brand-glow: 320 90% 65%;
+    --brand-start: 190 81% 50%;
+    --brand-end: 205 85% 60%;
+    --brand-glow: 195 90% 65%;
 
     /* Glass (dark mode) */
-    --glass-bg: hsl(258 30% 16% / 0.9);
-    --glass-border: hsl(258 28% 30% / 0.5);
+    --glass-bg: hsl(220 15% 16% / 0.9);
+    --glass-border: hsl(220 15% 30% / 0.5);
     --glass-shadow: 0 8px 32px hsl(var(--brand-end) / 0.35);
 
     --shadow-elev: 0 10px 30px -12px hsl(var(--brand-end) / 0.45);
@@ -135,7 +135,7 @@
     background-image: linear-gradient(135deg, hsl(var(--brand-start)), hsl(var(--brand-end)));
   }
   .bg-neon-gradient {
-    background-image: linear-gradient(135deg, hsl(var(--neon-pink)), hsl(var(--neon-purple)));
+    background-image: linear-gradient(135deg, hsl(var(--accent-teal)), hsl(var(--accent-blue)));
   }
   .text-gradient-brand {
     background-image: linear-gradient(135deg, hsl(var(--brand-start)), hsl(var(--brand-end)));
@@ -150,7 +150,7 @@
     backdrop-filter: blur(10px);
   }
   .neon-glow {
-    box-shadow: 0 0 20px hsl(var(--neon-pink) / 0.5), 0 0 40px hsl(var(--neon-purple) / 0.3);
+    box-shadow: 0 0 20px hsl(var(--brand-start) / 0.5), 0 0 40px hsl(var(--brand-end) / 0.3);
   }
   .icon-glow {
     filter: drop-shadow(0 0 8px hsl(var(--brand-start) / 0.6));

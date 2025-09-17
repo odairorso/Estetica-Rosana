@@ -1,14 +1,20 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect } from 'react';
+import { supabase } from '../lib/supabase';
+
+export interface SessionHistoryEntry {
+  id: string;
+  date: string;
+  notes?: string;
+}
 
 export interface Package {
-  id: number;
+  id: string;
   name: string;
   description: string;
-  clientId: number;
+  clientId: string;
   clientName: string;
   totalSessions: number;
   usedSessions: number;
-  remainingSessions: number;
   price: number;
   validUntil: string;
   lastUsed: string | null;
@@ -17,180 +23,276 @@ export interface Package {
   sessionHistory: SessionHistoryEntry[];
 }
 
-export interface SessionHistoryEntry {
-  id: string;
-  date: string;
-  notes?: string;
-}
-
-const STORAGE_KEY = "clinic-packages";
-
-const initialPackages: Package[] = [
-  {
-    id: 1,
-    name: "Pacote Limpeza de Pele Premium",
-    description: "Tratamento completo de limpeza facial com extração e hidratação",
-    clientId: 1,
-    clientName: "Ana Silva",
-    totalSessions: 10,
-    usedSessions: 3,
-    remainingSessions: 7,
-    price: 800.00,
-    validUntil: "2024-12-15",
-    lastUsed: "2024-09-10",
-    status: "active",
-    createdAt: "2024-08-01",
-    sessionHistory: [
-      { id: "1", date: "2024-08-15", notes: "Primeira sessão - limpeza profunda" },
-      { id: "2", date: "2024-08-25", notes: "Segunda sessão - extração e hidratação" },
-      { id: "3", date: "2024-09-10", notes: "Terceira sessão - tonificação" }
-    ]
-  },
-  {
-    id: 2,
-    name: "Drenagem Linfática - Combo",
-    description: "Sessões de drenagem linfática para redução de inchaço",
-    clientId: 2,
-    clientName: "Beatriz Santos",
-    totalSessions: 8,
-    usedSessions: 5,
-    remainingSessions: 3,
-    price: 600.00,
-    validUntil: "2024-11-20",
-    lastUsed: "2024-09-12",
-    status: "active",
-    createdAt: "2024-07-20",
-    sessionHistory: [
-      { id: "4", date: "2024-07-25", notes: "Primeira sessão - avaliação" },
-      { id: "5", date: "2024-08-02", notes: "Segunda sessão - drenagem completa" },
-      { id: "6", date: "2024-08-12", notes: "Terceira sessão - foco nas pernas" },
-      { id: "7", date: "2024-08-28", notes: "Quarta sessão - melhora significativa" },
-      { id: "8", date: "2024-09-12", notes: "Quinta sessão - manutenção" }
-    ]
-  },
-  {
-    id: 3,
-    name: "Tratamento Facial Completo",
-    description: "Tratamento facial com peeling, hidratação e rejuvenescimento",
-    clientId: 3,
-    clientName: "Carla Oliveira",
-    totalSessions: 6,
-    usedSessions: 6,
-    remainingSessions: 0,
-    price: 900.00,
-    validUntil: "2024-08-30",
-    lastUsed: "2024-08-28",
-    status: "completed",
-    createdAt: "2024-06-01",
-    sessionHistory: [
-      { id: "9", date: "2024-06-10", notes: "Primeira sessão - avaliação e limpeza" },
-      { id: "10", date: "2024-06-20", notes: "Segunda sessão - peeling suave" },
-      { id: "11", date: "2024-07-05", notes: "Terceira sessão - hidratação profunda" },
-      { id: "12", date: "2024-07-18", notes: "Quarta sessão - microagulhamento" },
-      { id: "13", date: "2024-08-02", notes: "Quinta sessão - LED therapy" },
-      { id: "14", date: "2024-08-28", notes: "Sexta sessão - finalização do tratamento" }
-    ]
-  }
-];
-
 export function usePackages() {
-  const [packages, setPackages] = useState<Package[]>(() => {
-    const stored = localStorage.getItem(STORAGE_KEY);
-    if (stored) {
-      const parsedPackages = JSON.parse(stored);
-      // Migração para adicionar sessionHistory em pacotes existentes
-      const migratedPackages = parsedPackages.map((pkg: any) => ({
-        ...pkg,
-        sessionHistory: pkg.sessionHistory || []
-      }));
-      
-      // Se não tem sessionHistory nos dados salvos, força resetar para dados iniciais
-      const hasSessionHistory = parsedPackages.some((pkg: any) => pkg.sessionHistory && pkg.sessionHistory.length > 0);
-      if (!hasSessionHistory) {
-        localStorage.setItem(STORAGE_KEY, JSON.stringify(initialPackages));
-        return initialPackages;
-      }
-      
-      return migratedPackages;
-    }
-    return initialPackages;
-  });
+  const [packages, setPackages] = useState<Package[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
 
+  // Load packages from Supabase on mount
   useEffect(() => {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(packages));
-  }, [packages]);
-
-  const addPackage = (packageData: Omit<Package, 'id' | 'createdAt' | 'usedSessions' | 'remainingSessions' | 'lastUsed' | 'status' | 'sessionHistory'>) => {
-    const newPackage: Package = {
-      ...packageData,
-      id: Date.now(),
-      createdAt: new Date().toISOString().split('T')[0],
-      usedSessions: 0,
-      remainingSessions: packageData.totalSessions,
-      lastUsed: null,
-      status: "active",
-      sessionHistory: []
-    };
-    setPackages(prev => [...prev, newPackage]);
-  };
-
-  const updatePackage = (id: number, packageData: Partial<Package>) => {
-    setPackages(prev => 
-      prev.map(pkg => {
-        if (pkg.id === id) {
-          const updated = { ...pkg, ...packageData };
-          // Recalcular sessões restantes
-          if (packageData.totalSessions !== undefined || packageData.usedSessions !== undefined) {
-            updated.remainingSessions = updated.totalSessions - updated.usedSessions;
+    const loadPackages = async () => {
+      if (!supabase) {
+        console.warn('Supabase not available, using fallback data');
+        // Fallback data if Supabase is not available
+        const fallbackPackages: Package[] = [
+          {
+            id: "1",
+            name: "Pacote Limpeza de Pele Premium",
+            description: "10 sessões de limpeza de pele com hidratação profunda",
+            clientId: "1",
+            clientName: "Ana Silva",
+            totalSessions: 10,
+            usedSessions: 3,
+            price: 900,
+            validUntil: "2023-12-31",
+            lastUsed: "2023-05-15",
+            status: "active",
+            createdAt: "2023-03-01",
+            sessionHistory: [
+              { id: "1", date: "2023-03-15", notes: "Primeira sessão - pele muito oleosa" },
+              { id: "2", date: "2023-04-15", notes: "Melhora significativa" },
+              { id: "3", date: "2023-05-15", notes: "Pele mais equilibrada" }
+            ]
+          },
+          {
+            id: "2",
+            name: "Pacote Drenagem Linfática",
+            description: "8 sessões de drenagem linfática para redução de medidas",
+            clientId: "2",
+            clientName: "Carlos Oliveira",
+            totalSessions: 8,
+            usedSessions: 5,
+            price: 600,
+            validUntil: "2023-11-30",
+            lastUsed: "2023-05-20",
+            status: "active",
+            createdAt: "2023-02-15",
+            sessionHistory: [
+              { id: "4", date: "2023-02-20", notes: "Primeira sessão" },
+              { id: "5", date: "2023-03-05", notes: "Cliente relatou melhora" },
+              { id: "6", date: "2023-03-20", notes: "Redução de 2cm na cintura" },
+              { id: "7", date: "2023-04-05", notes: "Continuidade do tratamento" },
+              { id: "8", date: "2023-05-20", notes: "Excelente evolução" }
+            ]
           }
-          // Atualizar status baseado nas sessões
-          if (updated.remainingSessions <= 0) {
-            updated.status = "completed";
-          } else if (new Date(updated.validUntil) < new Date()) {
-            updated.status = "expired";
-          } else if (new Date(updated.validUntil) <= new Date(Date.now() + 30 * 24 * 60 * 60 * 1000)) {
-            updated.status = "expiring";
-          } else {
-            updated.status = "active";
-          }
-          return updated;
+        ];
+        setPackages(fallbackPackages);
+        setIsLoading(false);
+        return;
+      }
+
+      try {
+        const { data, error } = await supabase
+          .from('packages')
+          .select('*')
+          .order('created_at', { ascending: false });
+
+        if (error) {
+          console.error('Error loading packages:', error);
+          return;
         }
-        return pkg;
-      })
-    );
+
+        // Transform Supabase data to match our interface
+        const transformedPackages: Package[] = data.map(pkg => ({
+          id: pkg.id,
+          name: pkg.name || '',
+          description: pkg.description || '',
+          clientId: pkg.client_id || '',
+          clientName: pkg.client_name || '',
+          totalSessions: pkg.total_sessions || 0,
+          usedSessions: pkg.used_sessions || 0,
+          price: pkg.price || 0,
+          validUntil: pkg.valid_until || '',
+          lastUsed: pkg.last_used || null,
+          status: pkg.status || 'active',
+          createdAt: pkg.created_at?.split('T')[0] || '',
+          sessionHistory: pkg.session_history ? JSON.parse(pkg.session_history) : []
+        }));
+
+        setPackages(transformedPackages);
+      } catch (error) {
+        console.error('Error loading packages:', error);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    loadPackages();
+  }, []);
+
+  const addPackage = async (packageData: Omit<Package, 'id' | 'createdAt' | 'sessionHistory'>) => {
+    if (!supabase) {
+      console.warn('Supabase not available');
+      return null;
+    }
+
+    try {
+      const { data, error } = await supabase
+        .from('packages')
+        .insert([{
+          name: packageData.name,
+          description: packageData.description,
+          client_id: packageData.clientId,
+          client_name: packageData.clientName,
+          total_sessions: packageData.totalSessions,
+          used_sessions: packageData.usedSessions,
+          price: packageData.price,
+          valid_until: packageData.validUntil,
+          last_used: packageData.lastUsed,
+          status: packageData.status,
+          session_history: JSON.stringify([])
+        }])
+        .select()
+        .single();
+
+      if (error) {
+        console.error('Error adding package:', error);
+        return null;
+      }
+
+      const newPackage: Package = {
+        id: data.id,
+        name: data.name || '',
+        description: data.description || '',
+        clientId: data.client_id || '',
+        clientName: data.client_name || '',
+        totalSessions: data.total_sessions || 0,
+        usedSessions: data.used_sessions || 0,
+        price: data.price || 0,
+        validUntil: data.valid_until || '',
+        lastUsed: data.last_used || null,
+        status: data.status || 'active',
+        createdAt: data.created_at?.split('T')[0] || '',
+        sessionHistory: []
+      };
+
+      setPackages([newPackage, ...packages]);
+      return newPackage;
+    } catch (error) {
+      console.error('Error adding package:', error);
+      return null;
+    }
   };
 
-  const deletePackage = (id: number) => {
-    setPackages(prev => prev.filter(pkg => pkg.id !== id));
+  const updatePackage = async (id: string, packageData: Partial<Package>) => {
+    if (!supabase) {
+      console.warn('Supabase not available');
+      return;
+    }
+
+    try {
+      const updateData: any = {};
+      if (packageData.name !== undefined) updateData.name = packageData.name;
+      if (packageData.description !== undefined) updateData.description = packageData.description;
+      if (packageData.clientId !== undefined) updateData.client_id = packageData.clientId;
+      if (packageData.clientName !== undefined) updateData.client_name = packageData.clientName;
+      if (packageData.totalSessions !== undefined) updateData.total_sessions = packageData.totalSessions;
+      if (packageData.usedSessions !== undefined) updateData.used_sessions = packageData.usedSessions;
+      if (packageData.price !== undefined) updateData.price = packageData.price;
+      if (packageData.validUntil !== undefined) updateData.valid_until = packageData.validUntil;
+      if (packageData.lastUsed !== undefined) updateData.last_used = packageData.lastUsed;
+      if (packageData.status !== undefined) updateData.status = packageData.status;
+      if (packageData.sessionHistory !== undefined) updateData.session_history = JSON.stringify(packageData.sessionHistory);
+
+      const { error } = await supabase
+        .from('packages')
+        .update(updateData)
+        .eq('id', id);
+
+      if (error) {
+        console.error('Error updating package:', error);
+        return;
+      }
+
+      setPackages(packages.map(pkg => 
+        pkg.id === id ? { ...pkg, ...packageData } : pkg
+      ));
+    } catch (error) {
+      console.error('Error updating package:', error);
+    }
   };
 
-  const getPackage = (id: number) => {
-    return packages.find(pkg => pkg.id === id);
+  const deletePackage = async (id: string) => {
+    if (!supabase) {
+      console.warn('Supabase not available');
+      return;
+    }
+
+    try {
+      const { error } = await supabase
+        .from('packages')
+        .delete()
+        .eq('id', id);
+
+      if (error) {
+        console.error('Error deleting package:', error);
+        return;
+      }
+
+      setPackages(packages.filter(pkg => pkg.id !== id));
+    } catch (error) {
+      console.error('Error deleting package:', error);
+    }
   };
 
-  const useSession = (id: number, notes?: string) => {
-    const pkg = packages.find(p => p.id === id);
-    if (!pkg) return;
+  const useSession = async (packageId: string, notes?: string) => {
+    const pkg = packages.find(p => p.id === packageId);
+    if (!pkg || pkg.usedSessions >= pkg.totalSessions) {
+      return false;
+    }
 
     const newSessionEntry: SessionHistoryEntry = {
       id: Date.now().toString(),
       date: new Date().toISOString().split('T')[0],
-      notes: notes || `Sessão ${pkg.usedSessions + 1}`
+      notes: notes || ''
     };
 
-    updatePackage(id, {
-      usedSessions: pkg.usedSessions + 1,
+    const updatedSessionHistory = [...pkg.sessionHistory, newSessionEntry];
+    const newUsedSessions = pkg.usedSessions + 1;
+    const newStatus = newUsedSessions >= pkg.totalSessions ? 'completed' : pkg.status;
+
+    await updatePackage(packageId, {
+      usedSessions: newUsedSessions,
       lastUsed: newSessionEntry.date,
-      sessionHistory: [...(pkg.sessionHistory || []), newSessionEntry]
+      status: newStatus,
+      sessionHistory: updatedSessionHistory
     });
+
+    return true;
+  };
+
+  const getPackage = (id: string) => {
+    return packages.find(p => p.id === id);
+  };
+
+  const getPackagesByClient = (clientId: string) => {
+    return packages.filter(p => p.clientId === clientId);
+  };
+
+  const getActivePackages = () => {
+    return packages.filter(p => p.status === 'active');
+  };
+
+  const getExpiringPackages = (days: number = 30) => {
+    const futureDate = new Date();
+    futureDate.setDate(futureDate.getDate() + days);
+    const futureDateStr = futureDate.toISOString().split('T')[0];
+    
+    return packages.filter(p => 
+      p.status === 'active' && 
+      p.validUntil <= futureDateStr
+    );
   };
 
   return {
     packages,
+    isLoading,
     addPackage,
     updatePackage,
     deletePackage,
+    useSession,
     getPackage,
-    useSession
+    getPackagesByClient,
+    getActivePackages,
+    getExpiringPackages,
   };
 }

@@ -12,11 +12,14 @@ import { Calendar as CalendarComponent } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { cn } from "@/lib/utils";
 import { Service } from "@/hooks/useServices";
+import { useClients } from "@/hooks/useClients";
+import { useAppointments } from "@/hooks/useAppointments";
 
 interface Appointment {
   id?: number;
   serviceId: number;
   serviceName: string;
+  clientId: number;
   clientName: string;
   clientPhone: string;
   date: Date;
@@ -31,7 +34,7 @@ interface AppointmentModalProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   service: Service | null;
-  onSave: (appointment: Appointment) => void;
+  onSave: (appointment: Omit<Appointment, 'id'>) => void;
 }
 
 // Horários disponíveis (8h às 18h, intervalos de 30 min)
@@ -42,9 +45,13 @@ const timeSlots = Array.from({ length: 21 }, (_, i) => {
 });
 
 export function AppointmentModal({ open, onOpenChange, service, onSave }: AppointmentModalProps) {
+  const { clients } = useClients();
+  const { appointments } = useAppointments();
+  const [selectedClientId, setSelectedClientId] = useState<string>("");
   const [formData, setFormData] = useState<Omit<Appointment, 'id'>>({
     serviceId: 0,
     serviceName: "",
+    clientId: 0,
     clientName: "",
     clientPhone: "",
     date: new Date(),
@@ -60,6 +67,7 @@ export function AppointmentModal({ open, onOpenChange, service, onSave }: Appoin
       setFormData({
         serviceId: service.id,
         serviceName: service.name,
+        clientId: 0,
         clientName: "",
         clientPhone: "",
         date: new Date(),
@@ -69,6 +77,7 @@ export function AppointmentModal({ open, onOpenChange, service, onSave }: Appoin
         notes: "",
         status: "agendado"
       });
+      setSelectedClientId("");
     }
   }, [service, open]);
 
@@ -79,26 +88,22 @@ export function AppointmentModal({ open, onOpenChange, service, onSave }: Appoin
       return;
     }
 
-    onSave(formData as Appointment);
+    onSave(formData);
     onOpenChange(false);
-    
-    // Reset form
-    setFormData({
-      serviceId: 0,
-      serviceName: "",
-      clientName: "",
-      clientPhone: "",
-      date: new Date(),
-      time: "09:00",
-      duration: 60,
-      price: 0,
-      notes: "",
-      status: "agendado"
-    });
   };
 
   const handleChange = (field: keyof Omit<Appointment, 'id'>, value: any) => {
     setFormData(prev => ({ ...prev, [field]: value }));
+  };
+
+  const handleClientSelect = (clientId: string) => {
+    setSelectedClientId(clientId);
+    const selectedClient = clients.find(c => c.id.toString() === clientId);
+    if (selectedClient) {
+      handleChange("clientId", selectedClient.id);
+      handleChange("clientName", selectedClient.name);
+      handleChange("clientPhone", selectedClient.phone);
+    }
   };
 
   if (!service) return null;
@@ -140,28 +145,28 @@ export function AppointmentModal({ open, onOpenChange, service, onSave }: Appoin
               Dados do Cliente
             </h4>
             
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label htmlFor="clientName">Nome Completo</Label>
-                <Input
-                  id="clientName"
-                  value={formData.clientName}
-                  onChange={(e) => handleChange("clientName", e.target.value)}
-                  placeholder="Ex: Maria Silva"
-                  required
-                />
-              </div>
-              
-              <div className="space-y-2">
-                <Label htmlFor="clientPhone">Telefone</Label>
-                <Input
-                  id="clientPhone"
-                  value={formData.clientPhone}
-                  onChange={(e) => handleChange("clientPhone", e.target.value)}
-                  placeholder="(11) 99999-9999"
-                  required
-                />
-              </div>
+            <div className="space-y-2">
+              <Label htmlFor="client">Cliente *</Label>
+              <Select value={selectedClientId} onValueChange={handleClientSelect} required>
+                <SelectTrigger>
+                  <SelectValue placeholder="Selecione um cliente" />
+                </SelectTrigger>
+                <SelectContent>
+                  {clients.map((client) => (
+                    <SelectItem key={client.id} value={client.id.toString()}>
+                      <div className="flex flex-col">
+                        <span className="font-medium">{client.name}</span>
+                        <span className="text-xs text-muted-foreground">{client.phone}</span>
+                      </div>
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              {clients.length === 0 && (
+                <p className="text-xs text-muted-foreground mt-1">
+                  Nenhum cliente cadastrado. Vá para a aba Clientes primeiro.
+                </p>
+              )}
             </div>
           </div>
 
@@ -243,7 +248,8 @@ export function AppointmentModal({ open, onOpenChange, service, onSave }: Appoin
           <div className="p-4 bg-primary/5 rounded-lg border border-primary/20">
             <h4 className="font-medium mb-2">Resumo do Agendamento</h4>
             <div className="space-y-1 text-sm">
-              <p><span className="text-muted-foreground">Cliente:</span> {formData.clientName || "Nome não informado"}</p>
+              <p><span className="text-muted-foreground">Cliente:</span> {formData.clientName || "Selecione um cliente"}</p>
+              <p><span className="text-muted-foreground">Telefone:</span> {formData.clientPhone || "Selecione um cliente"}</p>
               <p><span className="text-muted-foreground">Data:</span> {formData.date ? format(formData.date, "dd/MM/yyyy", { locale: ptBR }) : "Data não selecionada"} às {formData.time}</p>
               <p><span className="text-muted-foreground">Duração:</span> {formData.duration} minutos</p>
               <p><span className="text-muted-foreground">Valor:</span> R$ {formData.price.toFixed(2).replace('.', ',')}</p>

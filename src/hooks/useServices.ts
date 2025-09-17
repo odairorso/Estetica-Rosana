@@ -1,8 +1,9 @@
-import { useState } from "react";
-import { Sparkles, Clock, DollarSign, Tag, Heart, Droplet, Zap } from "lucide-react";
+import { useState, useEffect } from 'react';
+import { Sparkles, Heart, Droplet, Zap } from "lucide-react";
+import { supabase } from '../lib/supabase';
 
 export interface Service {
-  id: number;
+  id: string;
   name: string;
   category: string;
   price: number;
@@ -19,85 +20,190 @@ const iconMap = {
   Zap,
 };
 
-const initialServices: Service[] = [
-  {
-    id: 1,
-    name: "Limpeza de Pele Profunda",
-    category: "Facial",
-    price: 120.00,
-    duration: 60,
-    description: "Limpeza completa com extração e hidratação",
-    icon: "Sparkles",
-    popular: true
-  },
-  {
-    id: 2,
-    name: "Drenagem Linfática",
-    category: "Corporal",
-    price: 80.00,
-    duration: 45,
-    description: "Massagem para redução de inchaço e retenção",
-    icon: "Droplet",
-    popular: false
-  },
-  {
-    id: 3,
-    name: "Hidratação Facial",
-    category: "Facial",
-    price: 90.00,
-    duration: 40,
-    description: "Tratamento hidratante com ácido hialurônico",
-    icon: "Heart",
-    popular: true
-  },
-  {
-    id: 4,
-    name: "Peeling Químico",
-    category: "Facial",
-    price: 150.00,
-    duration: 30,
-    description: "Renovação celular com ácidos específicos",
-    icon: "Zap",
-    popular: false
-  },
-  {
-    id: 5,
-    name: "Massagem Relaxante",
-    category: "Corporal",
-    price: 100.00,
-    duration: 50,
-    description: "Massagem terapêutica para alívio do estresse",
-    icon: "Heart",
-    popular: true
-  },
-  {
-    id: 6,
-    name: "Tratamento Anti-idade",
-    category: "Facial",
-    price: 200.00,
-    duration: 75,
-    description: "Protocolo completo contra sinais de envelhecimento",
-    icon: "Sparkles",
-    popular: false
-  }
-];
-
 export function useServices() {
-  const [services, setServices] = useState<Service[]>(initialServices);
+  const [services, setServices] = useState<Service[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
 
-  const addService = (newService: Omit<Service, 'id'>) => {
-    const id = Math.max(...services.map(s => s.id), 0) + 1;
-    setServices(prev => [...prev, { ...newService, id }]);
+  // Load services from Supabase on mount
+  useEffect(() => {
+    const loadServices = async () => {
+      if (!supabase) {
+        console.warn('Supabase not available, using fallback data');
+        // Fallback data if Supabase is not available
+        const fallbackServices: Service[] = [
+          {
+            id: "1",
+            name: "Limpeza de Pele",
+            category: "Facial",
+            price: 120,
+            duration: 60,
+            description: "Tratamento completo para limpeza e revitalização da pele do rosto",
+            icon: "Sparkles",
+            popular: true
+          },
+          {
+            id: "2",
+            name: "Drenagem Linfática",
+            category: "Corporal",
+            price: 80,
+            duration: 50,
+            description: "Massagem que estimula o sistema linfático para redução de inchaços",
+            icon: "Droplet",
+            popular: false
+          },
+          {
+            id: "3",
+            name: "Botox",
+            category: "Facial",
+            price: 350,
+            duration: 30,
+            description: "Aplicação de toxina botulínica para redução de rugas e expressões",
+            icon: "Zap",
+            popular: true
+          }
+        ];
+        setServices(fallbackServices);
+        setIsLoading(false);
+        return;
+      }
+
+      try {
+        const { data, error } = await supabase
+          .from('services')
+          .select('*')
+          .order('name', { ascending: true });
+
+        if (error) {
+          console.error('Error loading services:', error);
+          return;
+        }
+
+        // Transform Supabase data to match our interface
+        const transformedServices: Service[] = data.map(service => ({
+          id: service.id,
+          name: service.name || '',
+          category: service.category || '',
+          price: service.price || 0,
+          duration: service.duration || 0,
+          description: service.description || '',
+          icon: service.icon || 'Sparkles',
+          popular: service.popular || false
+        }));
+
+        setServices(transformedServices);
+      } catch (error) {
+        console.error('Error loading services:', error);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    loadServices();
+  }, []);
+
+  const addService = async (serviceData: Omit<Service, 'id'>) => {
+    if (!supabase) {
+      console.warn('Supabase not available');
+      return null;
+    }
+
+    try {
+      const { data, error } = await supabase
+        .from('services')
+        .insert([{
+          name: serviceData.name,
+          category: serviceData.category,
+          price: serviceData.price,
+          duration: serviceData.duration,
+          description: serviceData.description,
+          icon: serviceData.icon,
+          popular: serviceData.popular
+        }])
+        .select()
+        .single();
+
+      if (error) {
+        console.error('Error adding service:', error);
+        return null;
+      }
+
+      const newService: Service = {
+        id: data.id,
+        name: data.name || '',
+        category: data.category || '',
+        price: data.price || 0,
+        duration: data.duration || 0,
+        description: data.description || '',
+        icon: data.icon || 'Sparkles',
+        popular: data.popular || false
+      };
+
+      setServices([...services, newService]);
+      return newService;
+    } catch (error) {
+      console.error('Error adding service:', error);
+      return null;
+    }
   };
 
-  const updateService = (updatedService: Service) => {
-    setServices(prev => prev.map(service => 
-      service.id === updatedService.id ? updatedService : service
-    ));
+  const updateService = async (id: string, serviceData: Partial<Service>) => {
+    if (!supabase) {
+      console.warn('Supabase not available');
+      return;
+    }
+
+    try {
+      const { error } = await supabase
+        .from('services')
+        .update({
+          name: serviceData.name,
+          category: serviceData.category,
+          price: serviceData.price,
+          duration: serviceData.duration,
+          description: serviceData.description,
+          icon: serviceData.icon,
+          popular: serviceData.popular
+        })
+        .eq('id', id);
+
+      if (error) {
+        console.error('Error updating service:', error);
+        return;
+      }
+
+      setServices(services.map(service => 
+        service.id === id ? { ...service, ...serviceData } : service
+      ));
+    } catch (error) {
+      console.error('Error updating service:', error);
+    }
   };
 
-  const deleteService = (id: number) => {
-    setServices(prev => prev.filter(service => service.id !== id));
+  const deleteService = async (id: string) => {
+    if (!supabase) {
+      console.warn('Supabase not available');
+      return;
+    }
+
+    try {
+      const { error } = await supabase
+        .from('services')
+        .delete()
+        .eq('id', id);
+
+      if (error) {
+        console.error('Error deleting service:', error);
+        return;
+      }
+
+      setServices(services.filter(service => service.id !== id));
+    } catch (error) {
+      console.error('Error deleting service:', error);
+    }
+  };
+
+  const getService = (id: string) => {
+    return services.find(s => s.id === id);
   };
 
   const getServiceIcon = (iconName: string) => {
@@ -106,9 +212,11 @@ export function useServices() {
 
   return {
     services,
+    isLoading,
     addService,
     updateService,
     deleteService,
+    getService,
     getServiceIcon,
   };
 }

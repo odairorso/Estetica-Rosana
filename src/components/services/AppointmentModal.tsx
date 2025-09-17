@@ -16,7 +16,7 @@ interface FormData {
   package_id: number;
   service_id: number;
   serviceName: string;
-  date: string;
+  date: string; // kept for internal use but not exposed to user
   time: string;
   notes: string;
 }
@@ -41,10 +41,10 @@ export function AppointmentModal({ open, onOpenChange, onSave }: AppointmentModa
   const [formData, setFormData] = useState<FormData>({
     package_id: 0,
     service_id: 0,
-    serviceName: "",
-    date: new Date().toISOString().split('T')[0],
+    serviceName: '',
+    date: new Date().toISOString().split('T')[0], // default to today
     time: "09:00",
-    notes: "",
+    notes: '',
   });
 
   const [selectedPackage, setSelectedPackage] = useState<PackageType | null>(null);
@@ -54,10 +54,10 @@ export function AppointmentModal({ open, onOpenChange, onSave }: AppointmentModa
       setFormData({
         package_id: 0,
         service_id: 0,
-        serviceName: "",
-        date: new Date().toISOString().split('T')[0],
+        serviceName: '',
+        date: new Date().toISOString().split('T')[0], // reset to today on open
         time: "09:00",
-        notes: "",
+        notes: '',
       });
       setSelectedPackage(null);
     }
@@ -65,7 +65,7 @@ export function AppointmentModal({ open, onOpenChange, onSave }: AppointmentModa
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     if (!formData.package_id || !formData.service_id) {
       toast({ title: "Erro", description: "Selecione um pacote e um serviço.", variant: "destructive" });
       return;
@@ -81,7 +81,7 @@ export function AppointmentModal({ open, onOpenChange, onSave }: AppointmentModa
       client_id: selectedPackage?.client_id || 0,
       client_name: selectedPackage?.clientName || "",
       client_phone: "",
-      appointment_date: formData.date,
+      appointment_date: formData.date, // date is set automatically to today
       appointment_time: formData.time,
       duration: selectedService?.duration || 60,
       price: 0,
@@ -162,18 +162,6 @@ export function AppointmentModal({ open, onOpenChange, onSave }: AppointmentModa
             </Select>
           </div>
 
-          {/* Data fixa de hoje */}
-          <div className="space-y-2">
-            <Label>Data</Label>
-            <div className="flex items-center gap-2 p-2 rounded-md border border-input bg-muted/50">
-              <Calendar className="h-4 w-4 text-muted-foreground" />
-              <span className="text-sm">
-                {format(new Date(formData.date), "dd/MM/yyyy", { locale: ptBR })}
-              </span>
-            </div>
-            <p className="text-xs text-muted-foreground">Data atual (hoje)</p>
-          </div>
-
           {/* Horário */}
           <div className="space-y-2">
             <Label htmlFor="time">Horário *</Label>
@@ -216,10 +204,8 @@ export function AppointmentModal({ open, onOpenChange, onSave }: AppointmentModa
           )}
 
           <div className="flex gap-3 pt-4">
-            <Button type="button" variant="outline" onClick={() => onOpenChange(false)} className="flex-1">
-              Cancelar
-            </Button>
-            <Button type="submit" className="flex-1">
+            <Button type="button" variant="outline" onClick={() => onOpenChange(false)} className="flex-1">Cancelar</Button>
+            <Button type="submit" className="flex-1 bg-brand-gradient hover:opacity-90">
               Agendar Sessão
             </Button>
           </div>

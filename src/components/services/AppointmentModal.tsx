@@ -60,6 +60,7 @@ export function AppointmentModal({ open, onOpenChange, onSave }: AppointmentModa
 
   const [clientComboboxOpen, setClientComboboxOpen] = useState(false);
   const [selectedPackage, setSelectedPackage] = useState<PackageType | null>(null);
+  const [selectionType, setSelectionType] = useState<'package' | 'service' | null>(null);
 
   useEffect(() => {
     if (open) {
@@ -75,6 +76,7 @@ export function AppointmentModal({ open, onOpenChange, onSave }: AppointmentModa
         notes: '',
       });
       setSelectedPackage(null);
+      setSelectionType(null);
     }
   }, [open]);
 
@@ -128,11 +130,33 @@ export function AppointmentModal({ open, onOpenChange, onSave }: AppointmentModa
     setClientComboboxOpen(false);
   };
 
+  const handleSelectionTypeChange = (type: 'package' | 'service') => {
+    if (selectionType === type) {
+      // Deselect if clicking the same type
+      setSelectionType(null);
+      setFormData(prev => ({
+        ...prev,
+        package_id: 0,
+        service_id: 0
+      }));
+      setSelectedPackage(null);
+    } else {
+      // Select new type
+      setSelectionType(type);
+      setFormData(prev => ({
+        ...prev,
+        package_id: 0,
+        service_id: 0
+      }));
+      setSelectedPackage(null);
+    }
+  };
+
   const handlePackageSelect = (packageId: string) => {
     const id = parseInt(packageId);
     const selected = packages.find(p => p.id === id);
     setSelectedPackage(selected || null);
-    setFormData(prev => ({ ...prev, package_id: id, service_id: 0 }));
+    setFormData(prev => ({ ...prev, package_id: id }));
   };
 
   const handleServiceSelect = (serviceId: string) => {
@@ -141,10 +165,8 @@ export function AppointmentModal({ open, onOpenChange, onSave }: AppointmentModa
     setFormData(prev => ({ 
       ...prev, 
       service_id: id,
-      serviceName: selectedService?.name || "",
-      package_id: 0
+      serviceName: selectedService?.name || ""
     }));
-    setSelectedPackage(null);
   };
 
   const handleDateChange = (date: string) => {
@@ -203,27 +225,18 @@ export function AppointmentModal({ open, onOpenChange, onSave }: AppointmentModa
             <div className="grid grid-cols-2 gap-2">
               <Button
                 type="button"
-                variant={formData.package_id ? "default" : "outline"}
-                className={formData.package_id ? "bg-brand-gradient" : ""}
-                onClick={() => {
-                  if (formData.package_id) {
-                    setFormData(prev => ({ ...prev, package_id: 0 }));
-                    setSelectedPackage(null);
-                  }
-                }}
+                variant={selectionType === 'package' ? "default" : "outline"}
+                className={selectionType === 'package' ? "bg-brand-gradient" : ""}
+                onClick={() => handleSelectionTypeChange('package')}
               >
                 <Package className="mr-2 h-4 w-4" />
                 Pacote
               </Button>
               <Button
                 type="button"
-                variant={formData.service_id ? "default" : "outline"}
-                className={formData.service_id ? "bg-brand-gradient" : ""}
-                onClick={() => {
-                  if (formData.service_id) {
-                    setFormData(prev => ({ ...prev, service_id: 0 }));
-                  }
-                }}
+                variant={selectionType === 'service' ? "default" : "outline"}
+                className={selectionType === 'service' ? "bg-brand-gradient" : ""}
+                onClick={() => handleSelectionTypeChange('service')}
               >
                 <Sparkles className="mr-2 h-4 w-4" />
                 Procedimento
@@ -232,7 +245,7 @@ export function AppointmentModal({ open, onOpenChange, onSave }: AppointmentModa
           </div>
 
           {/* Seleção de Pacote */}
-          {formData.package_id !== 0 && (
+          {selectionType === 'package' && (
             <div className="space-y-2">
               <Label htmlFor="package">Pacote</Label>
               <Select value={formData.package_id.toString()} onValueChange={handlePackageSelect}>
@@ -253,7 +266,7 @@ export function AppointmentModal({ open, onOpenChange, onSave }: AppointmentModa
           )}
 
           {/* Seleção de Serviço */}
-          {formData.service_id !== 0 && (
+          {selectionType === 'service' && (
             <div className="space-y-2">
               <Label htmlFor="service">Serviço</Label>
               <Select value={formData.service_id.toString()} onValueChange={handleServiceSelect}>

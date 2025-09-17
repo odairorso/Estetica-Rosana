@@ -6,38 +6,42 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Popover, PopoverTrigger, PopoverContent } from "@/components/ui/popover";
 import { Command, CommandInput, CommandEmpty, CommandGroup, CommandItem } from "@/components/ui/command";
-import { Check, ChevronsUpDown, CalendarIcon } from "lucide-react";
+import { Check, ChevronsUpDown, CalendarIcon, Sparkles, Package } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { Calendar } from "@/components/ui/calendar";
 import { useClients } from "@/hooks/useClients";
+import { useServices } from "@/hooks/useServices";
 import { usePackages } from "@/hooks/usePackages";
 import { useToast } from "@/hooks/use-toast";
 
-interface SalesModalProps {
+interface CashierModalProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  type: 'service' | 'package';
   onSave: (saleData: any) => void;
 }
 
-export function SalesModal({ open, onOpenChange, onSave }: SalesModalProps) {
+export function CashierModal({ open, onOpenChange, type, onSave }: CashierModalProps) {
   const { toast } = useToast();
   const { clients } = useClients();
+  const { services: availableServices } = useServices();
   const { packages: availablePackages } = usePackages();
   const [clientComboboxOpen, setClientComboboxOpen] = useState(false);
-  const [packageComboboxOpen, setPackageComboboxOpen] = useState(false);
+  const [itemComboboxOpen, setItemComboboxOpen] = useState(false);
   const [datePickerOpen, setDatePickerOpen] = useState(false);
   
   const [formData, setFormData] = useState({
     client_id: 0,
-    package_id: 0,
-    packageName: '',
+    item_id: 0,
+    itemName: '',
     clientName: '',
     price: 0,
     sale_date: new Date(),
-    valid_until: '',
-    total_sessions: 0,
+    duration: 0, // Para serviços
+    total_sessions: 0, // Para pacotes
+    valid_until: '', // Para pacotes
     notes: ''
   });
 
@@ -45,22 +49,23 @@ export function SalesModal({ open, onOpenChange, onSave }: SalesModalProps) {
     if (open) {
       setFormData({
         client_id: 0,
-        package_id: 0,
-        packageName: '',
+        item_id: 0,
+        itemName: '',
         clientName: '',
         price: 0,
         sale_date: new Date(),
-        valid_until: '',
+        duration: 0,
         total_sessions: 0,
+        valid_until: '',
         notes: ''
       });
     }
-  }, [open]);
+  }, [open, type]);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (!formData.client_id || !formData.package_id || !formData.price) {
+    if (!formData.client_id || !formData.item_id || !formData.price) {
       toast({
         title: "Erro",
         description: "Por favor, preencha todos os campos obrigatórios.",
@@ -70,14 +75,16 @@ export function SalesModal({ open, onOpenChange, onSave }: SalesModalProps) {
     }
 
     const dataToSave = {
+      type,
       client_id: formData.client_id,
-      package_id: formData.package_id,
-      packageName: formData.packageName,
+      item_id: formData.item_id,
+      itemName: formData.itemName,
       clientName: formData.clientName,
       price: formData.price,
       sale_date: format(formData.sale_date, 'yyyy-MM-dd'),
-      valid_until: formData.valid_until,
+      duration: formData.duration,
       total_sessions: formData.total_sessions,
+      valid_until: formData.valid_until,
       notes: formData.notes
     };
 
@@ -97,20 +104,33 @@ export function SalesModal({ open, onOpenChange, onSave }: SalesModalProps) {
     }
   };
 
-  const handlePackageSelect = (packageId: string) => {
-    const id = parseInt(packageId);
-    const pkg = availablePackages.find(p => p.id === id);
-    if (pkg) {
-      setFormData(prev => ({
-        ...prev,
-        package_id: id,
-        packageName: pkg.name,
-        price: pkg.price,
-        valid_until: pkg.valid_until,
-        total_sessions: pkg.total_sessions
-      }));
-      setPackageComboboxOpen(false);
+  const handleItemSelect = (itemId: string) => {
+    const id = parseInt(itemId);
+    if (type === 'service') {
+      const service = availableServices.find(s => s.id === id);
+      if (service) {
+        setFormData(prev => ({
+          ...prev,
+          item_id: id,
+          itemName: service.name,
+          price: service.price,
+          duration: service.duration
+        }));
+      }
+    } else {
+      const pkg = availablePackages.find(p => p.id === id);
+      if (pkg) {
+        setFormData(prev => ({
+          ...prev,
+          item_id: id,
+          itemName: pkg.name,
+          price: pkg.price,
+          total_sessions: pkg.total_sessions,
+          valid_until: pkg.valid_until
+        }));
+      }
     }
+    setItemComboboxOpen(false);
   };
 
   const handleInputChange = (field: string, value: any) => {
@@ -121,8 +141,9 @@ export function SalesModal({ open, onOpenChange, onSave }: SalesModalProps) {
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-[500px]">
         <DialogHeader>
-          <DialogTitle className="text-gradient-brand">
-            Nova Venda de Pacote
+          <DialogTitle className="text-gradient-brand flex items-center gap-2">
+            {type === 'service' ? <Sparkles className="h-5 w-5" /> : <Package className="h-5 w-5" />}
+            Nova Venda de {type === 'service' ? 'Procedimento' : 'Pacote'}
           </DialogTitle>
         </DialogHeader>
         
@@ -158,29 +179,33 @@ export function SalesModal({ open, onOpenChange, onSave }: SalesModalProps) {
             </Popover>
           </div>
 
-          {/* Pacote */}
+          {/* Procedimento ou Pacote */}
           <div className="space-y-2">
-            <Label>Pacote *</Label>
-            <Popover open={packageComboboxOpen} onOpenChange={setPackageComboboxOpen}>
+            <Label>{type === 'service' ? 'Procedimento' : 'Pacote'} *</Label>
+            <Popover open={itemComboboxOpen} onOpenChange={setItemComboboxOpen}>
               <PopoverTrigger asChild>
-                <Button variant="outline" role="combobox" aria-expanded={packageComboboxOpen} className="w-full justify-between">
-                  {formData.package_id ? availablePackages.find(p => p.id === formData.package_id)?.name : "Selecione um pacote..."}
+                <Button variant="outline" role="combobox" aria-expanded={itemComboboxOpen} className="w-full justify-between">
+                  {formData.item_id ? 
+                    (type === 'service' 
+                      ? availableServices.find(s => s.id === formData.item_id)?.name 
+                      : availablePackages.find(p => p.id === formData.item_id)?.name)
+                    : `Selecione um ${type === 'service' ? 'procedimento' : 'pacote'}...`}
                   <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
                 </Button>
               </PopoverTrigger>
               <PopoverContent className="w-[450px] p-0">
                 <Command>
-                  <CommandInput placeholder="Buscar pacote..." />
-                  <CommandEmpty>Nenhum pacote encontrado.</CommandEmpty>
+                  <CommandInput placeholder={`Buscar ${type === 'service' ? 'procedimento' : 'pacote'}...`} />
+                  <CommandEmpty>{`Nenhum ${type === 'service' ? 'procedimento' : 'pacote'} encontrado.`}</CommandEmpty>
                   <CommandGroup>
-                    {availablePackages.map((pkg) => (
+                    {(type === 'service' ? availableServices : availablePackages).map((item) => (
                       <CommandItem
-                        key={pkg.id}
-                        value={pkg.name}
-                        onSelect={() => handlePackageSelect(pkg.id.toString())}
+                        key={item.id}
+                        value={item.name}
+                        onSelect={() => handleItemSelect(item.id.toString())}
                       >
-                        <Check className={cn("mr-2 h-4 w-4", formData.package_id === pkg.id ? "opacity-100" : "opacity-0")} />
-                        {pkg.name}
+                        <Check className={cn("mr-2 h-4 w-4", formData.item_id === item.id ? "opacity-100" : "opacity-0")} />
+                        {item.name}
                       </CommandItem>
                     ))}
                   </CommandGroup>
@@ -228,6 +253,19 @@ export function SalesModal({ open, onOpenChange, onSave }: SalesModalProps) {
             />
           </div>
 
+          {/* Informações adicionais */}
+          {type === 'service' && formData.duration > 0 && (
+            <div className="text-sm text-muted-foreground">
+              Duração: {formData.duration} minutos
+            </div>
+          )}
+          
+          {type === 'package' && formData.total_sessions > 0 && (
+            <div className="text-sm text-muted-foreground">
+              {formData.total_sessions} sessões - Válido até: {formData.valid_until ? format(new Date(formData.valid_until), "dd/MM/yyyy", { locale: ptBR }) : 'N/A'}
+            </div>
+          )}
+
           {/* Observações */}
           <div className="space-y-2">
             <Label htmlFor="notes">Observações</Label>
@@ -241,7 +279,9 @@ export function SalesModal({ open, onOpenChange, onSave }: SalesModalProps) {
 
           <div className="flex gap-3 pt-4">
             <Button type="button" variant="outline" onClick={() => onOpenChange(false)} className="flex-1">Cancelar</Button>
-            <Button type="submit" className="flex-1 bg-brand-gradient hover:opacity-90">Registrar Venda</Button>
+            <Button type="submit" className="flex-1 bg-brand-gradient hover:opacity-90">
+              Registrar Venda
+            </Button>
           </div>
         </form>
       </DialogContent>

@@ -5,6 +5,8 @@ import { GlassCard } from "@/components/ui/glass-card";
 import { NeonButton } from "@/components/ui/neon-button";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Calendar } from "@/components/ui/calendar";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -13,36 +15,93 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { AppointmentModal } from "@/components/services/AppointmentModal";
 import { useAppointments, Appointment } from "@/hooks/useAppointments";
-import { useServices } from "@/hooks/useServices";
-import { toast } from "@/hooks/use-toast";
-import { format } from "date-fns";
+import { useToast } from "@/hooks/use-toast";
+import { format, parseISO, isToday } from "date-fns";
 import { ptBR } from "date-fns/locale";
 
 export default function Appointments() {
-  const { services } = useServices();
-  const { appointments, addAppointment, updateAppointment } = useAppointments();
+  const { appointments, addAppointment, updateAppointment, isLoading } = useAppointments();
   const [selectedDate, setSelectedDate] = useState(new Date());
   const [modalOpen, setModalOpen] = useState(false);
-  const [selectedService, setSelectedService] = useState(null);
+  const { toast } = useToast();
 
-  const todayAppointments = appointments
-    .filter(apt => apt.date === format(selectedDate, 'yyyy-MM-dd'))
-    .sort((a, b) => a.time.localeCompare(b.time));
-
-  const handleSaveAppointment = (appointmentData: any) => {
-    addAppointment(appointmentData);
-    toast({
-      title: "Agendamento confirmado!",
-      description: `${appointmentData.serviceName} agendado para ${appointmentData.clientName}.`,
-    });
+  // Função segura para normalizar datas
+  const normalizeDate = (dateString: string) => {
+    try {
+      return format(parseISO(dateString), 'yyyy-MM-dd');
+    } catch (error) {
+      console.error('Erro ao normalizar data:', error);
+      return '0000-00-00';
+    }
   };
 
-  const handleStatusChange = (appointment: Appointment, status: Appointment['status']) => {
-    updateAppointment({ ...appointment, status });
-    toast({
-      title: "Status atualizado!",
-      description: `O agendamento de ${appointment.clientName} foi atualizado para "${status}".`,
-    });
+  // Filtrar agendamentos para a data selecionada
+  const filteredAppointments = appointments.filter(apt => {
+    try {
+      const aptDate = normalizeDate(apt.appointment_date);
+      const selectedDateStr = format(selectedDate, 'yyyy-MM-dd');
+      return aptDate === selectedDateStr;
+    } catch (error) {
+      console.error('Erro ao filtrar agendamentos:', error);
+      return false;
+    }
+  }).sort((a, b) => a.appointment_time.localeCompare(b.appointment_time));
+
+  const handleSaveAppointment = async (appointmentData: any) => {
+    try {
+      const dataToSave = {
+        service_id: appointmentData.service_id,
+        client_id: appointmentData.client_id,
+        client_name: appointmentData.client_name,
+        client_phone: appointmentData.client_phone,
+        duration: appointmentData.duration,
+        price: appointmentData.price,
+        notes: appointmentData.notes || '',
+        status: "agendado" as const,
+        appointment_date: format(appointmentData.date, 'yyyy-MM-dd'),
+        appointment_time: appointmentData.time,
+      };
+
+      const result = await addAppointment(dataToSave);
+      
+      if (result) {
+        toast({
+          title: "Agendamento confirmado!",
+          description: `${appointmentData.serviceName} agendado para ${appointmentData.client_name}.`,
+        });
+        setModalOpen(false);
+      } else {
+        toast({
+          title: "Erro",
+          description: "Não foi possível criar o agendamento.",
+          variant: "destructive",
+        });
+      }
+    } catch (error) {
+      console.error('Erro ao salvar agendamento:', error);
+      toast({
+        title: "Erro",
+        description: "Ocorreu um erro ao criar o agendamento.",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleStatusChange = async (appointment: Appointment, status: Appointment['status']) => {
+    try {
+      await updateAppointment(appointment.id, { status });
+      toast({
+        title: "Status atualizado!",
+        description: `O agendamento de ${appointment.client_name} foi atualizado para "${getStatusText(status)}".`,
+      });
+    } catch (error) {
+      console.error('Erro ao atualizar status:', error);
+      toast({
+        title: "Erro",
+        description: "Não foi possível atualizar o status.",
+        variant: "destructive",
+      });
+    }
   };
 
   const getStatusProps = (status: Appointment['status']) => {
@@ -52,13 +111,28 @@ export default function Appointments() {
       case "confirmado":
         return { text: "Confirmado", color: "bg-green-500/20 text-green-600 border-green-500/30", icon: CheckCircle };
       case "concluido":
-        return { text: "Concluído", color: "bg-gray-500/20 text-gray-600 border-gray-500/30", icon: User };
+        return { text: "Concluído", color: "bg-purple-500/20 text-purple-600 border-purple-500/30", icon: User };
       case "cancelado":
         return { text: "Cancelado", color: "bg-red-500/20 text-red-600 border-red-500/30", icon: XCircle };
       default:
         return { text: "Agendado", color: "bg-blue-500/20 text-blue-600 border-blue-500/30", icon: Hourglass };
     }
   };
+
+  const getStatusText = (status: Appointment['status']) => {
+    return getStatusProps(status).text;
+  };
+
+  if (isLoading) {
+    return (
+      <div className="flex min-h-screen items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-brand-gradient mx-auto"></div>
+          <p className="mt-4 text-muted-foreground">Carregando agendamentos...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <>
@@ -72,9 +146,23 @@ export default function Appointments() {
         <div className="flex flex-col gap-4 md:flex-row md:justify-between md:items-center">
           <div>
             <h1 className="text-3xl font-bold text-gradient-brand">Agendamentos</h1>
-            <p className="text-foreground/80 font-medium">
-              Data: {format(selectedDate, "dd 'de' MMMM 'de' yyyy", { locale: ptBR })}
-            </p>
+            <Popover>
+              <PopoverTrigger asChild>
+                <Button variant="outline" className="mt-2 text-lg p-6">
+                  <CalendarIcon className="mr-3 h-5 w-5" />
+                  {format(selectedDate, "dd 'de' MMMM 'de' yyyy", { locale: ptBR })}
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-auto p-0">
+                <Calendar
+                  mode="single"
+                  selected={selectedDate}
+                  onSelect={(date) => date && setSelectedDate(date)}
+                  initialFocus
+                  locale={ptBR}
+                />
+              </PopoverContent>
+            </Popover>
           </div>
           
           <NeonButton icon={Plus} variant="primary" onClick={() => setModalOpen(true)}>
@@ -82,25 +170,34 @@ export default function Appointments() {
           </NeonButton>
         </div>
 
-        <div className="grid gap-4">
-          {todayAppointments.map((apt) => {
+        <div className="space-y-4">
+          {filteredAppointments.map((apt) => {
             const statusProps = getStatusProps(apt.status);
+            const StatusIcon = statusProps.icon;
+            
             return (
-              <GlassCard key={apt.id} className="hover-lift p-4">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-6">
-                    <div className="flex items-center gap-2">
-                      <Clock className="h-5 w-5 text-brand-start icon-glow" />
-                      <span className="font-bold text-lg text-white">{apt.time}</span>
+              <GlassCard key={apt.id} className="hover-lift p-6">
+                <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+                  <div className="flex items-center gap-4 flex-1 min-w-0">
+                    <div className="flex items-center gap-2 min-w-[80px]">
+                      <Clock className="h-5 w-5 text-brand-start" />
+                      <span className="font-bold text-lg text-foreground">{apt.appointment_time}</span>
                     </div>
-                    <div className="flex items-center gap-2">
-                      <User className="h-5 w-5 text-brand-end" />
-                      <span className="font-semibold text-white">{apt.clientName}</span>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2 mb-1">
+                        <User className="h-5 w-5 text-brand-end" />
+                        <span className="font-semibold text-foreground truncate">{apt.client_name}</span>
+                      </div>
+                      <p className="text-muted-foreground text-sm truncate">{apt.serviceName}</p>
+                      {apt.notes && (
+                        <p className="text-muted-foreground text-xs mt-1 italic truncate">"{apt.notes}"</p>
+                      )}
                     </div>
-                    <span className="text-gray-200 font-medium">{apt.serviceName}</span>
                   </div>
-                  <div className="flex items-center gap-3">
-                    <Badge className={`${statusProps.color} font-semibold`}>
+                  
+                  <div className="flex items-center gap-3 flex-shrink-0">
+                    <Badge className={`${statusProps.color} font-semibold flex items-center gap-1`}>
+                      <StatusIcon className="h-3 w-3" />
                       {statusProps.text}
                     </Badge>
                     <DropdownMenu>
@@ -110,9 +207,24 @@ export default function Appointments() {
                         </Button>
                       </DropdownMenuTrigger>
                       <DropdownMenuContent align="end">
-                        <DropdownMenuItem onClick={() => handleStatusChange(apt, 'confirmado')}>Confirmar</DropdownMenuItem>
-                        <DropdownMenuItem onClick={() => handleStatusChange(apt, 'concluido')}>Marcar como Concluído</DropdownMenuItem>
-                        <DropdownMenuItem onClick={() => handleStatusChange(apt, 'cancelado')} className="text-destructive">Cancelar</DropdownMenuItem>
+                        {apt.status !== 'confirmado' && (
+                          <DropdownMenuItem onClick={() => handleStatusChange(apt, 'confirmado')}>
+                            Confirmar
+                          </DropdownMenuItem>
+                        )}
+                        {apt.status !== 'concluido' && (
+                          <DropdownMenuItem onClick={() => handleStatusChange(apt, 'concluido')}>
+                            Concluir
+                          </DropdownMenuItem>
+                        )}
+                        {apt.status !== 'cancelado' && (
+                          <DropdownMenuItem 
+                            onClick={() => handleStatusChange(apt, 'cancelado')} 
+                            className="text-destructive"
+                          >
+                            Cancelar
+                          </DropdownMenuItem>
+                        )}
                       </DropdownMenuContent>
                     </DropdownMenu>
                   </div>
@@ -121,11 +233,18 @@ export default function Appointments() {
             );
           })}
           
-          {todayAppointments.length === 0 && (
+          {filteredAppointments.length === 0 && (
             <GlassCard className="text-center py-12">
               <CalendarIcon className="h-12 w-12 text-brand-start mx-auto mb-4" />
-              <h3 className="text-xl font-semibold text-foreground mb-2">Nenhum agendamento hoje</h3>
-              <p className="text-foreground/70">Clique em "Novo Agendamento" para começar</p>
+              <h3 className="text-xl font-semibold text-foreground mb-2">
+                {isToday(selectedDate) ? 'Nenhum agendamento para hoje' : 'Nenhum agendamento para esta data'}
+              </h3>
+              <p className="text-muted-foreground mb-4">
+                Selecione outra data ou crie um novo agendamento
+              </p>
+              <NeonButton icon={Plus} onClick={() => setModalOpen(true)}>
+                Criar Novo Agendamento
+              </NeonButton>
             </GlassCard>
           )}
         </div>
@@ -134,8 +253,8 @@ export default function Appointments() {
       <AppointmentModal
         open={modalOpen}
         onOpenChange={setModalOpen}
-        service={selectedService}
         onSave={handleSaveAppointment}
+        service={null} // Corrigido: passe null como serviço quando não há serviço específico
       />
     </>
   );

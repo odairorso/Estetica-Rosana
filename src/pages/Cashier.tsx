@@ -1,6 +1,6 @@
 import { Helmet } from "react-helmet-async";
 import { useState } from "react";
-import { Plus, ShoppingCart, DollarSign, Calendar, User, Receipt, Trash2 } from "lucide-react";
+import { Plus, ShoppingCart, DollarSign, Calendar, User, Receipt, Trash2, Package, Sparkles, Box } from "lucide-react";
 import { GlassCard } from "@/components/ui/glass-card";
 import { NeonButton } from "@/components/ui/neon-button";
 import { Badge } from "@/components/ui/badge";
@@ -10,36 +10,48 @@ import { ptBR } from "date-fns/locale";
 import { useToast } from "@/hooks/use-toast";
 import { CashierModal } from "@/components/cashier/CashierModal";
 
-interface SaleItem {
+interface CartItem {
   id: number;
   type: 'service' | 'package' | 'product';
   item_id: number;
-  client_id: number;
-  clientName: string;
   itemName: string;
   price: number;
+  quantity: number;
+}
+
+interface Sale {
+  id: number;
+  client_id: number;
+  clientName: string;
+  items: CartItem[];
+  total: number;
   sale_date: string;
-  quantity?: number;
   payment_method: string;
+  notes: string;
 }
 
 export default function Cashier() {
   const { toast } = useToast();
   const [modalOpen, setModalOpen] = useState(false);
-  const [sales, setSales] = useState<SaleItem[]>([]);
+  const [sales, setSales] = useState<Sale[]>([]);
 
   const handleSaveSale = (saleData: any) => {
-    const newSale: SaleItem = {
+    const newSale: Sale = {
       id: Math.max(0, ...sales.map(s => s.id)) + 1,
-      ...saleData,
-      sale_date: new Date().toISOString().split('T')[0]
+      client_id: saleData.client_id,
+      clientName: saleData.clientName,
+      items: saleData.items,
+      total: saleData.items.reduce((sum: number, item: CartItem) => sum + (item.price * item.quantity), 0),
+      sale_date: new Date().toISOString().split('T')[0],
+      payment_method: saleData.payment_method,
+      notes: saleData.notes
     };
     
     setSales([...sales, newSale]);
     
     toast({
       title: "Venda registrada!",
-      description: `Venda de ${saleData.itemName} para ${saleData.clientName} registrada com sucesso.`,
+      description: `Venda para ${saleData.clientName} registrada com sucesso.`,
     });
     setModalOpen(false);
   };
@@ -54,10 +66,10 @@ export default function Cashier() {
 
   const getItemIcon = (type: string) => {
     switch (type) {
-      case 'service': return "💆‍♀️";
-      case 'package': return "📦";
-      case 'product': return "🧴";
-      default: return "💰";
+      case 'service': return <Sparkles className="h-4 w-4" />;
+      case 'package': return <Package className="h-4 w-4" />;
+      case 'product': return <Box className="h-4 w-4" />;
+      default: return <DollarSign className="h-4 w-4" />;
     }
   };
 
@@ -88,13 +100,13 @@ export default function Cashier() {
     }
   };
 
-  const totalRevenue = sales.reduce((sum, sale) => sum + sale.price, 0);
+  const totalRevenue = sales.reduce((sum, sale) => sum + sale.total, 0);
 
   return (
     <>
       <Helmet>
         <title>Caixa | Gestão de Clínica Estética</title>
-        <meta name="description" content="Sistema profissional de caixa para clínica estética" />
+        <meta name="description" content="Sistema profissional de caixa com carrinho de compras" />
         <link rel="canonical" href="/caixa" />
       </Helmet>
 
@@ -103,7 +115,7 @@ export default function Cashier() {
         <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
           <div>
             <h1 className="text-2xl font-bold text-gradient-brand">Caixa</h1>
-            <p className="text-muted-foreground">Controle profissional de vendas</p>
+            <p className="text-muted-foreground">Sistema de vendas com carrinho</p>
           </div>
           <div className="flex items-center gap-4">
             <div className="text-right">
@@ -124,44 +136,56 @@ export default function Cashier() {
             <GlassCard key={sale.id} className="p-4 hover-lift">
               <div className="flex items-start justify-between">
                 {/* Informações principais */}
-                <div className="flex items-start gap-4 flex-1">
-                  <div className="text-2xl mt-1">{getItemIcon(sale.type)}</div>
-                  
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-3 mb-2">
-                      <h3 className="font-semibold text-foreground text-lg">{sale.itemName}</h3>
-                      <Badge variant="secondary" className="text-xs">
-                        {getItemTypeName(sale.type)}
-                      </Badge>
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-3 mb-3">
+                    <div className="rounded-full bg-brand-gradient p-2">
+                      <User className="h-4 w-4 text-white" />
                     </div>
-                    
-                    <div className="flex items-center gap-4 text-sm text-muted-foreground">
-                      <div className="flex items-center gap-1">
-                        <User className="h-4 w-4" />
-                        {sale.clientName}
-                      </div>
-                      <div className="flex items-center gap-1">
-                        <Calendar className="h-4 w-4" />
-                        {format(new Date(sale.sale_date), "dd/MM/yyyy", { locale: ptBR })}
-                      </div>
-                      {sale.quantity && (
+                    <div>
+                      <h3 className="font-semibold text-foreground text-lg">{sale.clientName}</h3>
+                      <div className="flex items-center gap-4 text-sm text-muted-foreground">
                         <div className="flex items-center gap-1">
-                          <span>Qtd: {sale.quantity}</span>
+                          <Calendar className="h-3 w-3" />
+                          {format(new Date(sale.sale_date), "dd/MM/yyyy", { locale: ptBR })}
                         </div>
-                      )}
+                        <Badge className={getPaymentMethodColor(sale.payment_method)}>
+                          {getPaymentMethodName(sale.payment_method)}
+                        </Badge>
+                      </div>
                     </div>
+                  </div>
+
+                  {/* Itens da venda */}
+                  <div className="space-y-2">
+                    {sale.items.map((item, index) => (
+                      <div key={index} className="flex items-center justify-between text-sm">
+                        <div className="flex items-center gap-2">
+                          {getItemIcon(item.type)}
+                          <span className="font-medium">{item.itemName}</span>
+                          {item.quantity > 1 && (
+                            <span className="text-muted-foreground">x{item.quantity}</span>
+                          )}
+                          <Badge variant="outline" className="text-xs">
+                            {getItemTypeName(item.type)}
+                          </Badge>
+                        </div>
+                        <span className="font-medium">
+                          R$ {(item.price * item.quantity).toFixed(2).replace('.', ',')}
+                        </span>
+                      </div>
+                    ))}
                   </div>
                 </div>
 
-                {/* Lado direito - valor e ações */}
-                <div className="flex flex-col items-end gap-3">
+                {/* Lado direito - valor total e ações */}
+                <div className="flex flex-col items-end gap-3 ml-4">
                   <div className="text-right">
                     <p className="text-lg font-bold text-green-600">
-                      R$ {sale.price.toFixed(2).replace('.', ',')}
+                      R$ {sale.total.toFixed(2).replace('.', ',')}
                     </p>
-                    <Badge className={getPaymentMethodColor(sale.payment_method)}>
-                      {getPaymentMethodName(sale.payment_method)}
-                    </Badge>
+                    <p className="text-sm text-muted-foreground">
+                      {sale.items.length} item{sale.items.length !== 1 ? 's' : ''}
+                    </p>
                   </div>
                   
                   <Button
@@ -174,6 +198,15 @@ export default function Cashier() {
                   </Button>
                 </div>
               </div>
+
+              {/* Observações */}
+              {sale.notes && (
+                <div className="mt-3 pt-3 border-t border-border/30">
+                  <p className="text-sm text-muted-foreground">
+                    <span className="font-medium">Observações:</span> {sale.notes}
+                  </p>
+                </div>
+              )}
             </GlassCard>
           ))}
         </div>
@@ -183,16 +216,16 @@ export default function Cashier() {
           <GlassCard className="text-center py-12">
             <div className="space-y-4">
               <div className="mx-auto h-16 w-16 rounded-full bg-muted flex items-center justify-center">
-                <Receipt className="h-8 w-8 text-muted-foreground" />
+                <ShoppingCart className="h-8 w-8 text-muted-foreground" />
               </div>
               <div>
                 <h3 className="font-semibold">Nenhuma venda registrada</h3>
                 <p className="text-muted-foreground text-sm">
-                  Comece registrando sua primeira venda
+                  Comece registrando sua primeira venda com carrinho
                 </p>
               </div>
               <NeonButton icon={Plus} onClick={() => setModalOpen(true)}>
-                Registrar Primeira Venda
+                Nova Venda com Carrinho
               </NeonButton>
             </div>
           </GlassCard>
@@ -222,7 +255,7 @@ export default function Cashier() {
           </GlassCard>
         )}
 
-        {/* Modal de nova venda */}
+        {/* Modal de nova venda com carrinho */}
         <CashierModal
           open={modalOpen}
           onOpenChange={setModalOpen}

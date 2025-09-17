@@ -6,7 +6,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Popover, PopoverTrigger, PopoverContent } from "@/components/ui/popover";
 import { Command, CommandInput, CommandEmpty, CommandGroup, CommandItem } from "@/components/ui/command";
-import { Check, ChevronsUpDown, CalendarIcon, Sparkles, Package } from "lucide-react";
+import { Check, ChevronsUpDown, CalendarIcon, Sparkles, Package, CreditCard, QrCode, Banknote } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
@@ -15,6 +15,7 @@ import { useClients } from "@/hooks/useClients";
 import { useServices } from "@/hooks/useServices";
 import { usePackages } from "@/hooks/usePackages";
 import { useToast } from "@/hooks/use-toast";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 interface CashierModalProps {
   open: boolean;
@@ -42,7 +43,8 @@ export function CashierModal({ open, onOpenChange, type, onSave }: CashierModalP
     duration: 0, // Para serviços
     total_sessions: 0, // Para pacotes
     valid_until: '', // Para pacotes
-    notes: ''
+    notes: '',
+    payment_method: 'dinheiro' // ✅ Nova propriedade
   });
 
   useEffect(() => {
@@ -57,7 +59,8 @@ export function CashierModal({ open, onOpenChange, type, onSave }: CashierModalP
         duration: 0,
         total_sessions: 0,
         valid_until: '',
-        notes: ''
+        notes: '',
+        payment_method: 'dinheiro'
       });
     }
   }, [open, type]);
@@ -85,7 +88,8 @@ export function CashierModal({ open, onOpenChange, type, onSave }: CashierModalP
       duration: formData.duration,
       total_sessions: formData.total_sessions,
       valid_until: formData.valid_until,
-      notes: formData.notes
+      notes: formData.notes,
+      payment_method: formData.payment_method // ✅ Incluindo no salvamento
     };
 
     onSave(dataToSave);
@@ -135,6 +139,26 @@ export function CashierModal({ open, onOpenChange, type, onSave }: CashierModalP
 
   const handleInputChange = (field: string, value: any) => {
     setFormData(prev => ({ ...prev, [field]: value }));
+  };
+
+  // ✅ Função para obter o ícone da forma de pagamento
+  const getPaymentMethodIcon = (method: string) => {
+    switch (method) {
+      case 'cartao': return <CreditCard className="h-4 w-4" />;
+      case 'pix': return <QrCode className="h-4 w-4" />;
+      case 'dinheiro':
+      default: return <Banknote className="h-4 w-4" />;
+    }
+  };
+
+  // ✅ Função para obter o nome da forma de pagamento
+  const getPaymentMethodName = (method: string) => {
+    switch (method) {
+      case 'cartao': return 'Cartão';
+      case 'pix': return 'PIX';
+      case 'dinheiro':
+      default: return 'Dinheiro';
+    }
   };
 
   return (
@@ -251,6 +275,41 @@ export function CashierModal({ open, onOpenChange, type, onSave }: CashierModalP
               onChange={(e) => handleInputChange('price', parseFloat(e.target.value) || 0)} 
               required 
             />
+          </div>
+
+          {/* Forma de Pagamento */}
+          <div className="space-y-2">
+            <Label>Forma de Pagamento *</Label>
+            <Select value={formData.payment_method} onValueChange={(value) => handleInputChange('payment_method', value)}>
+              <SelectTrigger>
+                <SelectValue>
+                  <div className="flex items-center gap-2">
+                    {getPaymentMethodIcon(formData.payment_method)}
+                    {getPaymentMethodName(formData.payment_method)}
+                  </div>
+                </SelectValue>
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="dinheiro">
+                  <div className="flex items-center gap-2">
+                    <Banknote className="h-4 w-4" />
+                    Dinheiro
+                  </div>
+                </SelectItem>
+                <SelectItem value="pix">
+                  <div className="flex items-center gap-2">
+                    <QrCode className="h-4 w-4" />
+                    PIX
+                  </div>
+                </SelectItem>
+                <SelectItem value="cartao">
+                  <div className="flex items-center gap-2">
+                    <CreditCard className="h-4 w-4" />
+                    Cartão
+                  </div>
+                </SelectItem>
+              </SelectContent>
+            </Select>
           </div>
 
           {/* Informações adicionais */}

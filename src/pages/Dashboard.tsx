@@ -19,9 +19,14 @@ import {
   DollarSign,
   Activity
 } from "lucide-react";
+import { useSettings } from "@/hooks/useSettings";
 
 export default function Dashboard() {
   const navigate = useNavigate();
+  const { settings } = useSettings();
+  
+  // Usar nome da clínica das configurações ou um padrão
+  const clinicName = settings?.clinicInfo?.name || "Clínica Rosana Turci";
 
   return (
     <>

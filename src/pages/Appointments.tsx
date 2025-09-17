@@ -26,7 +26,7 @@ export default function Appointments() {
   const [selectedService, setSelectedService] = useState(null);
 
   const todayAppointments = appointments
-    .filter(apt => format(apt.date, 'yyyy-MM-dd') === format(selectedDate, 'yyyy-MM-dd'))
+    .filter(apt => format(new Date(apt.date), 'yyyy-MM-dd') === format(selectedDate, 'yyyy-MM-dd'))
     .sort((a, b) => a.time.localeCompare(b.time));
 
   const handleSaveAppointment = (appointmentData: any) => {

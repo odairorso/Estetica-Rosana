@@ -1,87 +1,119 @@
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { supabase } from '@/lib/supabase';
-import { format } from 'date-fns';
+import { useState, useEffect } from 'react';
 
 export interface Appointment {
-  id: string;
-  service_id: string;
-  service_name: string;
-  client_id: string;
-  client_name: string;
-  client_phone: string;
+  id: number;
+  serviceId: number;
+  serviceName: string;
+  clientId: number;
+  clientName: string;
+  clientPhone: string;
   date: string; // YYYY-MM-DD
   time: string;
   duration: number;
   price: number;
   notes: string;
   status: "agendado" | "confirmado" | "concluido" | "cancelado";
-  created_at: string;
+  createdAt: string;
 }
 
-const fetchAppointments = async () => {
-  const { data, error } = await supabase.from('appointments').select('*').order('date').order('time');
-  if (error) throw new Error(error.message);
-  return data;
-};
-
-const addAppointment = async (appointmentData: Omit<Appointment, 'id' | 'created_at'>) => {
-  const { data, error } = await supabase.from('appointments').insert([appointmentData]).select();
-  if (error) throw new Error(error.message);
-  return data[0];
-};
-
-const updateAppointment = async (appointmentData: Partial<Appointment> & { id: string }) => {
-  const { id, ...updateData } = appointmentData;
-  const { data, error } = await supabase.from('appointments').update(updateData).eq('id', id).select();
-  if (error) throw new Error(error.message);
-  return data[0];
-};
-
-const deleteAppointment = async (id: string) => {
-  const { error } = await supabase.from('appointments').delete().eq('id', id);
-  if (error) throw new Error(error.message);
-};
+const APPOINTMENTS_STORAGE_KEY = 'clinic-appointments';
 
 export function useAppointments() {
-  const queryClient = useQueryClient();
+  const [appointments, setAppointments] = useState<Appointment[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
 
-  const { data: appointments = [], isLoading } = useQuery<Appointment[]>({
-    queryKey: ['appointments'],
-    queryFn: fetchAppointments,
-  });
+  // Load appointments from localStorage on mount
+  useEffect(() => {
+    const loadAppointments = () => {
+      try {
+        const stored = localStorage.getItem(APPOINTMENTS_STORAGE_KEY);
+        if (stored) {
+          setAppointments(JSON.parse(stored));
+        } else {
+          // Initialize with sample data if empty
+          const sampleAppointments: Appointment[] = [
+            {
+              id: 1,
+              serviceId: 1,
+              serviceName: "Limpeza de Pele",
+              clientId: 1,
+              clientName: "Ana Silva",
+              clientPhone: "(11) 98765-4321",
+              date: "2023-06-10",
+              time: "14:00",
+              duration: 60,
+              price: 120,
+              notes: "Cliente com pele sensível",
+              status: "confirmado",
+              createdAt: "2023-06-01"
+            },
+            {
+              id: 2,
+              serviceId: 2,
+              serviceName: "Drenagem Linfática",
+              clientId: 2,
+              clientName: "Carlos Oliveira",
+              clientPhone: "(11) 99876-5432",
+              date: "2023-06-12",
+              time: "10:30",
+              duration: 50,
+              price: 80,
+              notes: "",
+              status: "agendado",
+              createdAt: "2023-06-02"
+            }
+          ];
+          setAppointments(sampleAppointments);
+          localStorage.setItem(APPOINTMENTS_STORAGE_KEY, JSON.stringify(sampleAppointments));
+        }
+      } catch (error) {
+        console.error('Error loading appointments:', error);
+      } finally {
+        setIsLoading(false);
+      }
+    };
 
-  const addMutation = useMutation({
-    mutationFn: addAppointment,
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['appointments'] });
-    },
-  });
+    loadAppointments();
+  }, []);
 
-  const updateMutation = useMutation({
-    mutationFn: updateAppointment,
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['appointments'] });
-    },
-  });
+  // Save appointments to localStorage whenever they change
+  useEffect(() => {
+    if (appointments.length > 0) {
+      localStorage.setItem(APPOINTMENTS_STORAGE_KEY, JSON.stringify(appointments));
+    }
+  }, [appointments]);
 
-  const deleteMutation = useMutation({
-    mutationFn: deleteAppointment,
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['appointments'] });
-    },
-  });
+  const addAppointment = (appointmentData: Omit<Appointment, 'id' | 'createdAt'>) => {
+    const newAppointment: Appointment = {
+      ...appointmentData,
+      id: Math.max(0, ...appointments.map(a => a.id)) + 1,
+      createdAt: new Date().toISOString().split('T')[0]
+    };
+    setAppointments([...appointments, newAppointment]);
+    return newAppointment;
+  };
+
+  const updateAppointment = (appointmentData: Appointment) => {
+    setAppointments(appointments.map(appointment => 
+      appointment.id === appointmentData.id ? appointmentData : appointment
+    ));
+  };
+
+  const deleteAppointment = (id: number) => {
+    setAppointments(appointments.filter(appointment => appointment.id !== id));
+  };
 
   const getAppointmentsByDate = (date: Date) => {
-    const targetDate = format(date, "yyyy-MM-dd");
+    const targetDate = date.toISOString().split('T')[0];
     return appointments.filter(appointment => appointment.date === targetDate);
   };
 
   return {
     appointments,
     isLoading,
-    addAppointment: addMutation.mutate,
-    updateAppointment: updateMutation.mutate,
-    deleteAppointment: deleteMutation.mutate,
+    addAppointment,
+    updateAppointment,
+    deleteAppointment,
     getAppointmentsByDate,
   };
 }

@@ -1,5 +1,4 @@
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { supabase } from '@/lib/supabase';
+import { useState, useEffect } from 'react';
 
 export interface ClinicInfo {
   name: string;
@@ -9,47 +8,70 @@ export interface ClinicInfo {
 }
 
 export interface Settings {
-  clinic_info: ClinicInfo;
+  clinicInfo: ClinicInfo;
   theme: 'light' | 'dark' | 'system';
 }
 
-const fetchSettings = async () => {
-  const { data, error } = await supabase.from('settings').select('*').eq('id', 1).single();
-  if (error) throw new Error(error.message);
-  return data;
-};
-
-const updateSettings = async (settingsData: Partial<Settings>) => {
-  const { data, error } = await supabase.from('settings').update(settingsData).eq('id', 1).select();
-  if (error) throw new Error(error.message);
-  return data[0];
-};
+const SETTINGS_STORAGE_KEY = 'clinic-settings';
 
 export function useSettings() {
-  const queryClient = useQueryClient();
+  const [settings, setSettings] = useState<Settings | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
 
-  const { data: settings, isLoading } = useQuery<Settings>({
-    queryKey: ['settings'],
-    queryFn: fetchSettings,
-  });
+  // Load settings from localStorage on mount
+  useEffect(() => {
+    const loadSettings = () => {
+      try {
+        const stored = localStorage.getItem(SETTINGS_STORAGE_KEY);
+        if (stored) {
+          setSettings(JSON.parse(stored));
+        } else {
+          // Initialize with default settings
+          const defaultSettings: Settings = {
+            clinicInfo: {
+              name: "Clínica Rosana Turci",
+              phone: "(11) 99999-9999",
+              email: "contato@rosanaturci.com.br",
+              address: "Rua Exemplo, 123 - Centro, São Paulo - SP"
+            },
+            theme: 'dark'
+          };
+          setSettings(defaultSettings);
+          localStorage.setItem(SETTINGS_STORAGE_KEY, JSON.stringify(defaultSettings));
+        }
+      } catch (error) {
+        console.error('Error loading settings:', error);
+      } finally {
+        setIsLoading(false);
+      }
+    };
 
-  const updateMutation = useMutation({
-    mutationFn: updateSettings,
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['settings'] });
-    },
-  });
+    loadSettings();
+  }, []);
+
+  // Save settings to localStorage whenever they change
+  useEffect(() => {
+    if (settings) {
+      localStorage.setItem(SETTINGS_STORAGE_KEY, JSON.stringify(settings));
+    }
+  }, [settings]);
 
   const updateClinicInfo = (info: Partial<ClinicInfo>) => {
     if (settings) {
-      updateMutation.mutate({
-        clinic_info: { ...settings.clinic_info, ...info }
+      setSettings({
+        ...settings,
+        clinicInfo: { ...settings.clinicInfo, ...info }
       });
     }
   };
 
   const updateTheme = (theme: 'light' | 'dark' | 'system') => {
-    updateMutation.mutate({ theme });
+    if (settings) {
+      setSettings({
+        ...settings,
+        theme
+      });
+    }
   };
 
   return {

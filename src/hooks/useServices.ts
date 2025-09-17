@@ -1,9 +1,8 @@
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { supabase } from '@/lib/supabase';
+import { useState, useEffect } from 'react';
 import { Sparkles, Heart, Droplet, Zap } from "lucide-react";
 
 export interface Service {
-  id: string;
+  id: number;
   name: string;
   category: string;
   price: number;
@@ -13,6 +12,8 @@ export interface Service {
   popular: boolean;
 }
 
+const SERVICES_STORAGE_KEY = 'clinic-services';
+
 const iconMap = {
   Sparkles,
   Heart,
@@ -20,59 +21,90 @@ const iconMap = {
   Zap,
 };
 
-const fetchServices = async () => {
-  const { data, error } = await supabase.from('services').select('*').order('name');
-  if (error) throw new Error(error.message);
-  return data;
-};
-
-const addService = async (serviceData: Omit<Service, 'id'>) => {
-  const { data, error } = await supabase.from('services').insert([serviceData]).select();
-  if (error) throw new Error(error.message);
-  return data[0];
-};
-
-const updateService = async (serviceData: Partial<Service> & { id: string }) => {
-  const { id, ...updateData } = serviceData;
-  const { data, error } = await supabase.from('services').update(updateData).eq('id', id).select();
-  if (error) throw new Error(error.message);
-  return data[0];
-};
-
-const deleteService = async (id: string) => {
-  const { error } = await supabase.from('services').delete().eq('id', id);
-  if (error) throw new Error(error.message);
-};
-
 export function useServices() {
-  const queryClient = useQueryClient();
+  const [services, setServices] = useState<Service[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
 
-  const { data: services = [], isLoading } = useQuery<Service[]>({
-    queryKey: ['services'],
-    queryFn: fetchServices,
-  });
+  // Load services from localStorage on mount
+  useEffect(() => {
+    const loadServices = () => {
+      try {
+        const stored = localStorage.getItem(SERVICES_STORAGE_KEY);
+        if (stored) {
+          setServices(JSON.parse(stored));
+        } else {
+          // Initialize with sample data if empty
+          const sampleServices: Service[] = [
+            {
+              id: 1,
+              name: "Limpeza de Pele",
+              category: "Facial",
+              price: 120,
+              duration: 60,
+              description: "Tratamento completo para limpeza e revitalização da pele do rosto",
+              icon: "Sparkles",
+              popular: true
+            },
+            {
+              id: 2,
+              name: "Drenagem Linfática",
+              category: "Corporal",
+              price: 80,
+              duration: 50,
+              description: "Massagem que estimula o sistema linfático para redução de inchaços",
+              icon: "Droplet",
+              popular: false
+            },
+            {
+              id: 3,
+              name: "Botox",
+              category: "Facial",
+              price: 350,
+              duration: 30,
+              description: "Aplicação de toxina botulínica para redução de rugas e expressões",
+              icon: "Zap",
+              popular: true
+            }
+          ];
+          setServices(sampleServices);
+          localStorage.setItem(SERVICES_STORAGE_KEY, JSON.stringify(sampleServices));
+        }
+      } catch (error) {
+        console.error('Error loading services:', error);
+      } finally {
+        setIsLoading(false);
+      }
+    };
 
-  const addMutation = useMutation({
-    mutationFn: addService,
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['services'] });
-    },
-  });
+    loadServices();
+  }, []);
 
-  const updateMutation = useMutation({
-    mutationFn: updateService,
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['services'] });
-    },
-  });
+  // Save services to localStorage whenever they change
+  useEffect(() => {
+    if (services.length > 0) {
+      localStorage.setItem(SERVICES_STORAGE_KEY, JSON.stringify(services));
+    }
+  }, [services]);
 
-  const deleteMutation = useMutation({
-    mutationFn: deleteService,
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['services'] });
-    },
-  });
-  
+  const addService = (serviceData: Omit<Service, 'id'>) => {
+    const newService: Service = {
+      ...serviceData,
+      id: Math.max(0, ...services.map(s => s.id)) + 1
+    };
+    setServices([...services, newService]);
+    return newService;
+  };
+
+  const updateService = (serviceData: Service) => {
+    setServices(services.map(service => 
+      service.id === serviceData.id ? serviceData : service
+    ));
+  };
+
+  const deleteService = (id: number) => {
+    setServices(services.filter(service => service.id !== id));
+  };
+
   const getServiceIcon = (iconName: string) => {
     return iconMap[iconName as keyof typeof iconMap] || Sparkles;
   };
@@ -80,9 +112,9 @@ export function useServices() {
   return {
     services,
     isLoading,
-    addService: addMutation.mutate,
-    updateService: updateMutation.mutate,
-    deleteService: deleteMutation.mutate,
+    addService,
+    updateService,
+    deleteService,
     getServiceIcon,
   };
 }

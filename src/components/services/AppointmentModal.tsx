@@ -13,11 +13,13 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { cn } from "@/lib/utils";
 import { Service } from "@/hooks/useServices";
 import { useClients } from "@/hooks/useClients";
+import { useAppointments } from "@/hooks/useAppointments";
 
 interface Appointment {
   id?: number;
   serviceId: number;
   serviceName: string;
+  clientId: number;
   clientName: string;
   clientPhone: string;
   date: Date;
@@ -32,7 +34,7 @@ interface AppointmentModalProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   service: Service | null;
-  onSave: (appointment: Appointment) => void;
+  onSave: (appointment: Omit<Appointment, 'id'>) => void;
 }
 
 // Horários disponíveis (8h às 18h, intervalos de 30 min)
@@ -44,10 +46,12 @@ const timeSlots = Array.from({ length: 21 }, (_, i) => {
 
 export function AppointmentModal({ open, onOpenChange, service, onSave }: AppointmentModalProps) {
   const { clients } = useClients();
+  const { appointments } = useAppointments();
   const [selectedClientId, setSelectedClientId] = useState<string>("");
   const [formData, setFormData] = useState<Omit<Appointment, 'id'>>({
     serviceId: 0,
     serviceName: "",
+    clientId: 0,
     clientName: "",
     clientPhone: "",
     date: new Date(),
@@ -63,6 +67,7 @@ export function AppointmentModal({ open, onOpenChange, service, onSave }: Appoin
       setFormData({
         serviceId: service.id,
         serviceName: service.name,
+        clientId: 0,
         clientName: "",
         clientPhone: "",
         date: new Date(),
@@ -83,7 +88,7 @@ export function AppointmentModal({ open, onOpenChange, service, onSave }: Appoin
       return;
     }
 
-    onSave(formData as Appointment);
+    onSave(formData);
     onOpenChange(false);
   };
 
@@ -95,6 +100,7 @@ export function AppointmentModal({ open, onOpenChange, service, onSave }: Appoin
     setSelectedClientId(clientId);
     const selectedClient = clients.find(c => c.id.toString() === clientId);
     if (selectedClient) {
+      handleChange("clientId", selectedClient.id);
       handleChange("clientName", selectedClient.name);
       handleChange("clientPhone", selectedClient.phone);
     }

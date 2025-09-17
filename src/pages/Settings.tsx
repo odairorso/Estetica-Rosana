@@ -23,6 +23,14 @@ export default function Settings() {
     });
   };
 
+  // Fallback values in case settings is null
+  const clinicInfo = settings?.clinicInfo || {
+    name: "Clínica Rosana Turci",
+    phone: "(11) 99999-9999",
+    email: "contato@rosanaturci.com.br",
+    address: "Rua Exemplo, 123 - Centro, São Paulo - SP"
+  };
+
   return (
     <>
       <Helmet>
@@ -44,7 +52,7 @@ export default function Settings() {
                 <Label htmlFor="clinicName">Nome da Clínica</Label>
                 <Input
                   id="clinicName"
-                  value={settings.clinicInfo.name}
+                  value={clinicInfo.name}
                   onChange={(e) => handleInfoChange('name', e.target.value)}
                 />
               </div>
@@ -52,25 +60,25 @@ export default function Settings() {
                 <Label htmlFor="clinicPhone">Telefone</Label>
                 <Input
                   id="clinicPhone"
-                  value={settings.clinicInfo.phone}
+                  value={clinicInfo.phone}
                   onChange={(e) => handleInfoChange('phone', e.target.value)}
                 />
               </div>
             </div>
             <div className="space-y-2">
-              <Label htmlFor="clinicEmail">E-mail de Contato</Label>
-              <Input
-                id="clinicEmail"
-                type="email"
-                value={settings.clinicInfo.email}
-                onChange={(e) => handleInfoChange('email', e.target.value)}
-              />
-            </div>
+                <Label htmlFor="clinicEmail">E-mail de Contato</Label>
+                <Input
+                  id="clinicEmail"
+                  type="email"
+                  value={clinicInfo.email}
+                  onChange={(e) => handleInfoChange('email', e.target.value)}
+                />
+              </div>
             <div className="space-y-2">
               <Label htmlFor="clinicAddress">Endereço</Label>
               <Input
                 id="clinicAddress"
-                value={settings.clinicInfo.address}
+                value={clinicInfo.address}
                 onChange={(e) => handleInfoChange('address', e.target.value)}
               />
             </div>

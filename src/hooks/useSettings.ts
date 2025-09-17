@@ -24,7 +24,17 @@ export function useSettings() {
       try {
         const stored = localStorage.getItem(SETTINGS_STORAGE_KEY);
         if (stored) {
-          setSettings(JSON.parse(stored));
+          const parsedSettings = JSON.parse(stored);
+          // Ensure clinicInfo exists even if partially saved
+          if (!parsedSettings.clinicInfo) {
+            parsedSettings.clinicInfo = {
+              name: "",
+              phone: "",
+              email: "",
+              address: ""
+            };
+          }
+          setSettings(parsedSettings);
         } else {
           // Initialize with default settings
           const defaultSettings: Settings = {
@@ -41,6 +51,17 @@ export function useSettings() {
         }
       } catch (error) {
         console.error('Error loading settings:', error);
+        // Fallback to default settings if there's an error
+        const defaultSettings: Settings = {
+          clinicInfo: {
+            name: "Clínica Rosana Turci",
+            phone: "(11) 99999-9999",
+            email: "contato@rosanaturci.com.br",
+            address: "Rua Exemplo, 123 - Centro, São Paulo - SP"
+          },
+          theme: 'dark'
+        };
+        setSettings(defaultSettings);
       } finally {
         setIsLoading(false);
       }
@@ -52,7 +73,11 @@ export function useSettings() {
   // Save settings to localStorage whenever they change
   useEffect(() => {
     if (settings) {
-      localStorage.setItem(SETTINGS_STORAGE_KEY, JSON.stringify(settings));
+      try {
+        localStorage.setItem(SETTINGS_STORAGE_KEY, JSON.stringify(settings));
+      } catch (error) {
+        console.error('Error saving settings:', error);
+      }
     }
   }, [settings]);
 
@@ -75,7 +100,15 @@ export function useSettings() {
   };
 
   return {
-    settings,
+    settings: settings || {
+      clinicInfo: {
+        name: "Clínica Rosana Turci",
+        phone: "(11) 99999-9999",
+        email: "contato@rosanaturci.com.br",
+        address: "Rua Exemplo, 123 - Centro, São Paulo - SP"
+      },
+      theme: 'dark'
+    }, // Fallback to default settings if null
     isLoading,
     updateClinicInfo,
     updateTheme

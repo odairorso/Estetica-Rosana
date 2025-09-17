@@ -255,12 +255,27 @@ export function AppointmentModal({ open, onOpenChange, service, onSave }: Appoin
               <Label>Data</Label>
               <Popover>
                 <PopoverTrigger asChild>
-                  <Button variant="outline" className={cn("w-full justify-start text-left font-normal", !formData.date && "text-muted-foreground")}>
+                  <Button
+                    variant="outline"
+                    className={cn(
+                      "w-full justify-start text-left font-normal",
+                      !formData.date && "text-muted-foreground",
+                      "border-input bg-background hover:bg-accent hover:text-accent-foreground"
+                    )}
+                  >
                     <CalendarIcon className="mr-2 h-4 w-4" />
                     {formData.date ? format(formData.date, "dd/MM/yyyy") : <span>Selecione</span>}
                   </Button>
                 </PopoverTrigger>
-                <PopoverContent className="w-auto p-0"><CalendarComponent mode="single" selected={formData.date} onSelect={(d) => d && handleChange("date", d)} disabled={(d) => d < new Date(new Date().setDate(new Date().getDate() - 1))} initialFocus /></PopoverContent>
+                <PopoverContent className="w-auto p-0">
+                  <CalendarComponent
+                    mode="single"
+                    selected={formData.date}
+                    onSelect={(d) => d && handleChange("date", d)}
+                    disabled={(d) => d < new Date(new Date().setDate(new Date().getDate() - 1))}
+                    initialFocus
+                  />
+                </PopoverContent>
               </Popover>
             </div>
             <div className="space-y-2">

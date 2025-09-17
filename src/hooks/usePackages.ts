@@ -40,9 +40,7 @@ const MOCK_PACKAGES: Package[] = [
     last_used: "2025-09-10",
     status: "active",
     created_at: "2025-01-01T10:00Z",
-    session_history: [
-      { id: "1", date: "2025-09-10", notes: "Primeira sessão concluída" }
-    ],
+    session_history: [{ id: "1", date: "2025-09-10", notes: "Primeira sessão concluída" }],
     remaining_sessions: 2,
   },
   {
@@ -77,7 +75,7 @@ const MOCK_PACKAGES: Package[] = [
     session_history: [
       { id: "1", date: "2025-08-20", notes: "Sess 1" },
       { id: "2", date: "2025-08-27", notes: "Sessão 2" },
-      { id: "3", date: "2025-09-05", notes: "Sessão 3" }
+      { id: "3", date: "2025-09-05", notes: "Sessão 3" },
     ],
     remaining_sessions: 7,
   },
@@ -130,10 +128,12 @@ export function usePackages() {
 
   const addPackage = async (packageData: any) => {
     if (!supabase) {
+      // Cria um novo pacote em modo offline
       const newId = Math.max(0, ...packages.map(p => p.id)) + 1;
       const newPackage: Package = {
-        id: new        ...packageData,
-        clientName: (clients.find(c => c.id === packageData.client_id) || { name: '' }).name,
+        id: newId,
+        ...packageData,
+        clientName: '',
         remaining_sessions: packageData.total_sessions,
         used_sessions: 0,
         status: 'active',
@@ -145,7 +145,7 @@ export function usePackages() {
     }
 
     const { client_id, ...rest } = packageData;
-    const {, error } = await supabase.from('packages').insert([rest]).select().single();
+    const { data, error } = await supabase.from('packages').insert([rest]).select().single();
     if (error) {
       console.error('Erro ao adicionar pacote:', error);
       return null;

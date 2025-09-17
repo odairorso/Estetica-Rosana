@@ -51,7 +51,7 @@ export default function Appointments() {
 
   // Estado para o modal de histórico de pacotes
   const [historyModalOpen, setHistoryModalOpen] = useState(false);
-  const [selectedPackage, setSelectedPackage] = useState<PackageType | null>(null);
+  const [selectedPackage setSelectedPackage] = useState<PackageType | null>(null);
 
   const filteredAppointments = appointments
     .filter((apt) => {
@@ -163,8 +163,8 @@ export default function Appointments() {
       <div className="space-y-4">
         {filteredAppointments.map((apt) => {
           const statusProps = getStatusProps(apt.status);
-          const StatusIcon = statusProps.icon;
-          const isPackage = !!apt.package_id; // campo opcional que indica agendamento de pacote
+          const StatusIcon statusProps.icon;
+          const isPackage = !!apt.package_id; // campo opcional que indica ag de pacote
 
           return (
             <GlassCard key={apt.id} className="p-4">
@@ -175,9 +175,9 @@ export default function Appointments() {
                     <p className="font-bold text-lg text-foreground">{apt.appointment_time}</p>
                     <p className="text-xs text-muted-foreground">{apt.duration} min</p>
                   </div>
-                  {/* Data formatada */}
+                  {/* Data formatada de forma legível */}
                   <div className="text-sm text-muted-foreground">
-                    {format(parseISO(apt.appointment_date), "dd/MM/yyyy", {
+                    {format(parseISO(apt.appointment_date), "dd 'de' MMMM", {
                       locale: ptBR,
                     })}
                   </div>
@@ -219,8 +219,7 @@ export default function Appointments() {
                       </Button>
                     </DropdownMenuTrigger>
                     <DropdownMenuContent align="end">
-                      <DropdownMenuItem
-                        onClick={() => handleStatusChange(apt, "confirmado")}
+                      <DropdownMenuItem                        onClick={() => handleStatusChange(apt, "confirmado")}
                       >
                         Confirmar
                       </DropdownMenuItem>
@@ -228,7 +227,7 @@ export default function Appointments() {
                         onClick={() => handleStatusChange(apt, "concluido")}
                       >
                         Concluir
-                      </DropdownMenuItem>
+                      </DropdownMenu>
                       <DropdownMenuItem
                         onClick={() => handleStatusChange(apt, "cancelado")}
                         className="text-destructive"
@@ -279,8 +278,7 @@ export default function Appointments() {
             )}
             <AlertTitle>
               {error.includes("offline") ? "Modo Offline" : "Erro de Conexão"}
-            </AlertTitle>
-            <AlertDescription>
+            </AlertTitle <AlertDescription>
               {error}
               <Button
                 variant="link"
@@ -304,7 +302,7 @@ export default function Appointments() {
               locale={ptBR}
               className="p-0"
             />
-          </GlassCard>
+         GlassCard>
 
           {/* Lista de agendamentos */}
           <div className="lg:col-span-2 space-y-4">

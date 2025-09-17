@@ -16,7 +16,7 @@ import {
 import { AppointmentModal } from "@/components/services/AppointmentModal";
 import { useAppointments, Appointment } from "@/hooks/useAppointments";
 import { useToast } from "@/hooks/use-toast";
-import { format } from "date-fns";
+import { format, parseISO } from "date-fns";
 import { ptBR } from "date-fns/locale";
 
 export default function Appointments() {
@@ -25,8 +25,13 @@ export default function Appointments() {
   const [modalOpen, setModalOpen] = useState(false);
   const { toast } = useToast();
 
+  // Função para normalizar datas (remover informações de timezone)
+  const normalizeDate = (dateString: string) => {
+    return format(parseISO(dateString), 'yyyy-MM-dd');
+  };
+
   const todayAppointments = appointments
-    .filter(apt => apt.appointment_date === format(selectedDate, 'yyyy-MM-dd'))
+    .filter(apt => normalizeDate(apt.appointment_date) === format(selectedDate, 'yyyy-MM-dd'))
     .sort((a, b) => a.appointment_time.localeCompare(b.appointment_time));
 
   const handleSaveAppointment = (appointmentData: any) => {

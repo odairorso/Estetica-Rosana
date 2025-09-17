@@ -11,7 +11,6 @@ import { AppointmentModal } from "@/components/services/AppointmentModal";
 import { useServices, Service } from "@/hooks/useServices";
 import { useAppointments } from "@/hooks/useAppointments";
 import { useToast } from "@/hooks/use-toast";
-import { format } from "date-fns";
 
 const categories = ["Todos", "Facial", "Corporal"];
 
@@ -23,7 +22,7 @@ export default function Services() {
   const [editingService, setEditingService] = useState<Service | null>(null);
   const [selectedServiceForAppointment, setSelectedServiceForAppointment] = useState<Service | null>(null);
   
-  const { services, addService, updateService, deleteService, getServiceIcon } = useServices();
+  const { services, addService, updateService, getServiceIcon } = useServices();
   const { addAppointment } = useAppointments();
   const { toast } = useToast();
 
@@ -66,25 +65,16 @@ export default function Services() {
     setAppointmentModalOpen(true);
   };
 
-  const handleSaveAppointment = (appointmentData: any) => {
-    const dataToSave = {
-      service_id: appointmentData.service_id,
-      client_id: appointmentData.client_id,
-      client_name: appointmentData.client_name,
-      client_phone: appointmentData.client_phone,
-      duration: appointmentData.duration,
-      price: appointmentData.price,
-      notes: appointmentData.notes,
-      status: appointmentData.status,
-      appointment_date: format(appointmentData.date, 'yyyy-MM-dd'),
-      appointment_time: appointmentData.time,
-    };
-
-    addAppointment(dataToSave);
-    toast({
-      title: "Agendamento confirmado!",
-      description: `${appointmentData.serviceName} agendado para ${appointmentData.client_name} em ${new Date(appointmentData.date).toLocaleDateString('pt-BR')} às ${appointmentData.time}.`,
-    });
+  const handleSaveAppointment = async (appointmentData: any) => {
+    const result = await addAppointment(appointmentData);
+    if (result) {
+      toast({
+        title: "Agendamento confirmado!",
+        description: `${result.serviceName} agendado para ${result.client_name}.`,
+      });
+    } else {
+      toast({ title: "Erro", description: "Não foi possível criar o agendamento.", variant: "destructive" });
+    }
   };
 
   const getCategoryColor = (category: string) => {

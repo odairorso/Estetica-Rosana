@@ -6,7 +6,6 @@ import { NeonButton } from "@/components/ui/neon-button";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Calendar } from "@/components/ui/calendar";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -16,7 +15,7 @@ import {
 import { AppointmentModal } from "@/components/services/AppointmentModal";
 import { useAppointments, Appointment } from "@/hooks/useAppointments";
 import { useToast } from "@/hooks/use-toast";
-import { format, parseISO, isToday, isValid } from "date-fns";
+import { format, parseISO, isValid } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";

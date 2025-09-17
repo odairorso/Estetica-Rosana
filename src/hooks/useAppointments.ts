@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/lib/supabase';
+import { useToast } from "@/hooks/use-toast";
 
 export interface Appointment {
   id: number;
@@ -40,6 +41,7 @@ export function useAppointments() {
   const [appointments, setAppointments] = useState<Appointment[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const { toast } = useToast();
 
   const loadAppointments = useCallback(async () => {
     setIsLoading(true);
@@ -91,10 +93,39 @@ export function useAppointments() {
     }
     
     try {
-      const { data, error } = await supabase.from('appointments').insert([appointmentData]).select().single();
+      const { package_id, serviceName, ...restOfData } = appointmentData;
+
+      const { data: appointment, error } = await supabase
+        .from('appointments')
+        .insert([restOfData])
+        .select()
+        .single();
+
       if (error) throw error;
+
+      // Se for uma sessão de pacote, registra no histórico
+      if (package_id && appointment) {
+        const { error: sessionError } = await supabase
+          .from('session_history')
+          .insert({
+            package_id: package_id,
+            session_date: appointment.appointment_date,
+            notes: `Sessão referente ao agendamento do serviço: ${serviceName || 'não especificado'}. ${restOfData.notes || ''}`.trim()
+          });
+        
+        if (sessionError) {
+          console.error('❌ Erro ao registrar sessão do pacote:', sessionError);
+          toast({
+            title: "Atenção: Erro ao abater sessão",
+            description: "O agendamento foi criado, mas não foi possível registrar o uso da sessão. Por favor, ajuste manualmente no pacote.",
+            variant: "destructive",
+            duration: 10000,
+          });
+        }
+      }
+
       await loadAppointments(); // Recarrega a lista
-      return data;
+      return { ...appointment, serviceName };
     } catch (err) {
       console.error('❌ Erro ao adicionar agendamento:', err);
       setError('Não foi possível salvar o agendamento.');

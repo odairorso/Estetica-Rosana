@@ -22,7 +22,7 @@ import {
 
 export default function Packages() {
   const { toast } = useToast();
-  const { packages, addPackage, updatePackage, deletePackage, useSession } = usePackages();
+  const { packages, addPackage, updatePackage, deletePackage } = usePackages();
   const [searchTerm, setSearchTerm] = useState("");
   const [filter, setFilter] = useState("all");
   const [modalOpen, setModalOpen] = useState(false);
@@ -79,17 +79,6 @@ export default function Packages() {
       toast({
         title: "Pacote excluído",
         description: `O pacote "${pkg?.name}" foi removido.`,
-      });
-    }
-  };
-
-  const handleUseSession = (id: number) => {
-    const pkg = packages.find(p => p.id === id);
-    if (pkg && pkg.remaining_sessions > 0) {
-      useSession(id);
-      toast({
-        title: "Sessão utilizada",
-        description: `Uma sessão do pacote "${pkg.name}" foi marcada como utilizada.`,
       });
     }
   };
@@ -157,7 +146,6 @@ export default function Packages() {
               package={pkg}
               onEdit={handleEditPackage}
               onDelete={handleDeletePackage}
-              onUseSession={handleUseSession}
               onViewHistory={handleViewHistory}
             />
           ))}

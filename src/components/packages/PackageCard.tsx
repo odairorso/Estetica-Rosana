@@ -1,4 +1,4 @@
-import { Package, Clock, User, Calendar, AlertCircle, Edit, Trash2, MoreVertical, Play, History } from "lucide-react";
+import { Package, Clock, User, Calendar, AlertCircle, Edit, Trash2, MoreVertical, History } from "lucide-react";
 import { GlassCard } from "@/components/ui/glass-card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -15,11 +15,10 @@ interface PackageCardProps {
   package: PackageType;
   onEdit: (pkg: PackageType) => void;
   onDelete: (id: number) => void;
-  onUseSession: (id: number) => void;
   onViewHistory: (pkg: PackageType) => void;
 }
 
-export function PackageCard({ package: pkg, onEdit, onDelete, onUseSession, onViewHistory }: PackageCardProps) {
+export function PackageCard({ package: pkg, onEdit, onDelete, onViewHistory }: PackageCardProps) {
   const getStatusColor = (status: string) => {
     switch (status) {
       case "active": return "bg-green-500/20 text-green-600";
@@ -45,8 +44,6 @@ export function PackageCard({ package: pkg, onEdit, onDelete, onUseSession, onVi
     return new Date(dateString).toLocaleDateString('pt-BR');
   };
 
-  const canUseSession = pkg.status === "active" && pkg.remaining_sessions > 0;
-
   return (
     <GlassCard className="relative transition-all hover:scale-[1.02]">
       <div className="space-y-4">
@@ -63,12 +60,6 @@ export function PackageCard({ package: pkg, onEdit, onDelete, onUseSession, onVi
                 <History className="h-4 w-4 mr-2" />
                 Ver Histórico
               </DropdownMenuItem>
-              {canUseSession && (
-                <DropdownMenuItem onClick={() => onUseSession(pkg.id)} className="cursor-pointer text-green-600">
-                  <Play className="h-4 w-4 mr-2" />
-                  Usar Sessão
-                </DropdownMenuItem>
-              )}
               <DropdownMenuItem onClick={() => onEdit(pkg)} className="cursor-pointer">
                 <Edit className="h-4 w-4 mr-2" />
                 Editar
@@ -193,18 +184,6 @@ export function PackageCard({ package: pkg, onEdit, onDelete, onUseSession, onVi
               <span className="font-medium">Pacote expirado</span>
             </div>
           </div>
-        )}
-
-        {/* Botão de ação rápida */}
-        {canUseSession && (
-          <Button 
-            onClick={() => onUseSession(pkg.id)}
-            className="w-full bg-brand-gradient hover:opacity-90"
-            size="sm"
-          >
-            <Play className="h-4 w-4 mr-2" />
-            Usar uma sessão
-          </Button>
         )}
       </div>
     </GlassCard>

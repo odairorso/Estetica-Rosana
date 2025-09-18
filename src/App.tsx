@@ -8,7 +8,7 @@ import Dashboard from "./pages/Dashboard";
 import Clients from "./pages/Clients";
 import Appointments from "./pages/Appointments";
 import Packages from "./pages/Packages";
-import Services from "./pages/Services"; // CORRIGIDO - era Procedures
+import Services from "./pages/Services";
 import Inventory from "./pages/Inventory";
 import Finance from "./pages/Finance";
 import Settings from "./pages/Settings";
@@ -16,16 +16,13 @@ import Cashier from "./pages/Cashier";
 import { HelmetProvider } from "react-helmet-async";
 import AppLayout from "./components/layout/AppLayout";
 import { ThemeProvider } from "./components/ThemeProvider";
-import { supabase } from "./lib/supabase";
-import { SupabaseConnectionError } from "./components/SupabaseConnectionError";
+import { SYSTEM_CONFIG } from "./config/system";
 
 const queryClient = new QueryClient();
 
 const App = () => {
-  if (!supabase) {
-    return <SupabaseConnectionError />;
-  }
-
+  console.log("🌐 Sistema iniciado em MODO ONLINE com Supabase");
+  
   return (
     <HelmetProvider>
       <QueryClientProvider client={queryClient}>
@@ -42,11 +39,10 @@ const App = () => {
                   <Route path="/agendamentos" element={<Appointments />} />
                   <Route path="/pacotes" element={<Packages />} />
                   <Route path="/caixa" element={<Cashier />} />
-                  <Route path="/servicos" element={<Services />} /> {/* CORRIGIDO */}
+                  <Route path="/servicos" element={<Services />} />
                   <Route path="/estoque" element={<Inventory />} />
                   <Route path="/financeiro" element={<Finance />} />
                   <Route path="/configuracoes" element={<Settings />} />
-                  {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
                   <Route path="*" element={<NotFound />} />
                 </Routes>
               </AppLayout>

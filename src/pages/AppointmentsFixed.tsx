@@ -1,0 +1,1 @@
+// Este arquivo existe? Se sim, vamos removê-lo para evitar conflito

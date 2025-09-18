@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/lib/supabase';
-import { Package } from '@/hooks/usePackages';
+import { SYSTEM_CONFIG } from '@/config/system';
 
 export interface SessionHistoryEntry {
   id: string;
@@ -13,7 +13,7 @@ export interface Package {
   name: string;
   description: string;
   client_id: number;
-  clientName?: string; // Opcional, pode ser preenchido com um join
+  clientName?: string;
   total_sessions: number;
   used_sessions: number;
   price: number;
@@ -25,94 +25,72 @@ export interface Package {
   remaining_sessions: number;
 }
 
-/* Mock data used when Supabase is unavailable */
-const MOCK_PACKAGES: Package[] = [
-  {
-    id: 1,
-    name: "Pacote Bronze",
-    description: "3 sessões de limpeza facial",
-    client_id: 1,
-    clientName: "Ana Silva",
-    total_sessions: 3,
-    used_sessions: 1,
-    price: 300.0,
-    valid_until: "2025-12-31",
-    last_used: "2025-09-10",
-    status: "active",
-    created_at: "2025-01-01T10:00Z",
-    session_history: [{ id: "1", date: "2025-09-10", notes: "Primeira sessão concluída" }],
-    remaining_sessions: 2,
-  },
-  {
-    id: 2,
-    name: "Pacote Prata",
-    description: "5 sessões de botox",
-    client_id: 2,
-    clientName: "Beatriz Costa",
-    total_sessions: 5,
-    used_sessions: 0,
-    price: 1500.0,
-    valid_until: "2025-11-30",
-    last_used: null,
-    status: "active",
-    created_at: "2025-02-15T12:30:00Z",
-    session_history: [],
-    remaining_sessions: 5,
-  },
-];
-
 export function usePackages() {
+  console.log("📦 usePackages hook inicializado - CONECTADO AO SUPABASE");
   const [packages, setPackages] = useState<Package[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
   const loadPackages = useCallback(async () => {
-    if (!supabase) {
-      // Offline mode – use mock data
-      setPackages(MOCK_PACKAGES);
-      setIsLoading(false);
-      return;
-    }
-
+    console.log("📦 Carregando pacotes do Supabase...");
     setIsLoading(true);
+    
     try {
+      if (!supabase) {
+        throw new Error('Supabase não está disponível');
+      }
+      
       const { data, error } = await supabase
         .from('packages')
-        .select(`
-          *,
-          clients (name)
-        `)
-        .order('created_at', { ascending: false });
-
+        .select('*')
+        .order('name');
+      
       if (error) throw error;
-
-      const formattedData = (data || []).map(p => ({
-        ...p,
-        clientName: (p as any).clients?.name || '',
-        remaining_sessions: p.total_sessions - p.used_sessions,
-        session_history: (p as any).session_history || [],
-      }));
-
-      setPackages(formattedData as any);
-    } catch (error) {
-      console.error('Erro ao carregar pacotes:', error);
-      // Fallback to mock data on error
-      setPackages(MOCK_PACKAGES);
-    } finally {
-      setIsLoading(false);
+      
+      console.log("✅ Pacotes carregados do Supabase:", data?.length || 0);
+      setPackages(data || []);
+    } catch (err) {
+      console.error('❌ Erro ao carregar pacotes:', err);
+      
+      // Fallback para localStorage
+      const stored = localStorage.getItem(SYSTEM_CONFIG.STORAGE_KEYS.PACKAGES);
+      if (stored) {
+        const data = JSON.parse(stored);
+        setPackages(data);
+      }
     }
+    
+    setIsLoading(false);
   }, []);
 
-  useEffect(() => {
-    loadPackages();
-  }, [loadPackages]);
-
   const addPackage = async (packageData: any) => {
-    if (!supabase) {
-      // Cria um novo pacote em modo offline
-      const newId = Math.max(0, ...packages.map(p => p.id)) + 1;
+    console.log("📦 ADICIONANDO NOVO PACOTE:", packageData);
+    
+    try {
+      if (!supabase) {
+        throw new Error('Supabase não está disponível');
+      }
+      
+      const { data, error } = await supabase
+        .from('packages')
+        .insert([packageData])
+        .select()
+        .single();
+      
+      if (error) throw error;
+      
+      if (data) {
+        const updatedPackages = [...packages, data];
+        setPackages(updatedPackages);
+        console.log("✅ Pacote criado no Supabase:", data);
+        return data;
+      }
+    } catch (err) {
+      console.error('❌ Erro ao criar pacote no Supabase:', err);
+      
+      // Fallback offline
       const newPackage: Package = {
-        id: newId,
         ...packageData,
+        id: packages.length > 0 ? Math.max(...packages.map(p => p.id)) + 1 : 1,
         clientName: '',
         remaining_sessions: packageData.total_sessions,
         used_sessions: 0,
@@ -120,38 +98,78 @@ export function usePackages() {
         created_at: new Date().toISOString(),
         session_history: [],
       };
-      setPackages([...packages, newPackage]);
+      
+      const updatedPackages = [...packages, newPackage];
+      setPackages(updatedPackages);
+      localStorage.setItem(SYSTEM_CONFIG.STORAGE_KEYS.PACKAGES, JSON.stringify(updatedPackages));
       return newPackage;
     }
-
-    const { client_id, ...rest } = packageData;
-    const { data, error } = await supabase.from('packages').insert([rest]).select().single();
-    if (error) {
-      console.error('Erro ao adicionar pacote:', error);
-      return null;
-    }
-    await loadPackages();
-    return data;
+    
+    return null;
   };
 
   const updatePackage = async (id: number, packageData: Partial<Package>) => {
-    if (!supabase) {
-      setPackages(packages.map(p => (p.id === id ? { ...p, ...packageData } : p)));
-      return;
+    console.log("📦 ATUALIZANDO PACOTE:", id, packageData);
+    
+    try {
+      if (!supabase) {
+        throw new Error('Supabase não está disponível');
+      }
+      
+      const { data, error } = await supabase
+        .from('packages')
+        .update(packageData)
+        .eq('id', id)
+        .select()
+        .single();
+      
+      if (error) throw error;
+      
+      if (data) {
+        const updatedPackages = packages.map(p => 
+          p.id === id ? data : p
+        );
+        setPackages(updatedPackages);
+        console.log("✅ Pacote atualizado no Supabase:", id);
+      }
+    } catch (err) {
+      console.error('❌ Erro ao atualizar pacote no Supabase:', err);
+      
+      // Fallback offline
+      const updatedPackages = packages.map(p => 
+        p.id === id ? { ...p, ...packageData } : p
+      );
+      setPackages(updatedPackages);
+      localStorage.setItem(SYSTEM_CONFIG.STORAGE_KEYS.PACKAGES, JSON.stringify(updatedPackages));
     }
-    const { error } = await supabase.from('packages').update(packageData).eq('id', id);
-    if (error) console.error('Erro ao atualizar pacote:', error);
-    else await loadPackages();
   };
 
   const deletePackage = async (id: number) => {
-    if (!supabase) {
-      setPackages(packages.filter(p => p.id !== id));
-      return;
+    console.log("📦 REMOVENDO PACOTE:", id);
+    
+    try {
+      if (!supabase) {
+        throw new Error('Supabase não está disponível');
+      }
+      
+      const { error } = await supabase
+        .from('packages')
+        .delete()
+        .eq('id', id);
+      
+      if (error) throw error;
+      
+      const updatedPackages = packages.filter(p => p.id !== id);
+      setPackages(updatedPackages);
+      console.log("✅ Pacote removido do Supabase:", id);
+    } catch (err) {
+      console.error('❌ Erro ao remover pacote no Supabase:', err);
+      
+      // Fallback offline
+      const updatedPackages = packages.filter(p => p.id !== id);
+      setPackages(updatedPackages);
+      localStorage.setItem(SYSTEM_CONFIG.STORAGE_KEYS.PACKAGES, JSON.stringify(updatedPackages));
     }
-    const { error } = await supabase.from('packages').delete().eq('id', id);
-    if (error) console.error('Erro ao excluir pacote:', error);
-    else await loadPackages();
   };
 
   const useSession = async (id: number, notes?: string) => {
@@ -167,6 +185,10 @@ export function usePackages() {
       last_used: new Date().toISOString(),
     });
   };
+
+  useEffect(() => {
+    loadPackages();
+  }, [loadPackages]);
 
   return {
     packages,

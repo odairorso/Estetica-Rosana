@@ -1,256 +1,188 @@
-import { useState, useEffect } from 'react';
-import { supabase } from '../lib/supabase';
+import { useState, useEffect, useCallback } from 'react';
+import { supabase } from '@/lib/supabase';
+import { SYSTEM_CONFIG } from '@/config/system';
 
 export interface Client {
-  id: string;
+  id: number;
   name: string;
   email: string;
   phone: string;
   cpf: string;
-  address: {
-    street: string;
-    number: string;
-    complement?: string;
-    neighborhood: string;
-    city: string;
-    state: string;
-    zipCode: string;
-  };
-  avatar: string | null;
-  lastVisit: string;
-  totalVisits: number;
-  activePackages: number;
-  nextAppointment: string | null;
-  createdAt: string;
+  street?: string;
+  number?: string;
+  complement?: string;
+  neighborhood?: string;
+  city?: string;
+  state?: string;
+  zip_code?: string;
+  avatar?: string | null;
+  last_visit?: string;
+  total_visits: number;
+  active_packages: number;
+  next_appointment?: string | null;
+  created_at: string;
 }
 
 export function useClients() {
   const [clients, setClients] = useState<Client[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
-  // Load clients from Supabase on mount
-  useEffect(() => {
-    const loadClients = async () => {
-      if (!supabase) {
-        console.warn('Supabase not available, using fallback data');
-        // Fallback data if Supabase is not available
-        const fallbackClients: Client[] = [
-          {
-            id: "1",
-            name: "Ana Silva",
-            email: "ana.silva@email.com",
-            phone: "(11) 98765-4321",
-            cpf: "123.456.789-00",
-            address: {
-              street: "Rua das Flores",
-              number: "123",
-              complement: "Apto 101",
-              neighborhood: "Centro",
-              city: "São Paulo",
-              state: "SP",
-              zipCode: "01234-567"
-            },
-            avatar: null,
-            lastVisit: "2023-05-15",
-            totalVisits: 5,
-            activePackages: 1,
-            nextAppointment: "2023-06-10T14:00:00",
-            createdAt: "2023-01-15"
-          },
-          {
-            id: "2",
-            name: "Carlos Oliveira",
-            email: "carlos.oliveira@email.com",
-            phone: "(11) 99876-5432",
-            cpf: "987.654.321-00",
-            address: {
-              street: "Av. Paulista",
-              number: "1000",
-              neighborhood: "Bela Vista",
-              city: "São Paulo",
-              state: "SP",
-              zipCode: "01310-100"
-            },
-            avatar: null,
-            lastVisit: "2023-05-20",
-            totalVisits: 3,
-            activePackages: 0,
-            nextAppointment: null,
-            createdAt: "2023-02-10"
-          }
-        ];
-        setClients(fallbackClients);
-        setIsLoading(false);
-        return;
-      }
-
-      try {
-        const { data, error } = await supabase
-          .from('clients')
-          .select('*')
-          .order('created_at', { ascending: false });
-
-        if (error) {
-          console.error('Error loading clients:', error);
-          return;
-        }
-
-        // Transform Supabase data to match our interface
-        const transformedClients: Client[] = data.map(client => ({
-          id: client.id,
-          name: client.name || '',
-          email: client.email || '',
-          phone: client.phone || '',
-          cpf: client.cpf || '',
-          address: client.address || {
-            street: '',
-            number: '',
-            neighborhood: '',
-            city: '',
-            state: '',
-            zipCode: ''
-          },
-          avatar: client.avatar,
-          lastVisit: client.last_visit || '',
-          totalVisits: client.total_visits || 0,
-          activePackages: client.active_packages || 0,
-          nextAppointment: client.next_appointment,
-          createdAt: client.created_at?.split('T')[0] || ''
-        }));
-
-        setClients(transformedClients);
-      } catch (error) {
-        console.error('Error loading clients:', error);
-      } finally {
-        setIsLoading(false);
-      }
-    };
-
-    loadClients();
-  }, []);
-
-  const addClient = async (clientData: Omit<Client, 'id' | 'createdAt'>) => {
-    if (!supabase) {
-      console.warn('Supabase not available');
-      return null;
-    }
-
+  const loadClients = useCallback(async () => {
+    console.log("👥 Carregando clientes do Supabase...");
+    setIsLoading(true);
+    setError(null);
+    
     try {
+      if (!supabase) {
+        throw new Error('Supabase não está disponível');
+      }
+      
       const { data, error } = await supabase
         .from('clients')
-        .insert([{
-          name: clientData.name,
-          email: clientData.email,
-          phone: clientData.phone,
-          cpf: clientData.cpf,
-          address: clientData.address,
-          avatar: clientData.avatar,
-          last_visit: clientData.lastVisit || null,
-          total_visits: clientData.totalVisits,
-          active_packages: clientData.activePackages,
-          next_appointment: clientData.nextAppointment || null
-        }])
+        .select('*')
+        .order('name');
+      
+      if (error) throw error;
+      
+      console.log("✅ Clientes carregados do Supabase:", data?.length || 0);
+      setClients(data || []);
+    } catch (err) {
+      console.error('❌ Erro ao carregar clientes:', err);
+      setError('Erro ao carregar clientes do servidor');
+      
+      // Fallback para localStorage
+      const stored = localStorage.getItem(SYSTEM_CONFIG.STORAGE_KEYS.CLIENTS);
+      if (stored) {
+        const data = JSON.parse(stored);
+        setClients(data);
+      }
+    }
+    
+    setIsLoading(false);
+  }, []);
+
+  const addClient = async (clientData: Omit<Client, 'id' | 'created_at'>) => {
+    console.log("👥 ADICIONANDO NOVO CLIENTE:", clientData.name);
+    
+    try {
+      if (!supabase) {
+        throw new Error('Supabase não está disponível');
+      }
+      
+      const { data, error } = await supabase
+        .from('clients')
+        .insert([clientData])
         .select()
         .single();
-
-      if (error) {
-        console.error('Error adding client:', error);
-        return null;
+      
+      if (error) throw error;
+      
+      if (data) {
+        const updatedClients = [...clients, data];
+        setClients(updatedClients);
+        console.log("✅ Cliente criado no Supabase:", data);
+        return data;
       }
-
-      const newClient: Client = {
-        id: data.id,
-        name: data.name || '',
-        email: data.email || '',
-        phone: data.phone || '',
-        cpf: data.cpf || '',
-        address: data.address || clientData.address,
-        avatar: data.avatar,
-        lastVisit: data.last_visit || '',
-        totalVisits: data.total_visits || 0,
-        activePackages: data.active_packages || 0,
-        nextAppointment: data.next_appointment,
-        createdAt: data.created_at?.split('T')[0] || ''
+    } catch (err) {
+      console.error('❌ Erro ao criar cliente no Supabase:', err);
+      
+      // Fallback offline
+      const newClient = {
+        ...clientData,
+        id: clients.length > 0 ? Math.max(...clients.map(c => c.id)) + 1 : 1,
+        created_at: new Date().toISOString()
       };
-
-      setClients([newClient, ...clients]);
+      
+      const updatedClients = [...clients, newClient];
+      setClients(updatedClients);
+      localStorage.setItem(SYSTEM_CONFIG.STORAGE_KEYS.CLIENTS, JSON.stringify(updatedClients));
       return newClient;
-    } catch (error) {
-      console.error('Error adding client:', error);
-      return null;
     }
+    
+    return null;
   };
 
-  const updateClient = async (id: string, clientData: Partial<Client>) => {
-    if (!supabase) {
-      console.warn('Supabase not available');
-      return;
-    }
-
+  const updateClient = async (id: number, clientData: Partial<Client>) => {
+    console.log("👥 ATUALIZANDO CLIENTE:", id, clientData);
+    
     try {
-      const updateData: any = {};
-      if (clientData.name !== undefined) updateData.name = clientData.name;
-      if (clientData.email !== undefined) updateData.email = clientData.email;
-      if (clientData.phone !== undefined) updateData.phone = clientData.phone;
-      if (clientData.cpf !== undefined) updateData.cpf = clientData.cpf;
-      if (clientData.address !== undefined) updateData.address = clientData.address;
-      if (clientData.avatar !== undefined) updateData.avatar = clientData.avatar;
-      if (clientData.lastVisit !== undefined) updateData.last_visit = clientData.lastVisit;
-      if (clientData.totalVisits !== undefined) updateData.total_visits = clientData.totalVisits;
-      if (clientData.activePackages !== undefined) updateData.active_packages = clientData.activePackages;
-      if (clientData.nextAppointment !== undefined) updateData.next_appointment = clientData.nextAppointment;
-
-      const { error } = await supabase
-        .from('clients')
-        .update(updateData)
-        .eq('id', id);
-
-      if (error) {
-        console.error('Error updating client:', error);
-        return;
+      if (!supabase) {
+        throw new Error('Supabase não está disponível');
       }
-
-      setClients(clients.map(client => 
+      
+      const { data, error } = await supabase
+        .from('clients')
+        .update(clientData)
+        .eq('id', id)
+        .select()
+        .single();
+      
+      if (error) throw error;
+      
+      if (data) {
+        const updatedClients = clients.map(client => 
+          client.id === id ? data : client
+        );
+        setClients(updatedClients);
+        console.log("✅ Cliente atualizado no Supabase:", id);
+      }
+    } catch (err) {
+      console.error('❌ Erro ao atualizar cliente no Supabase:', err);
+      
+      // Fallback offline
+      const updatedClients = clients.map(client => 
         client.id === id ? { ...client, ...clientData } : client
-      ));
-    } catch (error) {
-      console.error('Error updating client:', error);
+      );
+      setClients(updatedClients);
+      localStorage.setItem(SYSTEM_CONFIG.STORAGE_KEYS.CLIENTS, JSON.stringify(updatedClients));
     }
   };
 
-  const deleteClient = async (id: string) => {
-    if (!supabase) {
-      console.warn('Supabase not available');
-      return;
-    }
-
+  const deleteClient = async (id: number) => {
+    console.log("👥 REMOVENDO CLIENTE:", id);
+    
     try {
+      if (!supabase) {
+        throw new Error('Supabase não está disponível');
+      }
+      
       const { error } = await supabase
         .from('clients')
         .delete()
         .eq('id', id);
-
-      if (error) {
-        console.error('Error deleting client:', error);
-        return;
-      }
-
-      setClients(clients.filter(client => client.id !== id));
-    } catch (error) {
-      console.error('Error deleting client:', error);
+      
+      if (error) throw error;
+      
+      const updatedClients = clients.filter(client => client.id !== id);
+      setClients(updatedClients);
+      console.log("✅ Cliente removido do Supabase:", id);
+    } catch (err) {
+      console.error('❌ Erro ao remover cliente no Supabase:', err);
+      
+      // Fallback offline
+      const updatedClients = clients.filter(client => client.id !== id);
+      setClients(updatedClients);
+      localStorage.setItem(SYSTEM_CONFIG.STORAGE_KEYS.CLIENTS, JSON.stringify(updatedClients));
     }
   };
 
-  const getClient = (id: string) => {
+  const getClient = (id: number) => {
     return clients.find(c => c.id === id);
   };
+
+  useEffect(() => {
+    loadClients();
+  }, [loadClients]);
 
   return {
     clients,
     isLoading,
+    error,
     addClient,
     updateClient,
     deleteClient,
     getClient,
+    refreshClients: loadClients,
   };
 }

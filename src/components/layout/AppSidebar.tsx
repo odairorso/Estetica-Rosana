@@ -27,6 +27,10 @@ const items = [
   { title: "Dashboard", url: "/dashboard", icon: LayoutDashboard },
   { title: "Clientes", url: "/clientes", icon: Users2 },
   { title: "Agendamentos", url: "/agendamentos", icon: CalendarClock },
+<<<<<<< HEAD
+=======
+  // O item 'Finalizados' foi removido para consolidar tudo em Agendamentos
+>>>>>>> 1be9b827db6afc3e4a1a015d739fa37e6574b522
   { title: "Pacotes", url: "/pacotes", icon: Package2 },
   { title: "Caixa", url: "/caixa", icon: ShoppingCart },
   { title: "Procedimentos", url: "/servicos", icon: Sparkles },
@@ -94,4 +98,8 @@ export function AppSidebar() {
   );
 }
 
+<<<<<<< HEAD
 export default AppSidebar;
+=======
+export default AppSidebar;
+>>>>>>> 1be9b827db6afc3e4a1a015d739fa37e6574b522

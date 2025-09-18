@@ -1,228 +1,354 @@
 import { useState, useEffect, useCallback } from 'react';
-import { supabase } from '@/lib/supabase';
 import { useToast } from "@/hooks/use-toast";
-import { usePackages } from './usePackages';
-import { isValid, parseISO } from 'date-fns';
+import { supabase } from '@/lib/supabase';
+import { SYSTEM_CONFIG } from '@/config/system';
 
 export interface Appointment {
   id: number;
-  service_id: number;
-  client_id: number;
+  client_id?: number;
   client_name: string;
   client_phone: string;
-  appointment_date: string; // YYYY-MM-DD
-  appointment_time: string;
+  service_id?: number;
+  service_name?: string;
+  date: string;
+  time: string;
   duration: number;
   price: number;
   notes: string;
   status: "agendado" | "confirmado" | "concluido" | "cancelado";
   created_at: string;
-  serviceName?: string; // Opcional - vem do JOIN
-  package_id?: number; // ID do pacote relacionado
+  package_id?: number;
+  package_name?: string;
+  appointment_date?: string;
+  appointment_time?: string;
+  type?: "individual" | "package_session";
+  session_number?: number;
+  total_sessions?: number;
+  sale_date?: string;
+  completed_at?: string;
 }
 
-// Função segura para validar datas
-const isValidDateString = (dateString: string | null | undefined): boolean => {
-  if (!dateString) return false;
-  try {
-    const date = parseISO(dateString);
-    return isValid(date);
-  } catch {
-    return false;
-  }
-};
-
-// Função para garantir formato de data válido
-const ensureValidDate = (dateString: string | null | undefined): string => {
-  if (isValidDateString(dateString)) return dateString!;
-  return new Date().toISOString().split('T')[0]; // Fallback para data atual
-};
-
-// Dados mock para fallback quando Supabase falhar
-const MOCK_APPOINTMENTS: Appointment[] = [
-  {
-    id: 1,
-    service_id: 1,
-    client_id: 1,
-    client_name: "Ana Silva (Exemplo)",
-    client_phone: "(11) 99999-9999",
-    appointment_date: new Date().toISOString().split('T')[0],
-    appointment_time: "14:00",
-    duration: 60,
-    price: 150,
-    notes: "Este é um agendamento de exemplo para modo offline.",
-    status: "confirmado",
-    created_at: "2024-01-10T10:00:00Z",
-    serviceName: "Limpeza de Pele (Exemplo)"
-  },
-];
+export interface PackageSession extends Appointment {
+  total_sessions: number;
+  used_sessions: number;
+  remaining_sessions: number;
+  session_history: {
+    id: number;
+    date: string;
+    time: string;
+    status: 'completed' | 'scheduled';
+    notes?: string;
+  }[];
+}
 
 export function useAppointments() {
+  const { toast } = useToast();
   const [appointments, setAppointments] = useState<Appointment[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const { toast } = useToast();
-  const { useSession } = usePackages();
 
+  // Carregar agendamentos do Supabase
   const loadAppointments = useCallback(async () => {
+    console.log("📋 Carregando agendamentos do Supabase...");
     setIsLoading(true);
     setError(null);
     
-    if (!supabase) {
-      console.warn('⚠️ Supabase não conectado. Usando dados de exemplo locais.');
-      setAppointments(MOCK_APPOINTMENTS);
-      setError('Você está em modo offline. Os dados não estão sendo salvos no servidor.');
-      setIsLoading(false);
-      return;
+    try {
+      if (!supabase) {
+        throw new Error('Supabase não está disponível');
+      }
+      
+      const { data, error } = await supabase
+        .from('appointments')
+        .select('*')
+        .order('appointment_date', { ascending: true });
+      
+      if (error) throw error;
+      
+      console.log("✅ Agendamentos carregados do Supabase:", data?.length || 0);
+      setAppointments(data || []);
+    } catch (err) {
+      console.error('❌ Erro ao carregar agendamentos:', err);
+      setError('Erro ao carregar agendamentos do servidor');
+      
+      // Fallback para localStorage se houver erro
+      const stored = localStorage.getItem(SYSTEM_CONFIG.STORAGE_KEYS.APPOINTMENTS);
+      if (stored) {
+        const data = JSON.parse(stored);
+        setAppointments(data);
+      }
     }
     
-    try {
-      const { data, error: dbError } = await supabase
-        .from('appointments')
-        .select(`
-          *,
-          services (name)
-        `)
-        .order('appointment_date', { ascending: false })
-        .order('appointment_time', { ascending: false });
-
-      if (dbError) throw dbError;
-
-      // Filtrar e formatar dados para garantir datas válidas
-      const formattedData = (data || [])
-        .map(a => ({
-          ...a,
-          serviceName: a.services ? a.services.name : 'Serviço Removido',
-          // Garantir que appointment_date seja válida
-          appointment_date: ensureValidDate(a.appointment_date),
-          // Garantir que appointment_time seja válida
-          appointment_time: a.appointment_time || "09:00",
-        }))
-        .filter(a => a.appointment_date && a.appointment_time); // Remover agendamentos sem data/hora
-      
-      setAppointments(formattedData as any);
-    } catch (err: any) {
-      console.error('❌ Erro crítico ao carregar agendamentos:', err);
-      setError('Falha ao buscar dados do servidor. Verifique sua conexão.');
-      setAppointments(MOCK_APPOINTMENTS); // Fallback para dados de exemplo em caso de erro
-    } finally {
-      setIsLoading(false);
-    }
+    setIsLoading(false);
   }, []);
+
+  // Salvar no Supabase
+  const saveToSupabase = async (appointmentData: any) => {
+    if (!supabase) return null;
+    
+    const { data, error } = await supabase
+      .from('appointments')
+      .insert([appointmentData])
+      .select()
+      .single();
+    
+    if (error) {
+      console.error('❌ Erro ao salvar no Supabase:', error);
+      throw error;
+    }
+    
+    return data;
+  };
+
+  // Atualizar no Supabase
+  const updateInSupabase = async (id: number, updates: Partial<Appointment>) => {
+    if (!supabase) return null;
+    
+    const { data, error } = await supabase
+      .from('appointments')
+      .update(updates)
+      .eq('id', id)
+      .select()
+      .single();
+    
+    if (error) {
+      console.error('❌ Erro ao atualizar no Supabase:', error);
+      throw error;
+    }
+    
+    return data;
+  };
+
+  const createFromSale = async (saleData: any) => {
+    console.log("🆕 Criando agendamento a partir de venda:", saleData);
+    
+    // Para pacotes, criar APENAS UMA sessão por vez
+    if (saleData.type === 'package_session') {
+      console.log(`📦 Criando sessão para pacote ${saleData.package_name}`);
+      
+      // Verificar quantas sessões já existem
+      const existingSessions = appointments.filter(apt => 
+        apt.client_name === saleData.client_name &&
+        apt.package_name === saleData.package_name &&
+        apt.package_id === saleData.package_id
+      );
+      
+      const nextSessionNumber = existingSessions.length + 1;
+      
+      // Verificar se já existe sessão pendente
+      const pendingSession = existingSessions.find(apt => 
+        apt.status === 'agendado' && 
+        (!apt.appointment_date || apt.appointment_date === '')
+      );
+      
+      if (pendingSession) {
+        console.log(`⚠️ Já existe sessão pendente:`, pendingSession.id);
+        return pendingSession;
+      }
+      
+      // Verificar se excederia o total
+      if (nextSessionNumber > (saleData.total_sessions || 5)) {
+        console.log(`❌ Não pode criar sessão ${nextSessionNumber}, total é ${saleData.total_sessions}`);
+        return null;
+      }
+      
+      const newAppointmentData = {
+        client_id: saleData.client_id,
+        client_name: saleData.client_name,
+        client_phone: saleData.client_phone || '',
+        package_id: saleData.package_id,
+        package_name: saleData.package_name,
+        total_sessions: saleData.total_sessions || 5,
+        session_number: nextSessionNumber,
+        type: 'package_session',
+        price: 0,
+        sale_date: saleData.sale_date,
+        status: 'agendado',
+        notes: `Sessão ${nextSessionNumber} de ${saleData.total_sessions || 5} - ${saleData.package_name}`,
+        duration: 60,
+        created_at: new Date().toISOString(),
+        date: '',
+        time: '',
+        appointment_date: '',
+        appointment_time: '',
+      };
+      
+      try {
+        const saved = await saveToSupabase(newAppointmentData);
+        if (saved) {
+          const updatedAppointments = [...appointments, saved];
+          setAppointments(updatedAppointments);
+          console.log(`✅ Sessão única criada: ${nextSessionNumber}/${saleData.total_sessions}`);
+          return saved;
+        }
+      } catch (error) {
+        console.error('❌ Erro ao salvar sessão no Supabase:', error);
+      }
+      
+      return null;
+    }
+    
+    // Para procedimentos individuais
+    const existingAppointment = appointments.find(apt => {
+      const sameClient = apt.client_name === saleData.client_name;
+      const sameItem = (saleData.type === 'individual' && apt.service_name === saleData.service_name);
+      return sameClient && sameItem;
+    });
+    
+    if (existingAppointment) {
+      console.log("⏭️ Agendamento já existe, pulando criação:", existingAppointment.id);
+      return existingAppointment;
+    }
+    
+    const newAppointmentData = {
+      client_id: saleData.client_id,
+      client_name: saleData.client_name,
+      client_phone: saleData.client_phone || '',
+      service_id: saleData.service_id,
+      service_name: saleData.service_name,
+      type: saleData.type,
+      price: saleData.price,
+      sale_date: saleData.sale_date,
+      status: 'agendado',
+      notes: `Aguardando agendamento - ${saleData.service_name}`,
+      duration: 60,
+      created_at: new Date().toISOString(),
+      date: '',
+      time: '',
+      appointment_date: '',
+      appointment_time: '',
+    };
+    
+    try {
+      const saved = await saveToSupabase(newAppointmentData);
+      if (saved) {
+        const updatedAppointments = [...appointments, saved];
+        setAppointments(updatedAppointments);
+        console.log("✅ Agendamento criado no Supabase:", saved);
+        return saved;
+      }
+    } catch (error) {
+      console.error('❌ Erro ao salvar agendamento no Supabase:', error);
+    }
+    
+    return null;
+  };
+
+  const scheduleAppointment = async (id: number, date: string, time: string) => {
+    console.log(`📅 Agendando procedimento ${id} para ${date} às ${time}`);
+    
+    try {
+      const updated = await updateInSupabase(id, {
+        appointment_date: date,
+        appointment_time: time,
+        date,
+        time,
+        status: 'agendado'
+      });
+      
+      if (updated) {
+        const updatedAppointments = appointments.map(apt => 
+          apt.id === id ? updated : apt
+        );
+        setAppointments(updatedAppointments);
+        console.log("✅ Agendamento atualizado no Supabase");
+      }
+    } catch (error) {
+      console.error('❌ Erro ao agendar no Supabase:', error);
+    }
+  };
+
+  const confirmAttendance = async (id: number) => {
+    console.log(`✅ Confirmando presença do agendamento ${id}`);
+    
+    try {
+      const updated = await updateInSupabase(id, {
+        status: 'concluido',
+        completed_at: new Date().toISOString()
+      });
+      
+      if (updated) {
+        const updatedAppointments = appointments.map(apt => 
+          apt.id === id ? updated : apt
+        );
+        setAppointments(updatedAppointments);
+        console.log("✅ Presença confirmada no Supabase");
+      }
+    } catch (error) {
+      console.error('❌ Erro ao confirmar presença no Supabase:', error);
+    }
+  };
+
+  const updateAppointment = async (id: number, updates: Partial<Appointment>) => {
+    console.log(`🔄 Atualizando agendamento ${id}:`, updates);
+    
+    try {
+      const updated = await updateInSupabase(id, updates);
+      if (updated) {
+        const updatedAppointments = appointments.map(apt => 
+          apt.id === id ? updated : apt
+        );
+        setAppointments(updatedAppointments);
+        console.log("✅ Agendamento atualizado no Supabase");
+      }
+    } catch (error) {
+      console.error('❌ Erro ao atualizar no Supabase:', error);
+    }
+  };
+
+  const getActivePackages = () => {
+    const active = appointments.filter(apt => 
+      apt.type === 'package_session' && 
+      apt.status !== 'concluido'
+    );
+    console.log("📦 Pacotes ativos encontrados:", active.length);
+    return active;
+  };
+
+  const getPendingProcedures = () => {
+    const pending = appointments.filter(apt => 
+      apt.type === 'individual' && 
+      apt.status === 'agendado' &&
+      (!apt.appointment_date || apt.appointment_date === '')
+    );
+    console.log("📋 Procedimentos pendentes encontrados:", pending.length);
+    return pending;
+  };
+
+  const getTodaysAppointments = () => {
+    const today = new Date().toISOString().split('T')[0];
+    const todays = appointments.filter(apt => 
+      apt.appointment_date === today && 
+      (apt.status === 'agendado' || apt.status === 'confirmado')
+    );
+    console.log("📅 Agendamentos de hoje encontrados:", todays.length);
+    return todays;
+  };
+
+  const getPackageHistory = (packageId: number) => {
+    const history = appointments
+      .filter(apt => apt.package_id === packageId && apt.status === 'concluido')
+      .sort((a, b) => (a.completed_at || '').localeCompare(b.completed_at || ''));
+    console.log(`📜 Histórico do pacote ${packageId}:`, history.length, "sessões");
+    return history;
+  };
 
   useEffect(() => {
     loadAppointments();
   }, [loadAppointments]);
 
-  const addAppointment = async (appointmentData: any) => {
-    if (!supabase) {
-      alert('Modo Offline: O agendamento não pode essere salvo.');
-      return null;
-    }
-    
-    try {
-      const { package_id, serviceName, ...restOfData } = appointmentData;
-
-      // Validar e formatar dados antes de enviar
-      const validatedData = {
-        ...restOfData,
-        appointment_date: ensureValidDate(restOfData.appointment_date),
-        appointment_time: restOfData.appointment_time || "09:00",
-        price: restOfData.price || 0,
-        duration: restOfData.duration || 60,
-      };
-
-      // Objeto limpo apenas com os campos que existem na tabela
-      const appointmentToInsert = {
-        client_id: validatedData.client_id,
-        service_id: validatedData.service_id,
-        date: validatedData.appointment_date, // Correção do nome da coluna
-        time: validatedData.appointment_time, // Correção do nome da coluna
-        duration: validatedData.duration,
-        price: validatedData.price,
-        notes: validatedData.notes,
-        status: validatedData.status,
-        client_name: validatedData.client_name,
-        client_phone: validatedData.client_phone,
-        service_name: serviceName, // Adicionado campo que faltava
-      };
-
-      const { data: appointment, error } = await supabase
-        .from('appointments')
-        .insert([appointmentToInsert])
-        .select()
-        .single();
-
-      if (error) throw error;
-
-      // Se for uma sessão de pacote, registra no histórico DO PACOTE
-      if (package_id && appointment) {
-        // Registrar uso da sessão do pacote
-        await useSession(package_id, `Sessão do serviço: ${serviceName || 'não especificado'}`);
-        
-        // Registrar no histórico de sessões
-        const { error: sessionError } = await supabase
-          .from('session_history')
-          .insert({
-            package_id: package_id,
-            session_date: appointment.appointment_date,
-            notes: `Sessão referente ao agendamento do serviço: ${serviceName || 'não especificado'}. ${restOfData.notes || ''}`.trim()
-          });
-        
-        if (sessionError) {
-          console.error('❌ Erro ao registrar sessão do pacote:', sessionError);
-          toast({
-            title: "Atenção: Erro ao abater sessão",
-            description: "O agendamento foi criado, mas não foi possível registrar o uso da sessão. Por favor, ajuste manualmente no pacote.",
-            variant: "destructive",
-            duration: 10000,
-          });
-        } else {
-          toast({
-            title: "Sessão registrada!",
-            description: `Uma sessão foi abatida do pacote.`,
-          });
-        }
-      }
-
-      await loadAppointments(); // Recarrega a lista
-      return { ...appointment, serviceName };
-    } catch (err) {
-      console.error('❌ Erro ao adicionar agendamento:', err);
-      setError('Não foi possível salvar o agendamento.');
-      return null;
-    }
-  };
-
-  const updateAppointment = async (id: number, appointmentData: Partial<Appointment>) => {
-    if (!supabase) {
-      alert('Modo Offline: O agendamento não pode essere atualizado.');
-      return;
-    }
-    
-    try {
-      // Validar dados antes de atualizar
-      const validatedData = {
-        ...appointmentData,
-        appointment_date: appointmentData.appointment_date ? ensureValidDate(appointmentData.appointment_date) : undefined,
-        appointment_time: appointmentData.appointment_time || "09:00",
-      };
-
-      const { error } = await supabase.from('appointments').update(validatedData).eq('id', id);
-      if (error) throw error;
-      await loadAppointments(); // Recarrega a lista
-    } catch (err) {
-      console.error('❌ Erro ao atualizar agendamento:', err);
-      setError('Não foi possível atualizar o agendamento.');
-    }
-  };
-
   return {
     appointments,
     isLoading,
     error,
-    addAppointment,
+    createFromSale,
+    scheduleAppointment,
+    confirmAttendance,
     updateAppointment,
+    getActivePackages,
+    getPendingProcedures,
+    getTodaysAppointments,
+    getPackageHistory,
     refreshAppointments: loadAppointments,
   };
 }

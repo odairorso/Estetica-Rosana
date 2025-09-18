@@ -7,18 +7,12 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { useSettings } from "@/hooks/useSettings";
 import { useTheme } from "@/components/ThemeProvider";
 import { toast } from "@/hooks/use-toast";
+import { Skeleton } from "@/components/ui/skeleton";
+import { TestDataSetup } from "@/components/setup/TestDataSetup";
 
 export default function Settings() {
   const { settings, updateClinicInfo, isLoading } = useSettings();
   const { theme, setTheme } = useTheme();
-
-  // Valores padrão caso settings seja null
-  const clinicInfo = settings?.clinicInfo || {
-    name: "Clínica Rosana Turci",
-    phone: "(11) 99999-9999",
-    email: "contato@rosanaturci.com.br",
-    address: "Rua Exemplo, 123 - Centro, São Paulo - SP"
-  };
 
   const handleInfoChange = (field: string, value: string) => {
     updateClinicInfo({ [field]: value });
@@ -31,14 +25,27 @@ export default function Settings() {
     });
   };
 
-  if (isLoading) {
+  if (isLoading || !settings) {
     return (
-      <div className="flex items-center justify-center min-h-[calc(100vh-3.5rem)]">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-brand-start mx-auto mb-4"></div>
-          <p>Carregando configurações...</p>
+      <>
+        <Helmet>
+          <title>Configurações | Gestão de Clínica Estética</title>
+        </Helmet>
+        <div className="space-y-8">
+          <div>
+            <h1 className="text-3xl font-bold text-gradient-brand">Configurações</h1>
+            <p className="text-muted-foreground">Gerencie as preferências do sistema.</p>
+          </div>
+          <GlassCard>
+            <h2 className="text-xl font-semibold mb-4">Informações da Clínica</h2>
+            <div className="space-y-4">
+              <Skeleton className="h-10 w-full" />
+              <Skeleton className="h-10 w-full" />
+              <Skeleton className="h-10 w-full" />
+            </div>
+          </GlassCard>
         </div>
-      </div>
+      </>
     );
   }
 
@@ -63,18 +70,16 @@ export default function Settings() {
                 <Label htmlFor="clinicName">Nome da Clínica</Label>
                 <Input
                   id="clinicName"
-                  value={clinicInfo.name}
+                  value={settings.clinicInfo.name}
                   onChange={(e) => handleInfoChange('name', e.target.value)}
-                  placeholder="Digite o nome da clínica"
                 />
               </div>
               <div className="space-y-2">
                 <Label htmlFor="clinicPhone">Telefone</Label>
                 <Input
                   id="clinicPhone"
-                  value={clinicInfo.phone}
+                  value={settings.clinicInfo.phone}
                   onChange={(e) => handleInfoChange('phone', e.target.value)}
-                  placeholder="(11) 99999-9999"
                 />
               </div>
             </div>
@@ -83,18 +88,16 @@ export default function Settings() {
               <Input
                 id="clinicEmail"
                 type="email"
-                value={clinicInfo.email}
+                value={settings.clinicInfo.email}
                 onChange={(e) => handleInfoChange('email', e.target.value)}
-                placeholder="contato@clinica.com.br"
               />
             </div>
             <div className="space-y-2">
               <Label htmlFor="clinicAddress">Endereço</Label>
               <Input
                 id="clinicAddress"
-                value={clinicInfo.address}
+                value={settings.clinicInfo.address}
                 onChange={(e) => handleInfoChange('address', e.target.value)}
-                placeholder="Rua, número, bairro, cidade - estado"
               />
             </div>
             <div className="flex justify-end">
@@ -121,6 +124,15 @@ export default function Settings() {
               Escolha como o painel deve ser exibido.
             </p>
           </div>
+        </GlassCard>
+
+        {/* Seção de Teste e Debug */}
+        <GlassCard>
+          <h2 className="text-xl font-semibold mb-4">🧪 Ferramentas de Teste</h2>
+          <p className="text-sm text-muted-foreground mb-6">
+            Crie dados de teste para verificar se o sistema está funcionando corretamente com o Supabase.
+          </p>
+          <TestDataSetup />
         </GlassCard>
       </div>
     </>

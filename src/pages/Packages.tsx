@@ -7,6 +7,10 @@ import { NeonButton } from "@/components/ui/neon-button";
 import { usePackages, Package as PackageType } from "@/hooks/usePackages";
 import { PackageCard } from "@/components/packages/PackageCard";
 import { PackageModal } from "@/components/packages/PackageModal";
+<<<<<<< HEAD
+=======
+import { SessionSchedulingModal } from "@/components/packages/SessionSchedulingModal";
+>>>>>>> 1be9b827db6afc3e4a1a015d739fa37e6574b522
 import { SessionHistoryModal } from "@/components/packages/SessionHistoryModal";
 import { useToast } from "@/hooks/use-toast";
 import {
@@ -26,6 +30,10 @@ export default function Packages() {
   const [searchTerm, setSearchTerm] = useState("");
   const [filter, setFilter] = useState("all");
   const [modalOpen, setModalOpen] = useState(false);
+<<<<<<< HEAD
+=======
+  const [schedulingModalOpen, setSchedulingModalOpen] = useState(false);
+>>>>>>> 1be9b827db6afc3e4a1a015d739fa37e6574b522
   const [editingPackage, setEditingPackage] = useState<PackageType | null>(null);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [packageToDelete, setPackageToDelete] = useState<number | null>(null);
@@ -33,8 +41,14 @@ export default function Packages() {
   const [selectedPackageHistory, setSelectedPackageHistory] = useState<PackageType | null>(null);
 
   const filteredPackages = packages.filter(pkg => {
+<<<<<<< HEAD
     const matchesSearch = pkg.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
                          pkg.clientName.toLowerCase().includes(searchTerm.toLowerCase());
+=======
+    const clientName = pkg.clientName || '';
+    const matchesSearch = pkg.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                         clientName.toLowerCase().includes(searchTerm.toLowerCase());
+>>>>>>> 1be9b827db6afc3e4a1a015d739fa37e6574b522
     
     if (filter === "all") return matchesSearch;
     if (filter === "active") return matchesSearch && pkg.status === "active";
@@ -87,11 +101,30 @@ export default function Packages() {
     setHistoryModalOpen(true);
   };
 
+<<<<<<< HEAD
+=======
+  const handleScheduleSession = () => {
+    setSchedulingModalOpen(true);
+  };
+
+  const handleSaveSession = (sessionData: any) => {
+    console.log("Sessão agendada:", sessionData);
+    toast({
+      title: "Sessão agendada!",
+      description: `Sessão do pacote "${sessionData.serviceName}" agendada com sucesso.`,
+    });
+  };
+
+>>>>>>> 1be9b827db6afc3e4a1a015d739fa37e6574b522
   return (
     <>
       <Helmet>
         <title>Pacotes | Gestão de Clínica Estética</title>
+<<<<<<< HEAD
         <meta name="description" content="Visualização e controle de pacotes promocionais." />
+=======
+        <meta name="description" content="Criação e controle de pacotes promocionais com sessões." />
+>>>>>>> 1be9b827db6afc3e4a1a015d739fa37e6574b522
         <link rel="canonical" href="/pacotes" />
       </Helmet>
 
@@ -100,7 +133,11 @@ export default function Packages() {
         <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
           <div>
             <h1 className="text-2xl font-bold text-gradient-brand">Pacotes</h1>
+<<<<<<< HEAD
             <p className="text-muted-foreground">Visualização e controle de pacotes promocionais</p>
+=======
+            <p className="text-muted-foreground">Controle de pacotes promocionais e sessões</p>
+>>>>>>> 1be9b827db6afc3e4a1a015d739fa37e6574b522
           </div>
           <div className="flex gap-3">
             <SearchBar 
@@ -111,6 +148,12 @@ export default function Packages() {
             <NeonButton icon={Plus} onClick={handleNewPackage}>
               Novo Pacote
             </NeonButton>
+<<<<<<< HEAD
+=======
+            <NeonButton icon={Package} onClick={handleScheduleSession} variant="secondary">
+              Agendar Sessão
+            </NeonButton>
+>>>>>>> 1be9b827db6afc3e4a1a015d739fa37e6574b522
           </div>
         </div>
 
@@ -181,6 +224,16 @@ export default function Packages() {
           mode={editingPackage ? 'edit' : 'create'}
         />
 
+<<<<<<< HEAD
+=======
+        {/* Modal de agendamento de sessão */}
+        <SessionSchedulingModal
+          open={schedulingModalOpen}
+          onOpenChange={setSchedulingModalOpen}
+          onSave={handleSaveSession}
+        />
+
+>>>>>>> 1be9b827db6afc3e4a1a015d739fa37e6574b522
         {/* Modal de histórico de sessões */}
         <SessionHistoryModal
           open={historyModalOpen}
@@ -208,4 +261,8 @@ export default function Packages() {
       </div>
     </>
   );
+<<<<<<< HEAD
 }
+=======
+}
+>>>>>>> 1be9b827db6afc3e4a1a015d739fa37e6574b522

@@ -8,7 +8,7 @@ import Dashboard from "./pages/Dashboard";
 import Clients from "./pages/Clients";
 import Appointments from "./pages/Appointments";
 import Packages from "./pages/Packages";
-import Procedures from "./pages/Procedures"; // ✅ Nova importação
+import Procedures from "./pages/Procedures";
 import Inventory from "./pages/Inventory";
 import Finance from "./pages/Finance";
 import Settings from "./pages/Settings";
@@ -42,7 +42,7 @@ const App = () => {
                   <Route path="/agendamentos" element={<Appointments />} />
                   <Route path="/pacotes" element={<Packages />} />
                   <Route path="/caixa" element={<Cashier />} />
-                  <Route path="/procedimentos" element={<Procedures />} /> {/* ✅ Nova rota */}
+                  <Route path="/procedimentos" element={<Procedures />} />
                   <Route path="/estoque" element={<Inventory />} />
                   <Route path="/financeiro" element={<Finance />} />
                   <Route path="/configuracoes" element={<Settings />} />

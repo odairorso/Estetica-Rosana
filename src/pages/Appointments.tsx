@@ -34,6 +34,30 @@ import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { usePackages, Package as PackageType } from "@/hooks/usePackages";
 import { SessionHistoryModal } from "@/components/packages/SessionHistoryModal";
 
+// Função segura para validar e formatar datas
+const safeFormatDate = (dateString: string | null | undefined, fallback: string = "Data inválida") => {
+  if (!dateString) return fallback;
+  
+  try {
+    const date = parseISO(dateString);
+    return isValid(date) ? format(date, "dd/MM/yyyy", { locale: ptBR }) : fallback;
+  } catch {
+    return fallback;
+  }
+};
+
+// Função segura para comparar datas
+const isSameDateSafe = (date1: Date, dateString: string | null | undefined) => {
+  if (!dateString) return false;
+  
+  try {
+    const date2 = parseISO(dateString);
+    return isValid(date2) ? format(date2, "yyyy-MM-dd") === format(date1, "yyyy-MM-dd") : false;
+  } catch {
+    return false;
+  }
+};
+
 export default function Appointments() {
   const {
     appointments,
@@ -56,16 +80,7 @@ export default function Appointments() {
   // Função segura para filtrar agendamentos por data
   const filteredAppointments = appointments
     .filter((apt) => {
-      if (!apt.appointment_date) return false;
-      
-      try {
-        const aptDate = parseISO(apt.appointment_date);
-        if (!isValid(aptDate)) return false;
-        
-        return format(aptDate, "yyyy-MM-dd") === format(selectedDate, "yyyy-MM-dd");
-      } catch {
-        return false;
-      }
+      return isSameDateSafe(selectedDate, apt.appointment_date);
     })
     .sort((a, b) => a.appointment_time.localeCompare(b.appointment_time));
 

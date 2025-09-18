@@ -21,6 +21,23 @@ export interface Appointment {
   package_id?: number; // ID do pacote relacionado
 }
 
+// Função segura para validar datas
+const isValidDateString = (dateString: string | null | undefined): boolean => {
+  if (!dateString) return false;
+  try {
+    const date = parseISO(dateString);
+    return isValid(date);
+  } catch {
+    return false;
+  }
+};
+
+// Função para garantir formato de data válido
+const ensureValidDate = (dateString: string | null | undefined): string => {
+  if (isValidDateString(dateString)) return dateString!;
+  return new Date().toISOString().split('T')[0]; // Fallback para data atual
+};
+
 // Dados mock para fallback quando Supabase falhar
 const MOCK_APPOINTMENTS: Appointment[] = [
   {
@@ -77,9 +94,7 @@ export function useAppointments() {
           ...a,
           serviceName: a.services ? a.services.name : 'Serviço Removido',
           // Garantir que appointment_date seja válida
-          appointment_date: a.appointment_date && isValid(parseISO(a.appointment_date)) 
-            ? a.appointment_date 
-            : new Date().toISOString().split('T')[0],
+          appointment_date: ensureValidDate(a.appointment_date),
           // Garantir que appointment_time seja válida
           appointment_time: a.appointment_time || "09:00",
         }))
@@ -111,7 +126,7 @@ export function useAppointments() {
       // Validar e formatar dados antes de enviar
       const validatedData = {
         ...restOfData,
-        appointment_date: restOfData.appointment_date || new Date().toISOString().split('T')[0],
+        appointment_date: ensureValidDate(restOfData.appointment_date),
         appointment_time: restOfData.appointment_time || "09:00",
         price: restOfData.price || 0,
         duration: restOfData.duration || 60,
@@ -174,9 +189,7 @@ export function useAppointments() {
       // Validar dados antes de atualizar
       const validatedData = {
         ...appointmentData,
-        appointment_date: appointmentData.appointment_date && isValid(parseISO(appointmentData.appointment_date))
-          ? appointmentData.appointment_date
-          : new Date().toISOString().split('T')[0],
+        appointment_date: appointmentData.appointment_date ? ensureValidDate(appointmentData.appointment_date) : undefined,
         appointment_time: appointmentData.appointment_time || "09:00",
       };
 

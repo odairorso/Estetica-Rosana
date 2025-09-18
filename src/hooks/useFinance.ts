@@ -114,7 +114,7 @@ export function useFinance() {
       date: new Date(sale.sale_date).toLocaleDateString('pt-BR'),
       category: 'Vendas Caixa'
     }));
-  }, [sales]);
+  }, [sales]); // AGORA ESCUTA MUDANÇAS NAS VENDAS!
 
   const allTransactions = useMemo(() => {
     const all = [...manualTransactions, ...incomeFromAppointments, ...incomeFromPackages, ...incomeFromSales];

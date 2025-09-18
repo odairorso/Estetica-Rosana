@@ -31,7 +31,7 @@ export default function Finance() {
           <div>
             <p className="font-medium">{transaction.description}</p>
             <p className="text-xs text-muted-foreground">
-              {format(new Date(transaction.date), "dd/MM/yyyy", { locale: ptBR })} - {transaction.category}
+              {transaction.date} - {transaction.category}
             </p>
           </div>
         </div>

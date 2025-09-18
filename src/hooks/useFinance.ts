@@ -9,7 +9,7 @@ export interface Transaction {
   type: 'income' | 'expense';
   description: string;
   amount: number;
-  date: string; // YYYY-MM-DD
+  date: string; // Formato brasileiro: DD/MM/YYYY
   category: string;
 }
 
@@ -36,7 +36,7 @@ export function useFinance() {
               type: 'expense',
               description: "Compra de material para procedimentos",
               amount: 350.00,
-              date: "2023-05-10",
+              date: "10/05/2023",
               category: "Material"
             },
             {
@@ -44,7 +44,7 @@ export function useFinance() {
               type: 'expense',
               description: "Pagamento de aluguel",
               amount: 2500.00,
-              date: "2023-05-01",
+              date: "01/05/2023",
               category: "Aluguel"
             }
           ];
@@ -87,7 +87,7 @@ export function useFinance() {
         type: 'income' as const,
         description: `Serviço: ${a.serviceName || 'Serviço'} (${a.client_name})`,
         amount: a.price || 0,
-        date: a.appointment_date || new Date().toISOString().split('T')[0],
+        date: new Date().toLocaleDateString('pt-BR'), // Formato brasileiro
         category: 'Serviços'
       }));
   }, [appointments]);
@@ -98,7 +98,7 @@ export function useFinance() {
       type: 'income' as const,
       description: `Pacote: ${p.name} (${p.clientName || 'Cliente'})`,
       amount: p.price || 0,
-      date: p.created_at || new Date().toISOString().split('T')[0],
+      date: new Date().toLocaleDateString('pt-BR'), // Formato brasileiro
       category: 'Pacotes'
     }));
   }, [packages]);
@@ -106,22 +106,37 @@ export function useFinance() {
   const allTransactions = useMemo(() => {
     const all = [...manualTransactions, ...incomeFromAppointments, ...incomeFromPackages];
     return all.sort((a, b) => {
-      if (!a.date || !b.date) return 0;
-      return new Date(b.date).getTime() - new Date(a.date).getTime()
+      // Converter datas brasileiras para comparação
+      const dateA = a.date ? new Date(a.date.split('/').reverse().join('-')) : new Date(0);
+      const dateB = b.date ? new Date(b.date.split('/').reverse().join('-')) : new Date(0);
+      return dateB.getTime() - dateA.getTime();
     });
   }, [manualTransactions, incomeFromAppointments, incomeFromPackages]);
 
   const getMetrics = () => {
+    const today = new Date().toLocaleDateString('pt-BR');
+    
     const todayIncome = allTransactions
-      .filter(t => t.type === 'income' && t.date && isToday(parseISO(t.date)))
+      .filter(t => t.type === 'income' && t.date === today)
       .reduce((sum, t) => sum + (t.amount || 0), 0);
 
+    const currentMonth = new Date().getMonth();
+    const currentYear = new Date().getFullYear();
+    
     const monthIncome = allTransactions
-      .filter(t => t.type === 'income' && t.date && isThisMonth(parseISO(t.date)))
+      .filter(t => {
+        if (t.type !== 'income' || !t.date) return false;
+        const [day, month, year] = t.date.split('/').map(Number);
+        return month === currentMonth + 1 && year === currentYear;
+      })
       .reduce((sum, t) => sum + (t.amount || 0), 0);
       
     const monthExpense = allTransactions
-      .filter(t => t.type === 'expense' && t.date && isThisMonth(parseISO(t.date)))
+      .filter(t => {
+        if (t.type !== 'expense' || !t.date) return false;
+        const [day, month, year] = t.date.split('/').map(Number);
+        return month === currentMonth + 1 && year === currentYear;
+      })
       .reduce((sum, t) => sum + (t.amount || 0), 0);
 
     const pendingAppointmentsValue = appointments

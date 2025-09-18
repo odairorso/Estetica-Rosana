@@ -85,9 +85,9 @@ export function useFinance() {
       .map(a => ({
         id: a.id * 1000, // Different ID space to avoid conflicts
         type: 'income' as const,
-        description: `Serviço: ${a.serviceName} (${a.clientName})`,
-        amount: a.price,
-        date: a.date,
+        description: `Serviço: ${a.serviceName || 'Serviço'} (${a.client_name})`,
+        amount: a.price || 0,
+        date: a.appointment_date || new Date().toISOString().split('T')[0],
         category: 'Serviços'
       }));
   }, [appointments]);
@@ -96,34 +96,37 @@ export function useFinance() {
     return packages.map(p => ({
       id: p.id * 10000, // Different ID space to avoid conflicts
       type: 'income' as const,
-      description: `Pacote: ${p.name} (${p.clientName})`,
-      amount: p.price,
-      date: p.createdAt,
+      description: `Pacote: ${p.name} (${p.clientName || 'Cliente'})`,
+      amount: p.price || 0,
+      date: p.created_at || new Date().toISOString().split('T')[0],
       category: 'Pacotes'
     }));
   }, [packages]);
 
   const allTransactions = useMemo(() => {
     const all = [...manualTransactions, ...incomeFromAppointments, ...incomeFromPackages];
-    return all.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+    return all.sort((a, b) => {
+      if (!a.date || !b.date) return 0;
+      return new Date(b.date).getTime() - new Date(a.date).getTime()
+    });
   }, [manualTransactions, incomeFromAppointments, incomeFromPackages]);
 
   const getMetrics = () => {
     const todayIncome = allTransactions
-      .filter(t => t.type === 'income' && isToday(parseISO(t.date)))
-      .reduce((sum, t) => sum + t.amount, 0);
+      .filter(t => t.type === 'income' && t.date && isToday(parseISO(t.date)))
+      .reduce((sum, t) => sum + (t.amount || 0), 0);
 
     const monthIncome = allTransactions
-      .filter(t => t.type === 'income' && isThisMonth(parseISO(t.date)))
-      .reduce((sum, t) => sum + t.amount, 0);
+      .filter(t => t.type === 'income' && t.date && isThisMonth(parseISO(t.date)))
+      .reduce((sum, t) => sum + (t.amount || 0), 0);
       
     const monthExpense = allTransactions
-      .filter(t => t.type === 'expense' && isThisMonth(parseISO(t.date)))
-      .reduce((sum, t) => sum + t.amount, 0);
+      .filter(t => t.type === 'expense' && t.date && isThisMonth(parseISO(t.date)))
+      .reduce((sum, t) => sum + (t.amount || 0), 0);
 
     const pendingAppointmentsValue = appointments
       .filter(a => a.status === 'agendado' || a.status === 'confirmado')
-      .reduce((sum, a) => sum + a.price, 0);
+      .reduce((sum, a) => sum + (a.price || 0), 0);
 
     return {
       todayIncome,

@@ -8,17 +8,24 @@ import Dashboard from "./pages/Dashboard";
 import Clients from "./pages/Clients";
 import Appointments from "./pages/Appointments";
 import Packages from "./pages/Packages";
-import Services from "./pages/Services";
+import Procedures from "./pages/Procedures";
 import Inventory from "./pages/Inventory";
 import Finance from "./pages/Finance";
 import Settings from "./pages/Settings";
+import Cashier from "./pages/Cashier";
 import { HelmetProvider } from "react-helmet-async";
 import AppLayout from "./components/layout/AppLayout";
 import { ThemeProvider } from "./components/ThemeProvider";
+import { supabase } from "./lib/supabase";
+import { SupabaseConnectionError } from "./components/SupabaseConnectionError";
 
 const queryClient = new QueryClient();
 
-function App() {
+const App = () => {
+  if (!supabase) {
+    return <SupabaseConnectionError />;
+  }
+
   return (
     <HelmetProvider>
       <QueryClientProvider client={queryClient}>
@@ -34,11 +41,12 @@ function App() {
                   <Route path="/clientes" element={<Clients />} />
                   <Route path="/agendamentos" element={<Appointments />} />
                   <Route path="/pacotes" element={<Packages />} />
-                  <Route path="/servicos" element={<Services />} />
+                  <Route path="/caixa" element={<Cashier />} />
+                  <Route path="/procedimentos" element={<Procedures />} />
                   <Route path="/estoque" element={<Inventory />} />
                   <Route path="/financeiro" element={<Finance />} />
                   <Route path="/configuracoes" element={<Settings />} />
-                  {/* 404 Route */}
+                  {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
                   <Route path="*" element={<NotFound />} />
                 </Routes>
               </AppLayout>
@@ -48,6 +56,6 @@ function App() {
       </QueryClientProvider>
     </HelmetProvider>
   );
-}
+};
 
 export default App;

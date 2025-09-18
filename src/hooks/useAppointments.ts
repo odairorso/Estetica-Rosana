@@ -49,14 +49,20 @@ export function useAppointments() {
 
   // Função para carregar agendamentos do Supabase ou localStorage
   const loadAppointments = useCallback(async () => {
+    console.log("🔄 Carregando agendamentos...");
     setIsLoading(true);
     setError(null);
     
     if (!supabase) {
       // Modo offline - carrega do localStorage
+      console.log("⚠️ Supabase não disponível, carregando do localStorage");
       const stored = localStorage.getItem(APPOINTMENTS_STORAGE_KEY);
       if (stored) {
-        setAppointments(JSON.parse(stored));
+        const data = JSON.parse(stored);
+        console.log("📋 Agendamentos carregados do localStorage:", data.length);
+        setAppointments(data);
+      } else {
+        console.log("📋 Nenhum agendamento no localStorage");
       }
       setIsLoading(false);
       return;
@@ -69,6 +75,8 @@ export function useAppointments() {
         .order('created_at', { ascending: false });
 
       if (dbError) throw dbError;
+      
+      console.log("📋 Agendamentos carregados do Supabase:", data?.length || 0);
       
       const formattedData = (data || []).map(apt => ({
         ...apt,
@@ -88,7 +96,9 @@ export function useAppointments() {
       // Fallback para dados locais
       const stored = localStorage.getItem(APPOINTMENTS_STORAGE_KEY);
       if (stored) {
-        setAppointments(JSON.parse(stored));
+        const data = JSON.parse(stored);
+        console.log("📋 Agendamentos carregados do localStorage (fallback):", data.length);
+        setAppointments(data);
       }
     } finally {
       setIsLoading(false);
@@ -109,8 +119,11 @@ export function useAppointments() {
     sale_date: string;
     type: 'individual' | 'package_session';
   }) => {
+    console.log("🆕 Criando agendamento a partir de venda:", saleData);
+    
     if (!supabase) {
       // Modo offline
+      console.log("⚠️ Modo offline - criando agendamento local");
       const newAppointment: Appointment = {
         id: Math.max(0, ...appointments.map(a => a.id)) + 1,
         ...saleData,
@@ -125,10 +138,12 @@ export function useAppointments() {
       const updatedAppointments = [...appointments, newAppointment];
       setAppointments(updatedAppointments);
       localStorage.setItem(APPOINTMENTS_STORAGE_KEY, JSON.stringify(updatedAppointments));
+      console.log("✅ Agendamento criado offline:", newAppointment);
       return newAppointment;
     }
     
     try {
+      console.log("🔄 Criando agendamento no Supabase...");
       const { data, error } = await supabase
         .from('appointments')
         .insert([{
@@ -151,18 +166,24 @@ export function useAppointments() {
         .select()
         .single();
 
-      if (error) throw error;
+      if (error) {
+        console.error('❌ Erro ao criar agendamento:', error);
+        throw error;
+      }
       
+      console.log("✅ Agendamento criado no Supabase:", data);
       await loadAppointments(); // Recarrega lista
       return data;
     } catch (err) {
-      console.error('❌ Erro ao criar agendamento:', err);
+      console.error('❌ Erro crítico ao criar agendamento:', err);
       return null;
     }
   };
 
   // Agendar procedimento pendente
   const scheduleAppointment = async (id: number, date: string, time: string) => {
+    console.log(`📅 Agendando procedimento ${id} para ${date} às ${time}`);
+    
     if (!supabase) {
       setAppointments(prev => prev.map(apt => 
         apt.id === id 
@@ -184,6 +205,7 @@ export function useAppointments() {
       
       if (error) throw error;
       await loadAppointments();
+      console.log("✅ Agendamento atualizado com sucesso");
     } catch (err) {
       console.error('❌ Erro ao agendar:', err);
     }
@@ -191,6 +213,8 @@ export function useAppointments() {
 
   // Confirmar presença e completar
   const confirmAttendance = async (id: number) => {
+    console.log(`✅ Confirmando presença do agendamento ${id}`);
+    
     if (!supabase) {
       setAppointments(prev => prev.map(apt => 
         apt.id === id 
@@ -211,6 +235,7 @@ export function useAppointments() {
       
       if (error) throw error;
       await loadAppointments();
+      console.log("✅ Presença confirmada com sucesso");
     } catch (err) {
       console.error('❌ Erro ao confirmar presença:', err);
     }
@@ -218,6 +243,8 @@ export function useAppointments() {
 
   // Atualizar status
   const updateAppointment = async (id: number, updates: Partial<Appointment>) => {
+    console.log(`🔄 Atualizando agendamento ${id}:`, updates);
+    
     if (!supabase) {
       setAppointments(prev => prev.map(apt => 
         apt.id === id ? { ...apt, ...updates } : apt
@@ -233,6 +260,7 @@ export function useAppointments() {
       
       if (error) throw error;
       await loadAppointments();
+      console.log("✅ Agendamento atualizado com sucesso");
     } catch (err) {
       console.error('❌ Erro ao atualizar:', err);
     }
@@ -240,35 +268,43 @@ export function useAppointments() {
 
   // Agrupar pacotes por cliente
   const getActivePackages = () => {
-    return appointments.filter(apt => 
+    const active = appointments.filter(apt => 
       apt.type === 'package_session' && 
       apt.status !== 'completed' &&
       (apt.remaining_sessions || 0) > 0
     );
+    console.log("📦 Pacotes ativos encontrados:", active.length);
+    return active;
   };
 
   // Pegar procedimentos pendentes
   const getPendingProcedures = () => {
-    return appointments.filter(apt => 
+    const pending = appointments.filter(apt => 
       apt.type === 'individual' && 
       apt.status === 'pending_scheduling'
     );
+    console.log("📋 Procedimentos pendentes encontrados:", pending.length);
+    return pending;
   };
 
   // Pegar agendamentos de hoje
   const getTodaysAppointments = () => {
     const today = new Date().toISOString().split('T')[0];
-    return appointments.filter(apt => 
+    const todays = appointments.filter(apt => 
       apt.appointment_date === today && 
       apt.status === 'scheduled'
     );
+    console.log("📅 Agendamentos de hoje encontrados:", todays.length);
+    return todays;
   };
 
   // Pegar histórico de sessões de um pacote
   const getPackageHistory = (packageId: number) => {
-    return appointments
+    const history = appointments
       .filter(apt => apt.package_id === packageId && apt.status === 'completed')
       .sort((a, b) => (a.completed_at || '').localeCompare(b.completed_at || ''));
+    console.log(`📜 Histórico do pacote ${packageId}:`, history.length, "sessões");
+    return history;
   };
 
   useEffect(() => {

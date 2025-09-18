@@ -7,8 +7,9 @@ import NotFound from "./pages/NotFound";
 import Dashboard from "./pages/Dashboard";
 import Clients from "./pages/Clients";
 import Appointments from "./pages/Appointments";
+import Completed from "./pages/Completed"; // Nova página
 import Packages from "./pages/Packages";
-import Services from "./pages/Services"; // CORRIGIDO - era Procedures
+import Services from "./pages/Services";
 import Inventory from "./pages/Inventory";
 import Finance from "./pages/Finance";
 import Settings from "./pages/Settings";
@@ -40,13 +41,13 @@ const App = () => {
                   <Route path="/dashboard" element={<Dashboard />} />
                   <Route path="/clientes" element={<Clients />} />
                   <Route path="/agendamentos" element={<Appointments />} />
+                  <Route path="/finalizados" element={<Completed />} /> {/* Nova rota */}
                   <Route path="/pacotes" element={<Packages />} />
                   <Route path="/caixa" element={<Cashier />} />
-                  <Route path="/servicos" element={<Services />} /> {/* CORRIGIDO */}
+                  <Route path="/servicos" element={<Services />} />
                   <Route path="/estoque" element={<Inventory />} />
                   <Route path="/financeiro" element={<Finance />} />
                   <Route path="/configuracoes" element={<Settings />} />
-                  {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
                   <Route path="*" element={<NotFound />} />
                 </Routes>
               </AppLayout>

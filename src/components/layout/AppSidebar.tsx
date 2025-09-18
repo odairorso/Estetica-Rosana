@@ -29,7 +29,7 @@ const items = [
   { title: "Agendamentos", url: "/agendamentos", icon: CalendarClock },
   { title: "Pacotes", url: "/pacotes", icon: Package2 },
   { title: "Caixa", url: "/caixa", icon: ShoppingCart },
-  { title: "Procedimentos", url: "/procedimentos", icon: Sparkles },
+  { title: "Procedimentos", url: "/servicos", icon: Sparkles },
   { title: "Estoque", url: "/estoque", icon: Boxes },
   { title: "Financeiro", url: "/financeiro", icon: CreditCard },
   { title: "Configurações", url: "/configuracoes", icon: Settings2 },

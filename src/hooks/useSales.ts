@@ -237,6 +237,74 @@ export function useSales() {
     }
   };
 
+  // Função para verificar se já existem agendamentos para uma venda específica
+  const checkExistingAppointments = (saleId: number, items: SaleItem[]) => {
+    console.log(`🔍 Verificando agendamentos existentes para venda ${saleId}`);
+    console.log(`📦 Itens da venda:`, items.map(item => ({
+      tipo: item.type,
+      nome: item.itemName,
+      id: item.item_id
+    })));
+    
+    // Esta função precisa ser implementada no useAppointments
+    // Por enquanto, vamos retornar false para sempre criar novos agendamentos
+    return false;
+  };
+
+  // Função para forçar criação de agendamentos (debug)
+  const forceCreateAppointments = async () => {
+    console.log("🚨 FORÇANDO criação de agendamentos...");
+    console.log("💰 Vendas para processar:", sales.length);
+    let criados = 0;
+
+    for (const sale of sales) {
+      console.log(`🔄 Processando venda: ${sale.clientName} (${sale.items.length} itens)`);
+      
+      for (const item of sale.items) {
+        console.log(`📦 Item: ${item.itemName} (${item.type}) - R$${item.price}`);
+        
+        // Sempre criar agendamento quando forçado
+        if (item.type === 'service' || item.type === 'package') {
+          console.log(`🆕 Criando agendamento forçado: ${sale.clientName} - ${item.itemName}`);
+          const result = await createFromSale({
+            client_id: sale.client_id,
+            client_name: sale.clientName,
+            client_phone: '',
+            service_id: item.type === 'service' ? item.item_id : undefined,
+            service_name: item.itemName,
+            package_id: item.type === 'package' ? item.item_id : undefined,
+            package_name: item.itemName,
+            total_sessions: item.type === 'package' ? item.quantity : undefined,
+            price: item.price * item.quantity,
+            sale_date: sale.sale_date,
+            type: item.type === 'service' ? 'individual' : 'package_session',
+          });
+          
+          if (result) {
+            console.log(`✅ Agendamento criado com sucesso!`);
+            criados++;
+          } else {
+            console.log(`❌ Erro ao criar agendamento`);
+          }
+        } else {
+          console.log(`⏭️ Produto ${item.itemName} não gera agendamento`);
+        }
+      }
+    }
+
+    if (criados > 0) {
+      toast({
+        title: "✅ Agendamentos criados!",
+        description: `${criados} novos agendamentos foram criados dos caixas existentes.`,
+      });
+    } else {
+      toast({
+        title: "ℹ️ Nada para criar",
+        description: "Todos os itens do caixa já têm agendamentos.",
+      });
+    }
+  };
+
   useEffect(() => {
     loadSales();
   }, [loadSales]);
@@ -246,6 +314,7 @@ export function useSales() {
     isLoading,
     addSale,
     deleteSale,
+    forceCreateAppointments,
     refreshSales: loadSales,
   };
 }

@@ -14,6 +14,7 @@ import {
   CalendarDays,
   TrendingUp,
   RefreshCw,
+  Trash2,
 } from "lucide-react";
 import { GlassCard } from "@/components/ui/glass-card";
 import { NeonButton } from "@/components/ui/neon-button";
@@ -43,105 +44,91 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 export default function Appointments() {
   const { toast } = useToast();
   const { appointments, createFromSale, scheduleAppointment, confirmAttendance, getActivePackages, getPendingProcedures, getTodaysAppointments, isLoading, error, refreshAppointments } = useAppointments();
-  const { sales, isLoading: salesLoading } = useSales();
+  const { sales, isLoading: salesLoading, forceCreateAppointments } = useSales();
   const { services } = useServices();
   const [selectedDate, setSelectedDate] = useState(new Date());
   const [scheduleModalOpen, setScheduleModalOpen] = useState(false);
   const [selectedAppointment, setSelectedAppointment] = useState<Appointment | null>(null);
   const [selectedTime, setSelectedTime] = useState("09:00");
 
-  // Debug detalhado
-  useEffect(() => {
-    console.log("=== DEBUG AGENDAMENTOS ===");
-    console.log("📊 Total appointments:", appointments.length);
-    console.log("💰 Total sales:", sales.length);
-    console.log("⏳ Sales loading:", salesLoading);
-    console.log("📋 Appointments loading:", isLoading);
-    
-    if (sales.length > 0) {
-      console.log("💰 Primeira venda:", {
-        cliente: sales[0].clientName,
-        data: sales[0].sale_date,
-        itens: sales[0].items.length,
-        itens_detalhes: sales[0].items.map(item => ({
-          tipo: item.type,
-          nome: item.itemName,
-          preco: item.price,
-          quantidade: item.quantity
-        }))
-      });
-    }
-    
-    if (appointments.length > 0) {
-      console.log("📅 Primeiro agendamento:", {
-        cliente: appointments[0].client_name,
-        tipo: appointments[0].type,
-        status: appointments[0].status,
-        servico: appointments[0].service_name,
-        pacote: appointments[0].package_name
-      });
-    }
-  }, [appointments, sales, salesLoading, isLoading]);
-
-  // Função para forçar criação de agendamentos (debug)
-  const forceCreateAppointments = async () => {
-    console.log("🚨 FORÇANDO criação de agendamentos...");
-    console.log("💰 Vendas para processar:", sales.length);
-    let criados = 0;
-
-    for (const sale of sales) {
-      console.log(`🔄 Processando venda: ${sale.clientName} (${sale.items.length} itens)`);
-      
-      for (const item of sale.items) {
-        console.log(`📦 Item: ${item.itemName} (${item.type}) - R$${item.price}`);
-        
-        const existingAppointment = appointments.find(apt => 
-          apt.client_id === sale.client_id && 
-          ((item.type === 'service' && apt.service_id === item.item_id) ||
-           (item.type === 'package' && apt.package_id === item.item_id)) &&
-          apt.type === (item.type === 'service' ? 'individual' : 'package_session')
-        );
-
-        if (!existingAppointment) {
-          console.log(`🆕 Criando agendamento forçado: ${sale.clientName} - ${item.itemName}`);
-          const result = await createFromSale({
-            client_id: sale.client_id,
-            client_name: sale.clientName,
-            client_phone: '',
-            service_id: item.type === 'service' ? item.item_id : undefined,
-            service_name: item.itemName,
-            package_id: item.type === 'package' ? item.item_id : undefined,
-            package_name: item.itemName,
-            total_sessions: item.type === 'package' ? item.quantity : undefined,
-            price: item.price * item.quantity,
-            sale_date: sale.sale_date,
-            type: item.type === 'service' ? 'individual' : 'package_session',
-          });
-          
-          if (result) {
-            console.log(`✅ Agendamento criado com sucesso!`);
-            criados++;
-          } else {
-            console.log(`❌ Erro ao criar agendamento`);
-          }
-        } else {
-          console.log(`⏭️ Agendamento já existe, pulando...`);
-        }
-      }
-    }
-
-    if (criados > 0) {
+  // Função para limpar todos os agendamentos (debug)
+  const clearAllAppointments = () => {
+    if (confirm("⚠️ Tem certeza que deseja limpar TODOS os agendamentos? Esta ação não pode ser desfeita!")) {
+      localStorage.removeItem('clinic-appointments-v2');
+      localStorage.removeItem('clinic-appointments');
       toast({
-        title: "✅ Agendamentos criados!",
-        description: `${criados} novos agendamentos foram criados dos caixas existentes.`,
+        title: "🗑️ Agendamentos limpos!",
+        description: "Todos os agendamentos foram removidos. Recarregue a página.",
       });
-    } else {
-      toast({
-        title: "ℹ️ Nada para criar",
-        description: "Todos os itens do caixa já têm agendamentos.",
-      });
+      setTimeout(() => window.location.reload(), 1000);
     }
   };
+
+  // Função para debug detalhado
+  const debugSystem = () => {
+    console.log("=== 🐛 DEBUG COMPLETO DO SISTEMA ===");
+    console.log("📊 Vendas:", sales.length);
+    console.log("📋 Agendamentos:", appointments.length);
+    console.log("💰 Últimas 3 vendas:", sales.slice(0, 3).map(s => ({
+      cliente: s.clientName,
+      data: s.sale_date,
+      itens: s.items.map(i => `${i.itemName} (${i.type})`)
+    })));
+    console.log("📋 Últimos 3 agendamentos:", appointments.slice(0, 3).map(a => ({
+      cliente: a.client_name,
+      tipo: a.type,
+      status: a.status,
+      servico: a.service_name,
+      pacote: a.package_name
+    })));
+    
+    // Verificar itens que deveriam ter agendamentos
+    const itemsThatShouldHaveAppointments = sales.flatMap(sale => 
+      sale.items.filter(item => item.type === 'service' || item.type === 'package')
+    );
+    
+    console.log("📦 Itens que deveriam ter agendamentos:", itemsThatShouldHaveAppointments.length);
+    itemsThatShouldHaveAppointments.forEach(item => {
+      const hasAppointment = appointments.some(apt => 
+        (apt.service_name === item.itemName && apt.type === 'individual') ||
+        (apt.package_name === item.itemName && apt.type === 'package_session')
+      );
+      console.log(`${hasAppointment ? '✅' : '❌'} ${item.itemName} (${item.type}): ${hasAppointment ? 'Tem agendamento' : 'SEM agendamento'}`);
+    });
+  };
+
+  // Debug detalhado
+  useEffect(() => {
+    console.log("=== 🐛 DEBUG COMPLETO DO SISTEMA ===");
+    console.log("📊 Vendas:", sales.length);
+    console.log("📋 Agendamentos:", appointments.length);
+    console.log("💰 Últimas 3 vendas:", sales.slice(0, 3).map(s => ({
+      cliente: s.clientName,
+      data: s.sale_date,
+      itens: s.items.map(i => `${i.itemName} (${i.type})`)
+    })));
+    console.log("📋 Últimos 3 agendamentos:", appointments.slice(0, 3).map(a => ({
+      cliente: a.client_name,
+      tipo: a.type,
+      status: a.status,
+      servico: a.service_name,
+      pacote: a.package_name
+    })));
+    
+    // Verificar itens que deveriam ter agendamentos
+    const itemsThatShouldHaveAppointments = sales.flatMap(sale => 
+      sale.items.filter(item => item.type === 'service' || item.type === 'package')
+    );
+    
+    console.log("📦 Itens que deveriam ter agendamentos:", itemsThatShouldHaveAppointments.length);
+    itemsThatShouldHaveAppointments.forEach(item => {
+      const hasAppointment = appointments.some(apt => 
+        (apt.service_name === item.itemName && apt.type === 'individual') ||
+        (apt.package_name === item.itemName && apt.type === 'package_session')
+      );
+      console.log(`${hasAppointment ? '✅' : '❌'} ${item.itemName} (${item.type}): ${hasAppointment ? 'Tem agendamento' : 'SEM agendamento'}`);
+    });
+  }, [sales, appointments]);
 
   // Processar vendas do caixa que ainda não viraram agendamentos
   useEffect(() => {
@@ -193,17 +180,6 @@ export default function Appointments() {
     console.log("🔄 Recarregando agendamentos...");
     refreshAppointments();
   }, []);
-
-  const pendingProcedures = getPendingProcedures();
-  const activePackages = getActivePackages();
-  const todaysAppointments = getTodaysAppointments();
-
-  // Debug das listas filtradas
-  useEffect(() => {
-    console.log("📋 Procedimentos pendentes:", pendingProcedures.length);
-    console.log("📦 Pacotes ativos:", activePackages.length);
-    console.log("📅 Agendamentos de hoje:", todaysAppointments.length);
-  }, [pendingProcedures, activePackages, todaysAppointments]);
 
   const handleSchedule = (appointment: Appointment) => {
     setSelectedAppointment(appointment);
@@ -259,6 +235,10 @@ export default function Appointments() {
     }
   };
 
+  const pendingProcedures = getPendingProcedures();
+  const activePackages = getActivePackages();
+  const todaysAppointments = getTodaysAppointments();
+
   if (isLoading || salesLoading) {
     return (
       <div className="space-y-6 p-6">
@@ -285,6 +265,24 @@ export default function Appointments() {
             <p className="text-muted-foreground">Controle de procedimentos e sessões de pacotes</p>
           </div>
           <div className="flex gap-3">
+            <Button 
+              variant="outline" 
+              size="sm" 
+              onClick={debugSystem}
+              className="bg-blue-500/20 text-blue-700 hover:bg-blue-500/30"
+            >
+              <RefreshCw className="h-4 w-4 mr-2" />
+              Debug
+            </Button>
+            <Button 
+              variant="outline" 
+              size="sm" 
+              onClick={clearAllAppointments}
+              className="bg-red-500/20 text-red-700 hover:bg-red-500/30"
+            >
+              <Trash2 className="h-4 w-4 mr-2" />
+              Limpar Tudo
+            </Button>
             <Button 
               variant="outline" 
               size="sm" 

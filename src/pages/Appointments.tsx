@@ -84,6 +84,11 @@ export default function Appointments() {
     })
     .sort((a, b) => a.appointment_time.localeCompare(b.appointment_time));
 
+  useEffect(() => {
+    console.log('Agendamentos carregados:', appointments);
+    console.log('Agendamentos filtrados:', filteredAppointments);
+  }, [appointments, filteredAppointments]);
+
   const handleSaveAppointment = async (appointmentData: any) => {
     const result = await addAppointment(appointmentData);
     if (result) {

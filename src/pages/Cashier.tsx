@@ -1,5 +1,5 @@
 import { Helmet } from "react-helmet-async";
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { Plus, ShoppingCart, DollarSign, Calendar, User, Receipt, Trash2, Package, Sparkles, Box } from "lucide-react";
 import { GlassCard } from "@/components/ui/glass-card";
 import { NeonButton } from "@/components/ui/neon-button";

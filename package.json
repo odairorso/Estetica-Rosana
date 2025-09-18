@@ -1,9 +1,5 @@
 {
-<<<<<<< HEAD
   "name": "estetica-rosana",
-=======
-  "name": "vite_react_shadcn_ts",
->>>>>>> 1be9b827db6afc3e4a1a015d739fa37e6574b522
   "private": true,
   "version": "0.0.0",
   "type": "module",
@@ -49,10 +45,7 @@
     "clsx": "^2.1.1",
     "cmdk": "^1.1.1",
     "date-fns": "^3.6.0",
-<<<<<<< HEAD
     "dotenv": "^17.2.2",
-=======
->>>>>>> 1be9b827db6afc3e4a1a015d739fa37e6574b522
     "embla-carousel-react": "^8.6.0",
     "input-otp": "^1.4.2",
     "lucide-react": "^0.462.0",

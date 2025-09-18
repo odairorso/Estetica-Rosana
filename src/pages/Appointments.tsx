@@ -2,7 +2,7 @@ import { Helmet } from "react-helmet-async";
 import { useState, useEffect } from "react";
 import {
   Plus,
-  Calendar,
+  Calendar as CalendarIcon, // Alias para evitar conflito
   Clock,
   User,
   Package,
@@ -189,7 +189,7 @@ export default function Appointments() {
           
           {pendingProcedures.length === 0 ? (
             <div className="text-center py-8 text-muted-foreground">
-              <Calendar className="h-12 w-12 mx-auto mb-4 opacity-50" />
+              <CalendarIcon className="h-12 w-12 mx-auto mb-4 opacity-50" />
               <p>Nenhum procedimento aguardando agendamento</p>
               <p className="text-sm mt-1">As vendas do caixa aparecerão aqui automaticamente</p>
             </div>
@@ -211,7 +211,7 @@ export default function Appointments() {
                             R$ {procedure.price.toFixed(2)}
                           </span>
                           <span className="flex items-center gap-1">
-                            <Calendar className="h-3 w-3" />
+                            <CalendarIcon className="h-3 w-3" />
                             Vendido: {format(parseISO(procedure.sale_date), "dd/MM/yyyy")}
                           </span>
                         </div>
@@ -226,7 +226,7 @@ export default function Appointments() {
                         className="bg-brand-gradient hover:opacity-90"
                         onClick={() => handleSchedule(procedure)}
                       >
-                        <Calendar className="h-3 w-3 mr-1" />
+                        <CalendarIcon className="h-3 w-3 mr-1" />
                         Agendar
                       </Button>
                     </div>
@@ -277,7 +277,7 @@ export default function Appointments() {
                               R$ {pkg.price.toFixed(2)}
                             </span>
                             <span className="flex items-center gap-1">
-                              <Calendar className="h-3 w-3" />
+                              <CalendarIcon className="h-3 w-3" />
                               Comprado: {format(parseISO(pkg.sale_date), "dd/MM/yyyy")}
                             </span>
                           </div>
@@ -308,7 +308,7 @@ export default function Appointments() {
                           size="sm"
                           className="flex-1 bg-brand-gradient hover:opacity-90"
                         >
-                          <Calendar className="h-3 w-3 mr-1" />
+                          <CalendarIcon className="h-3 w-3 mr-1" />
                           Próxima Sessão
                         </Button>
                       </div>

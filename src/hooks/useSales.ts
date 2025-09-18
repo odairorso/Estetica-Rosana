@@ -84,8 +84,21 @@ export function useSales() {
   }, [toast]);
 
   const addSale = async (saleData: Omit<Sale, 'id' | 'created_at' | 'updated_at'>) => {
+    console.log("🛒 ADICIONANDO NOVA VENDA:", {
+      cliente: saleData.clientName,
+      total: saleData.total,
+      itens: saleData.items.length,
+      itens_detalhados: saleData.items.map(item => ({
+        tipo: item.type,
+        nome: item.itemName,
+        preco: item.price,
+        quantidade: item.quantity
+      }))
+    });
+    
     if (!supabase) {
       // Modo offline
+      console.log("⚠️ Modo offline - criando venda local");
       const newSale = {
         ...saleData,
         id: Math.max(0, ...sales.map(s => s.id)) + 1,
@@ -98,9 +111,11 @@ export function useSales() {
       localStorage.setItem(SALES_STORAGE_KEY, JSON.stringify(updatedSales));
       
       // Criar agendamentos automaticamente
+      console.log("🔄 Criando agendamentos automaticamente para os itens...");
       for (const item of saleData.items) {
         if (item.type === 'service' || item.type === 'package') {
-          await createFromSale({
+          console.log(`📦 Criando agendamento para: ${item.itemName} (${item.type})`);
+          const result = await createFromSale({
             client_id: saleData.client_id,
             client_name: saleData.clientName,
             client_phone: '', // Pode ser buscado depois
@@ -113,6 +128,14 @@ export function useSales() {
             sale_date: saleData.sale_date,
             type: item.type === 'service' ? 'individual' : 'package_session',
           });
+          
+          if (result) {
+            console.log(`✅ Agendamento criado com sucesso: ${item.itemName}`);
+          } else {
+            console.log(`❌ Erro ao criar agendamento: ${item.itemName}`);
+          }
+        } else {
+          console.log(`⏭️ Produto ${item.itemName} não gera agendamento`);
         }
       }
       
@@ -120,6 +143,7 @@ export function useSales() {
     }
     
     try {
+      console.log("🔄 Criando venda no Supabase...");
       const { data, error } = await supabase
         .from('sales')
         .insert([{
@@ -137,12 +161,15 @@ export function useSales() {
       if (error) throw error;
       
       if (data) {
+        console.log("✅ Venda criada no Supabase:", data);
         setSales(prev => [...prev, data]);
         
         // Criar agendamentos automaticamente para serviços e pacotes
+        console.log("🔄 Criando agendamentos automaticamente para os itens...");
         for (const item of saleData.items) {
           if (item.type === 'service' || item.type === 'package') {
-            await createFromSale({
+            console.log(`📦 Criando agendamento para: ${item.itemName} (${item.type})`);
+            const result = await createFromSale({
               client_id: saleData.client_id,
               client_name: saleData.clientName,
               client_phone: '', // Pode ser buscado depois
@@ -155,14 +182,23 @@ export function useSales() {
               sale_date: saleData.sale_date,
               type: item.type === 'service' ? 'individual' : 'package_session',
             });
+            
+            if (result) {
+              console.log(`✅ Agendamento criado com sucesso: ${item.itemName}`);
+            } else {
+              console.log(`❌ Erro ao criar agendamento: ${item.itemName}`);
+            }
+          } else {
+            console.log(`⏭️ Produto ${item.itemName} não gera agendamento`);
           }
         }
-        
-        toast({
-          title: "✅ Venda registrada!",
-          description: `Venda para ${saleData.clientName} registrada com sucesso.`,
-        });
       }
+      
+      toast({
+        title: "✅ Venda registrada!",
+        description: `Venda para ${saleData.clientName} registrada com sucesso.`,
+      });
+      
       return data;
     } catch (error) {
       console.error('❌ Erro ao adicionar venda:', error);

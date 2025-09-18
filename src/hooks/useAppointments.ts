@@ -144,30 +144,41 @@ export function useAppointments() {
     
     try {
       console.log("🔄 Criando agendamento no Supabase...");
+      // Montar payload apenas com campos definidos
+      const payload: any = {
+        client_id: saleData.client_id,
+        client_name: saleData.client_name,
+        client_phone: saleData.client_phone,
+        price: saleData.price,
+        status: saleData.type === 'individual' ? 'pending_scheduling' : 'scheduled',
+        type: saleData.type,
+        notes: '',
+        duration: 60,
+        sale_date: saleData.sale_date,
+      };
+
+      if (saleData.service_id) {
+        payload.service_id = saleData.service_id;
+        payload.service_name = saleData.service_name || null;
+      }
+      if (saleData.package_id) {
+        payload.package_id = saleData.package_id;
+        payload.package_name = saleData.package_name || null;
+        payload.total_sessions = saleData.total_sessions;
+        payload.session_number = saleData.type === 'package_session' ? 1 : null;
+        // Para pacotes, já definimos a data da primeira sessão
+        payload.appointment_date = saleData.sale_date;
+        payload.appointment_time = '09:00';
+      }
+
       const { data, error } = await supabase
         .from('appointments')
-        .insert([{
-          client_id: saleData.client_id,
-          client_name: saleData.client_name,
-          client_phone: saleData.client_phone,
-          service_id: saleData.service_id,
-          service_name: saleData.service_name,
-          package_id: saleData.package_id,
-          package_name: saleData.package_name,
-          price: saleData.price,
-          status: saleData.type === 'individual' ? 'pending_scheduling' : 'scheduled',
-          type: saleData.type,
-          total_sessions: saleData.total_sessions,
-          session_number: saleData.type === 'package_session' ? 1 : undefined,
-          sale_date: saleData.sale_date,
-          notes: '',
-          duration: 60,
-        }])
+        .insert([payload])
         .select()
         .single();
 
       if (error) {
-        console.error('❌ Erro ao criar agendamento:', error);
+        console.error('❌ Erro ao criar agendamento (Supabase):', error);
         throw error;
       }
       

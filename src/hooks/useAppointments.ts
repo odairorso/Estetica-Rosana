@@ -136,15 +136,15 @@ export function useAppointments() {
       const appointmentToInsert = {
         client_id: validatedData.client_id,
         service_id: validatedData.service_id,
-        appointment_date: validatedData.appointment_date,
-        appointment_time: validatedData.appointment_time,
+        date: validatedData.appointment_date, // Correção do nome da coluna
+        time: validatedData.appointment_time, // Correção do nome da coluna
         duration: validatedData.duration,
         price: validatedData.price,
         notes: validatedData.notes,
         status: validatedData.status,
         client_name: validatedData.client_name,
         client_phone: validatedData.client_phone,
-        type: validatedData.type,
+        service_name: serviceName, // Adicionado campo que faltava
       };
 
       const { data: appointment, error } = await supabase

@@ -49,6 +49,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { clearAndSyncDatabase } from '../utils/syncDatabase';
 
 export default function Appointments() {
   const { toast } = useToast();
@@ -526,6 +527,67 @@ export default function Appointments() {
       setTimeout(() => window.location.reload(), 1000);
     } else {
       console.log("❌ Limpeza cancelada");
+    }
+  };
+
+  // Função para sincronizar com Supabase
+  const handleSyncWithSupabase = async () => {
+    if (!confirm('⚠️ ATENÇÃO! Esta ação irá:\n\n1. APAGAR todos os dados do Supabase\n2. Enviar apenas os dados locais desenvolvidos\n\nTem certeza que deseja continuar?')) {
+      return;
+    }
+    
+    try {
+      toast({
+        title: "🔄 Iniciando sincronização...",
+        description: "Limpando banco Supabase e enviando dados locais",
+      });
+      
+      const result = await clearAndSyncDatabase();
+      
+      if (result.success) {
+        // Calcular total de registros
+        const totalRecords = Object.values(result.stats || {}).reduce((sum: number, count: any) => sum + (count || 0), 0);
+        
+        toast({
+          title: "✅ Sincronização Concluída!",
+          description: `${totalRecords} registros enviados para o Supabase com sucesso.`,
+        });
+        
+        // Mostrar resultado detalhado
+        const detailLines = [
+          `🎉 SINCRONIZAÇÃO CONCLUÍDA!`,
+          ``,
+          `📊 Dados enviados para o Supabase:`,
+          `👥 Clientes: ${result.stats?.clientes || 0}`,
+          `🛍️ Serviços: ${result.stats?.serviços || 0}`,
+          `📦 Pacotes: ${result.stats?.pacotes || 0}`,
+          `💰 Vendas: ${result.stats?.vendas || 0}`,
+          `📅 Agendamentos: ${result.stats?.agendamentos || 0}`,
+          ``,
+          `Total: ${totalRecords} registros`,
+          ``,
+          `🌐 Agora sua versão na Vercel está sincronizada!`
+        ].join('\n');
+        
+        setTimeout(() => {
+          alert(detailLines);
+        }, 1000);
+        
+      } else {
+        toast({
+          title: "❌ Erro na Sincronização",
+          description: result.message || "Erro desconhecido durante a sincronização",
+          variant: "destructive",
+        });
+      }
+      
+    } catch (error) {
+      console.error('❌ Erro na sincronização:', error);
+      toast({
+        title: "❌ Erro Fatal",
+        description: "Erro inesperado durante a sincronização. Verifique o console.",
+        variant: "destructive",
+      });
     }
   };
 
@@ -1227,6 +1289,15 @@ export default function Appointments() {
             >
               <Search className="h-4 w-4 mr-2" />
               🔍 Debug Sistema
+            </Button>
+            <Button 
+              variant="outline" 
+              size="sm" 
+              onClick={handleSyncWithSupabase}
+              className="bg-emerald-500/20 text-emerald-700 hover:bg-emerald-500/30 font-semibold border-2"
+            >
+              <TrendingUp className="h-4 w-4 mr-2" />
+              🔄 Sincronizar com Supabase
             </Button>
           </div>
         </div>

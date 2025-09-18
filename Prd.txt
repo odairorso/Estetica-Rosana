@@ -1,0 +1,538 @@
+# PRD - Sistema de Gestão Clínica Estética
+## Fluxo Completo: Caixa → Agendamentos → Controle de Sessões
+
+---
+
+## 1. VISÃO GERAL DO SISTEMA
+
+O sistema funciona com **3 abas principais** que se comunicam automaticamente:
+
+### 🏪 **ABA CAIXA** → Vendas e Pagamentos
+### 📅 **ABA AGENDAMENTOS** → Controle de Sessões
+### ✅ **ABA FINALIZADOS** → Histórico Completo
+
+---
+
+## 2. FLUXO PRINCIPAL DO SISTEMA
+
+### 2.1 PONTO DE PARTIDA: ABA CAIXA
+**Onde tudo começa - Vendas de procedimentos e pacotes**
+
+#### 🎯 **Funcionalidades da Aba Caixa:**
+- Cadastro de clientes
+- Venda de procedimentos individuais
+- Venda de pacotes promocionais
+- Registro de pagamentos (dinheiro, cartão, PIX)
+- Emissão de recibos
+- Controle financeiro diário
+
+#### 💰 **Tipos de Venda:**
+
+**A) PROCEDIMENTO INDIVIDUAL:**
+- Exemplo: "Limpeza de Pele - R$ 80,00"
+- Cliente paga → Sistema registra venda
+- **AUTOMÁTICO:** Procedimento vai para "Aba Agendamentos" como "PENDENTE DE AGENDAMENTO"
+
+**B) PACOTE PROMOCIONAL:**
+- Exemplo: "Pacote 10 Limpezas - R$ 600,00"
+- Cliente paga → Sistema registra venda
+- **AUTOMÁTICO:** Pacote vai para "Aba Agendamentos" como "PACOTE ATIVO - 10 sessões disponíveis"
+
+---
+
+### 2.2 FLUXO AUTOMÁTICO: CAIXA → AGENDAMENTOS
+
+#### ⚡ **O que acontece automaticamente após a venda:**
+
+**PROCEDIMENTO INDIVIDUAL vendido:**
+```
+CAIXA: "Limpeza vendida - R$ 80 - Cliente: Maria"
+     ↓ (automático)
+AGENDAMENTOS: "Maria - Limpeza de Pele - STATUS: Aguardando agendamento"
+```
+
+**PACOTE PROMOCIONAL vendido:**
+```
+CAIXA: "Pacote 10 Limpezas vendido - R$ 600 - Cliente: João"
+     ↓ (automático)  
+AGENDAMENTOS: "João - Pacote Limpeza (10 sessões) - STATUS: Ativo - Sessões restantes: 10"
+```
+
+---
+
+## 3. ABA AGENDAMENTOS - CONTROLE DETALHADO
+
+### 3.1 VISUALIZAÇÃO NA ABA AGENDAMENTOS
+
+#### 📋 **Lista organizada por tipo:**
+
+**SEÇÃO 1: PROCEDIMENTOS INDIVIDUAIS (Aguardando agendamento)**
+```
+┌─────────────────────────────────────────────────────────┐
+│ 👤 MARIA SILVA                                          │
+│ 🔸 Limpeza de Pele                                      │  
+│ 💰 Pago: R$ 80,00 (05/12/2024)                         │
+│ 📅 STATUS: AGUARDANDO AGENDAMENTO                       │
+│ [🗓️ AGENDAR AGORA] [📞 LIGAR CLIENTE]                   │
+└─────────────────────────────────────────────────────────┘
+```
+
+**SEÇÃO 2: PACOTES ATIVOS (Com sessões disponíveis)**
+```
+┌─────────────────────────────────────────────────────────┐
+│ 👤 JOÃO SANTOS                                          │
+│ 📦 Pacote Limpeza de Pele                               │
+│ 💰 Pago: R$ 600,00 (03/12/2024)                        │
+│ 🔢 SESSÕES: ████████░░ (8/10 restantes)                 │
+│ 📅 HISTÓRICO DE SESSÕES:                                │
+│   ✅ 05/12/2024 às 14:30 - Sessão 1                    │
+│   ✅ 12/12/2024 às 16:00 - Sessão 2                    │  
+│   🗓️ 19/12/2024 às 15:00 - AGENDADO (Sessão 3)        │
+│ [🗓️ AGENDAR PRÓXIMA] [📝 VER HISTÓRICO]                │
+└─────────────────────────────────────────────────────────┘
+```
+
+### 3.2 PROCESSO DE AGENDAMENTO
+
+#### 🗓️ **Para PROCEDIMENTO INDIVIDUAL:**
+1. Clico em "AGENDAR AGORA"
+2. Escolho data e horário no calendário
+3. Sistema marca como "AGENDADO PARA [data]"
+4. **No dia marcado:** Cliente comparece
+5. **AUTOMÁTICO:** Sistema move para "ABA FINALIZADOS"
+
+#### 🗓️ **Para PACOTE (sessões múltiplas):**
+1. Clico em "AGENDAR PRÓXIMA"
+2. Escolho data e horário para a próxima sessão
+3. Sistema mostra: "Próxima sessão: 19/12/2024 às 15:00"
+4. **No dia:** Cliente comparece
+5. **AUTOMÁTICO:** Sistema registra data + diminui contador
+6. **Pacote continua ATIVO** até esgotar todas as sessões
+
+---
+
+## 4. CONTROLE AUTOMÁTICO DE SESSÕES
+
+### 4.1 QUANDO O CLIENTE COMPARECE
+
+#### ⚙️ **PROCEDIMENTO INDIVIDUAL:**
+```
+Cliente chega → Confirmo presença → AUTOMÁTICO:
+• Registra data/hora de realização: "19/12/2024 às 15:00"  
+• Move para ABA FINALIZADOS
+• Status: "CONCLUÍDO em 19/12/2024"
+```
+
+#### ⚙️ **PACOTE - CADA SESSÃO:**
+```
+Cliente chega → Confirmo presença → AUTOMÁTICO:
+• Registra: "19/12/2024 às 15:00 - Sessão 3 realizada"
+• Contador diminui: 8 → 7 sessões restantes  
+• Adiciona ao histórico de datas
+• Pacote CONTINUA ATIVO (ainda tem 7 sessões)
+```
+
+### 4.2 HISTÓRICO AUTOMÁTICO DE DATAS
+
+#### 📊 **Cada pacote mantém histórico completo:**
+```
+PACOTE: Limpeza de Pele (10 sessões)
+COMPRADO: 03/12/2024 - R$ 600,00
+
+HISTÓRICO DE SESSÕES:
+┌─────────────────────────────────────────────────────────┐
+│ 📅 05/12/2024 às 14:30 ✅ Sessão 1 - Concluída          │
+│ 📅 12/12/2024 às 16:00 ✅ Sessão 2 - Concluída          │  
+│ 📅 19/12/2024 às 15:00 ✅ Sessão 3 - Concluída          │
+│ 📅 02/01/2025 às 14:00 ✅ Sessão 4 - Concluída          │
+│ 📅 09/01/2025 às 16:30 ✅ Sessão 5 - Concluída          │
+│ 📅 ___/___/____ às __:__ ⏳ Próxima sessão (agendar)    │
+│                                                         │
+│ 🔢 RESTAM: 5 sessões de 10 totais                       │
+│ ⏰ VALIDADE: até 03/06/2025                             │
+└─────────────────────────────────────────────────────────┘
+```
+
+---
+
+## 5. ABA FINALIZADOS - HISTÓRICO COMPLETO
+
+### 5.1 O QUE VAI PARA FINALIZADOS
+
+#### ✅ **PROCEDIMENTOS INDIVIDUAIS:**
+- Assim que são realizados, vão direto para "Finalizados"
+- Exemplo: "Maria - Limpeza - Realizada em 19/12/2024"
+
+#### ✅ **PACOTES COMPLETOS:**
+- Só vão para "Finalizados" quando TODAS as sessões acabam
+- Exemplo: "João - Pacote Limpeza (10/10 sessões) - Finalizado em 15/03/2025"
+
+### 5.2 VISUALIZAÇÃO DOS FINALIZADOS
+```
+┌─────────────────────────────────────────────────────────┐
+│ 📋 PROCEDIMENTOS CONCLUÍDOS                              │
+├─────────────────────────────────────────────────────────┤
+│ 👤 Maria Silva                                          │
+│ 🔸 Limpeza de Pele - R$ 80,00                           │  
+│ ✅ Realizado em: 19/12/2024 às 15:00                    │
+│ 💬 Obs: "Cliente satisfeita, pele melhorou muito"       │
+├─────────────────────────────────────────────────────────┤
+│ 👤 João Santos                                          │
+│ 📦 Pacote Limpeza (10 sessões) - R$ 600,00              │
+│ ✅ Finalizado em: 15/03/2025                            │
+│ 📊 Sessões realizadas entre: 05/12/2024 a 15/03/2025    │
+│ [📝 VER HISTÓRICO COMPLETO]                             │
+└─────────────────────────────────────────────────────────┘
+```
+
+---
+
+## 6. REGRAS DE NEGÓCIO DETALHADAS
+
+### 6.1 STATUS DOS ITENS NO SISTEMA
+
+#### 🟡 **AGUARDANDO AGENDAMENTO**
+- Procedimento individual vendido mas ainda não agendado
+- Cliente pagou mas ainda não marcou horário
+
+#### 🔵 **AGENDADO**  
+- Data e hora já definidas
+- Aguardando chegada do cliente
+
+#### 🟢 **PACOTE ATIVO**
+- Pacote com sessões disponíveis
+- Pode ter sessões já agendadas ou não
+
+#### ✅ **CONCLUÍDO/FINALIZADO**
+- Procedimento individual realizado
+- Pacote com todas as sessões esgotadas
+
+### 6.2 TRANSIÇÕES AUTOMÁTICAS
+
+#### ⚡ **Fluxo Procedimento Individual:**
+```
+CAIXA (Vendido) → AGENDAMENTOS (Aguardando) → AGENDAMENTOS (Agendado) → FINALIZADOS (Concluído)
+```
+
+#### ⚡ **Fluxo Pacote:**
+```
+CAIXA (Vendido) → AGENDAMENTOS (Ativo - 10 sessões) → ... sessões ... → FINALIZADOS (10/10 completo)
+```
+
+---
+
+## 7. INTERFACE TÉCNICA - 3 ABAS PRINCIPAIS
+
+### 7.1 ABA CAIXA 💰
+**Funcionalidades:**
+- ➕ Nova venda (procedimento ou pacote)
+- 💳 Registro de pagamentos  
+- 🧾 Emissão de recibos
+- 📊 Relatório de vendas do dia
+- 👤 Cadastro rápido de clientes
+
+### 7.2 ABA AGENDAMENTOS 📅  
+**Seções:**
+- 🔸 **Procedimentos individuais** (aguardando agendamento)
+- 📦 **Pacotes ativos** (com sessões disponíveis)  
+- 🗓️ **Calendário visual** (próximos agendamentos)
+- ⏰ **Hoje** (confirmações de presença)
+
+### 7.3 ABA FINALIZADOS ✅
+**Visualizações:**
+- 📋 Lista de procedimentos concluídos
+- 📦 Pacotes finalizados  
+- 🔍 Busca por cliente/data
+- 📊 Relatórios de atendimentos
+
+---
+
+## 8. CASOS DE USO PRÁTICOS
+
+### 8.1 CASO 1: Cliente compra procedimento individual
+
+```
+DIA 1 - CAIXA:
+• Cliente: Ana Costa
+• Serviço: Microagulhamento - R$ 120,00  
+• Pagamento: Cartão
+• Status: VENDIDO ✅
+
+↓ AUTOMÁTICO
+
+DIA 1 - AGENDAMENTOS:  
+• Ana Costa - Microagulhamento
+• Status: AGUARDANDO AGENDAMENTO
+• [Botão: AGENDAR AGORA]
+
+↓ AÇÃO MANUAL
+
+DIA 2 - AGENDAMENTOS:
+• Ana agendada para 10/12/2024 às 14:00
+• Status: AGENDADO
+
+↓ NO DIA MARCADO
+
+DIA 10/12 - AGENDAMENTOS:
+• Ana comparece às 14:00
+• Confirmo presença
+• AUTOMÁTICO: vai para FINALIZADOS
+
+DIA 10/12 - FINALIZADOS:
+• Ana Costa - Microagulhamento  
+• Realizado em: 10/12/2024 às 14:00 ✅
+```
+
+### 8.2 CASO 2: Cliente compra pacote de 5 sessões
+
+```
+DIA 1 - CAIXA:
+• Cliente: Pedro Lima
+• Pacote: 5 Drenagens Linfáticas - R$ 400,00
+• Pagamento: PIX  
+• Status: VENDIDO ✅
+
+↓ AUTOMÁTICO
+
+DIA 1 - AGENDAMENTOS:
+• Pedro Lima - Pacote Drenagem (5 sessões)
+• Sessões restantes: 5/5
+• Status: PACOTE ATIVO
+• Histórico: (vazio - ainda não usou)
+
+↓ AGENDAMENTOS E USOS
+
+DIA 5 - Primeira sessão:
+• Pedro vem fazer sessão 1
+• AUTOMÁTICO: Registra "05/12/2024 às 15:00"  
+• Sessões restantes: 4/5
+• Histórico: "05/12 - Sessão 1 ✅"
+
+DIA 12 - Segunda sessão:  
+• Pedro vem fazer sessão 2
+• AUTOMÁTICO: Registra "12/12/2024 às 16:30"
+• Sessões restantes: 3/5  
+• Histórico: "05/12 - Sessão 1 ✅, 12/12 - Sessão 2 ✅"
+
+... (continua até esgotar) ...
+
+DIA 50 - Quinta sessão (última):
+• Pedro vem fazer sessão final
+• AUTOMÁTICO: Registra "15/01/2025 às 14:00"
+• Sessões restantes: 0/5
+• AUTOMÁTICO: Pacote vai para FINALIZADOS
+
+DIA 50 - FINALIZADOS:
+• Pedro Lima - Pacote Drenagem (5/5 sessões) ✅
+• Período: 05/12/2024 a 15/01/2025
+• Histórico completo disponível
+```
+
+---
+
+## 9. ESPECIFICAÇÕES TÉCNICAS
+
+### 9.1 BANCO DE DADOS - ESTRUTURAS PRINCIPAIS
+
+#### 📊 **Tabela: vendas**
+- id, cliente_id, tipo (procedimento/pacote)
+- valor, data_venda, status_pagamento
+- procedimento_id ou pacote_id
+
+#### 📊 **Tabela: agendamentos**  
+- id, venda_id, data_agendamento, status
+- data_realizacao, observacoes
+
+#### 📊 **Tabela: sessoes_pacote**
+- id, pacote_venda_id, numero_sessao  
+- data_realizada, status, observacoes
+
+#### 📊 **Tabela: historico_datas**
+- id, cliente_id, procedimento, data_hora
+- tipo (individual/sessao_pacote), observacoes
+
+### 9.2 REGRAS DE TRANSIÇÃO AUTOMÁTICA
+
+#### ⚙️ **Trigger 1: Após venda no Caixa**
+```sql
+WHEN nova_venda_inserida:
+  IF tipo = 'procedimento':
+    INSERT INTO agendamentos (status = 'aguardando')
+  IF tipo = 'pacote':  
+    CREATE pacote_ativo (sessoes_restantes = quantidade_comprada)
+```
+
+#### ⚙️ **Trigger 2: Quando cliente comparece**
+```sql  
+WHEN confirma_presenca:
+  IF procedimento_individual:
+    UPDATE status = 'finalizado'
+    INSERT INTO historico_datas
+  IF sessao_pacote:
+    sessoes_restantes = sessoes_restantes - 1
+    INSERT INTO sessoes_pacote (data_realizada = NOW())
+    INSERT INTO historico_datas
+    IF sessoes_restantes = 0:
+      UPDATE pacote_status = 'finalizado'
+```
+
+---
+
+## 10. LAYOUTS DAS TELAS
+
+### 10.1 TELA CAIXA
+```
+┌─────────────────────────────────────────────────────────┐
+│ 💰 CAIXA - VENDAS DO DIA                                 │
+├─────────────────────────────────────────────────────────┤
+│                                                         │
+│ 👤 Cliente: [___________________] [🔍 Buscar]           │  
+│                                                         │
+│ 🛍️ TIPO DE VENDA:                                       │
+│    ( ) Procedimento Individual                          │
+│    ( ) Pacote Promocional                               │
+│                                                         │  
+│ 🔸 Serviço: [Dropdown com procedimentos] R$ [____]      │
+│                                                         │
+│ 💳 Pagamento: [Dinheiro] [Cartão] [PIX] [Parcelado]     │
+│                                                         │
+│ [💰 FINALIZAR VENDA] [🧾 IMPRIMIR RECIBO]                │
+│                                                         │
+├─────────────────────────────────────────────────────────┤
+│ 📊 VENDAS DE HOJE: R$ 1.250,00 (8 procedimentos)       │  
+└─────────────────────────────────────────────────────────┘
+```
+
+### 10.2 TELA AGENDAMENTOS  
+```
+┌─────────────────────────────────────────────────────────┐
+│ 📅 AGENDAMENTOS E CONTROLE DE SESSÕES                   │  
+├─────────────────────────────────────────────────────────┤
+│                                                         │
+│ 🔸 PROCEDIMENTOS INDIVIDUAIS (Aguardando agendamento)   │
+│ ┌─────────────────────────────────────────────────────┐ │
+│ │ Maria Silva - Limpeza (R$ 80) [🗓️ AGENDAR]          │ │
+│ │ José Santos - Peeling (R$ 150) [🗓️ AGENDAR]         │ │  
+│ └─────────────────────────────────────────────────────┘ │
+│                                                         │
+│ 📦 PACOTES ATIVOS (Com sessões disponíveis)            │
+│ ┌─────────────────────────────────────────────────────┐ │
+│ │ Ana Costa - Drenagem (3/5) [🗓️ PRÓXIMA SESSÃO]      │ │
+│ │ ├ Histórico: 05/12, 12/12 ✅                       │ │
+│ │ └ Próxima: 19/12 às 15:00                           │ │  
+│ └─────────────────────────────────────────────────────┘ │
+│                                                         │  
+│ ⏰ AGENDAMENTOS DE HOJE                                 │
+│ ┌─────────────────────────────────────────────────────┐ │
+│ │ 14:00 - Pedro Lima (Sessão 2/10) [✅ CONFIRMAR]     │ │
+│ │ 15:30 - Carla Dias (Microagulhamento) [✅ CONFIRMAR]│ │
+│ └─────────────────────────────────────────────────────┘ │
+└─────────────────────────────────────────────────────────┘
+```
+
+### 10.3 TELA FINALIZADOS
+```
+┌─────────────────────────────────────────────────────────┐
+│ ✅ PROCEDIMENTOS E PACOTES FINALIZADOS                  │
+├─────────────────────────────────────────────────────────┤  
+│                                                         │
+│ 🔍 Buscar: [___________] 📅 Período: [____] a [____]    │
+│                                                         │
+│ 📋 DEZEMBRO 2024                                        │  
+│ ┌─────────────────────────────────────────────────────┐ │
+│ │ 19/12 - Maria Silva - Limpeza ✅                     │ │
+│ │ 18/12 - Pedro Lima - Pacote Drenagem (5/5) ✅        │ │
+│ │ │       └ Datas: 05/12, 12/12, 15/12, 17/12, 18/12 │ │  
+│ │ 17/12 - Ana Costa - Microagulhamento ✅              │ │
+│ │ 15/12 - José Santos - Peeling ✅                     │ │
+│ └─────────────────────────────────────────────────────┘ │
+│                                                         │
+│ 📊 Total dezembro: R$ 3.450,00 (23 atendimentos)       │
+└─────────────────────────────────────────────────────────┘
+```
+
+---
+
+## 11. CRONOGRAMA DE DESENVOLVIMENTO
+
+### 📅 **FASE 1 (4 semanas) - ESTRUTURA BASE**
+- Semana 1-2: Banco de dados + API básica  
+- Semana 3: Aba Caixa (vendas básicas)
+- Semana 4: Aba Agendamentos (visualização)
+
+### 📅 **FASE 2 (4 semanas) - AUTOMAÇÕES**  
+- Semana 1-2: Fluxo automático Caixa → Agendamentos
+- Semana 3-4: Sistema de confirmação de presença
+- Semana 4: Aba Finalizados
+
+### 📅 **FASE 3 (4 semanas) - CONTROLE DE PACOTES**
+- Semana 1-2: Contador de sessões automático  
+- Semana 3: Histórico de datas por pacote
+- Semana 4: Relatórios e dashboard
+
+### 📅 **FASE 4 (2 semanas) - TESTES E AJUSTES**
+- Testes de fluxo completo
+- Correções e otimizações
+- Treinamento de usuário
+
+---
+
+## 12. INVESTIMENTO ESTIMADO
+
+### 💰 **DESENVOLVIMENTO COMPLETO**
+- **Total:** R$ 45.000 - R$ 65.000
+- **Prazo:** 14 semanas (3,5 meses)
+- **Parcelas:** 3x sem juros
+
+### 💰 **INFRAESTRUTURA (mensal)**  
+- **Servidor + Banco:** R$ 200-400
+- **Backup automático:** R$ 50-100  
+- **Total mensal:** R$ 250-500
+
+### 💰 **SUPORTE E MANUTENÇÃO (anual)**
+- **Suporte técnico:** R$ 6.000  
+- **Atualizações:** R$ 4.000
+- **Total anual:** R$ 10.000
+
+---
+
+## 13. RETORNO DO INVESTIMENTO
+
+### 📈 **ECONOMIA OPERACIONAL**
+- **Controle manual eliminado:** -2h/dia = R$ 1.000/mês
+- **Erro em pacotes reduzido:** R$ 500/mês economizado
+- **Clientes perdidos evitados:** +R$ 2.000/mês
+
+### 📈 **RECEITA ADICIONAL**  
+- **Histórico para fidelização:** +15% retenção
+- **Controle para upsell:** +R$ 1.500/mês
+- **Eficiência operacional:** +10 atendimentos/mês
+
+### 📈 **ROI ESTIMADO**
+- **Economia + Receita:** R$ 5.000/mês
+- **Investimento:** R$ 55.000 (média)  
+- **Payback:** 11 meses
+- **ROI anual:** 109%
+
+---
+
+## 14. CONCLUSÃO
+
+Este sistema resolve **EXATAMENTE** o que você precisa:
+
+✅ **Vendas no Caixa** → **Automaticamente** vão para Agendamentos  
+✅ **Procedimentos** → Agenda uma vez → **Automaticamente** vão para Finalizados  
+✅ **Pacotes** → Ficam ativos → Cada sessão **registra data** → **Contador diminui**  
+✅ **Histórico completo** de todas as datas que o cliente veio  
+✅ **Controle total** sem perder nenhuma informação
+
+O sistema trabalha **PRA VOCÊ**, não você para o sistema. Tudo acontece automaticamente, você só precisa confirmar quando o cliente chega.
+
+**Próximos passos:**
+1. Aprovação do PRD
+2. Escolha da empresa desenvolvedora  
+3. Início do desenvolvimento
+4. Testes com dados reais da clínica
+5. Treinamento e implantação
+
+**Resultado:** Sua clínica funcionando 100% automatizada, sem perder controle de nenhum pacote ou sessão! 🚀

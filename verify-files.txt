@@ -1,0 +1,7 @@
+Arquivos que precisam existir:
+✅ src/pages/Appointments.tsx - DEVE existir com export default
+✅ src/App.tsx - DEVE importar Appointments corretamente  
+✅ public/_redirects - DEVE existir para SPA na Vercel
+✅ src/hooks/useAppointments.ts - DEVE ter fallback robusto
+
+Se algum estiver faltando, precisamos recriar!

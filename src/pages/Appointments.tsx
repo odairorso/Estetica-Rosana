@@ -13,6 +13,7 @@ import {
   DollarSign,
   CalendarDays,
   TrendingUp,
+  RefreshCw, // Adicionando ícone de refresh
 } from "lucide-react";
 import { GlassCard } from "@/components/ui/glass-card";
 import { NeonButton } from "@/components/ui/neon-button";
@@ -33,7 +34,7 @@ import {
   DialogContent,
   DialogHeader,
   DialogTitle,
-  DialogFooter, // Adicionando DialogFooter
+  DialogFooter,
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -41,26 +42,89 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 
 export default function Appointments() {
   const { toast } = useToast();
-  const { appointments, createFromSale, scheduleAppointment, confirmAttendance, getActivePackages, getPendingProcedures, getTodaysAppointments, isLoading, error } = useAppointments();
-  const { sales } = useSales();
+  const { appointments, createFromSale, scheduleAppointment, confirmAttendance, getActivePackages, getPendingProcedures, getTodaysAppointments, isLoading, error, refreshAppointments } = useAppointments();
+  const { sales, isLoading: salesLoading } = useSales();
   const { services } = useServices();
   const [selectedDate, setSelectedDate] = useState(new Date());
   const [scheduleModalOpen, setScheduleModalOpen] = useState(false);
   const [selectedAppointment, setSelectedAppointment] = useState<Appointment | null>(null);
   const [selectedTime, setSelectedTime] = useState("09:00");
 
+  // Debug: Verificar o que está chegando
+  useEffect(() => {
+    console.log("📊 Appointments carregados:", appointments.length);
+    console.log("💰 Sales carregadas:", sales.length);
+    console.log("⏳ Sales loading:", salesLoading);
+    console.log("📋 Primeiros appointments:", appointments.slice(0, 3));
+    console.log("💰 Primeiras sales:", sales.slice(0, 3));
+  }, [appointments, sales, salesLoading]);
+
+  // Função para forçar criação de agendamentos (debug)
+  const forceCreateAppointments = async () => {
+    console.log("🚨 FORÇANDO criação de agendamentos...");
+    let criados = 0;
+
+    for (const sale of sales) {
+      for (const item of sale.items) {
+        const existingAppointment = appointments.find(apt => 
+          apt.client_id === sale.client_id && 
+          ((item.type === 'service' && apt.service_id === item.item_id) ||
+           (item.type === 'package' && apt.package_id === item.item_id)) &&
+          apt.type === (item.type === 'service' ? 'individual' : 'package_session')
+        );
+
+        if (!existingAppointment) {
+          console.log(`🆕 Criando agendamento forçado: ${sale.clientName} - ${item.itemName}`);
+          await createFromSale({
+            client_id: sale.client_id,
+            client_name: sale.clientName,
+            client_phone: '',
+            service_id: item.type === 'service' ? item.item_id : undefined,
+            service_name: item.itemName,
+            package_id: item.type === 'package' ? item.item_id : undefined,
+            package_name: item.itemName,
+            total_sessions: item.type === 'package' ? item.quantity : undefined,
+            price: item.price * item.quantity,
+            sale_date: sale.sale_date,
+            type: item.type === 'service' ? 'individual' : 'package_session',
+          });
+          criados++;
+        }
+      }
+    }
+
+    if (criados > 0) {
+      toast({
+        title: "✅ Agendamentos criados!",
+        description: `${criados} novos agendamentos foram criados dos caixas existentes.`,
+      });
+    } else {
+      toast({
+        title: "ℹ️ Nada para criar",
+        description: "Todos os itens do caixa já têm agendamentos.",
+      });
+    }
+  };
+
   // Processar vendas do caixa que ainda não viraram agendamentos
   useEffect(() => {
+    if (salesLoading || appointments.length === 0) return;
+
+    console.log("🔄 Processando vendas do caixa...");
+    let novosAgendamentos = 0;
+
     sales.forEach(sale => {
       sale.items.forEach(item => {
         // Verifica se já existe agendamento para esta venda
         const existingAppointment = appointments.find(apt => 
           apt.client_id === sale.client_id && 
-          apt.service_id === item.item_id &&
+          ((item.type === 'service' && apt.service_id === item.item_id) ||
+           (item.type === 'package' && apt.package_id === item.item_id)) &&
           apt.type === (item.type === 'service' ? 'individual' : 'package_session')
         );
 
         if (!existingAppointment) {
+          console.log(`🆕 Criando agendamento: ${sale.clientName} - ${item.itemName}`);
           // Cria agendamento automaticamente
           createFromSale({
             client_id: sale.client_id,
@@ -75,14 +139,34 @@ export default function Appointments() {
             sale_date: sale.sale_date,
             type: item.type === 'service' ? 'individual' : 'package_session',
           });
+          novosAgendamentos++;
+        } else {
+          console.log(`✅ Agendamento já existe: ${sale.clientName} - ${item.itemName}`);
         }
       });
     });
-  }, [sales, appointments]);
+
+    if (novosAgendamentos > 0) {
+      console.log(`✨ ${novosAgendamentos} novos agendamentos criados`);
+    }
+  }, [sales, appointments, salesLoading]);
+
+  // Recarregar agendamentos quando a página carrega
+  useEffect(() => {
+    console.log("🔄 Recarregando agendamentos...");
+    refreshAppointments();
+  }, []);
 
   const pendingProcedures = getPendingProcedures();
   const activePackages = getActivePackages();
   const todaysAppointments = getTodaysAppointments();
+
+  // Debug das listas filtradas
+  useEffect(() => {
+    console.log("📋 Procedimentos pendentes:", pendingProcedures.length);
+    console.log("📦 Pacotes ativos:", activePackages.length);
+    console.log("📅 Agendamentos de hoje:", todaysAppointments.length);
+  }, [pendingProcedures, activePackages, todaysAppointments]);
 
   const handleSchedule = (appointment: Appointment) => {
     setSelectedAppointment(appointment);
@@ -138,7 +222,7 @@ export default function Appointments() {
     }
   };
 
-  if (isLoading) {
+  if (isLoading || salesLoading) {
     return (
       <div className="space-y-6 p-6">
         <Skeleton className="h-8 w-64" />
@@ -164,6 +248,15 @@ export default function Appointments() {
             <p className="text-muted-foreground">Controle de procedimentos e sessões de pacotes</p>
           </div>
           <div className="flex gap-3">
+            <Button 
+              variant="outline" 
+              size="sm" 
+              onClick={forceCreateAppointments}
+              className="bg-yellow-500/20 text-yellow-700 hover:bg-yellow-500/30"
+            >
+              <RefreshCw className="h-4 w-4 mr-2" />
+              Forçar Criação
+            </Button>
             <NeonButton icon={CalendarDays}>
               Ver Calendário
             </NeonButton>

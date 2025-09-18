@@ -59,26 +59,6 @@ const MOCK_PACKAGES: Package[] = [
     session_history: [],
     remaining_sessions: 5,
   },
-  {
-    id: 3,
-    name: "Pacote Ouro",
-    description: "10 sessões de preenchimento + cuidados",
-    client_id: 3,
-    clientName: "Carlos Oliveira",
-    total_sessions: 10,
-    used_sessions: 3,
-    price: 5000.0,
-    valid_until: "2026-01-15",
-    last_used: "2025-09-05",
-    status: "active",
-    created_at: "2025-03-20T09:45:00Z",
-    session_history: [
-      { id: "1", date: "2025-08-20", notes: "Sess 1" },
-      { id: "2", date: "2025-08-27", notes: "Sessão 2" },
-      { id: "3", date: "2025-09-05", notes: "Sessão 3" },
-    ],
-    remaining_sessions: 7,
-  },
 ];
 
 export function usePackages() {

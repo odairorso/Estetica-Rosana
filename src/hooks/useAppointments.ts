@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/lib/supabase';
 import { useToast } from "@/hooks/use-toast";
+import { usePackages } from './usePackages';
 
 export interface Appointment {
   id: number;
@@ -16,6 +17,7 @@ export interface Appointment {
   status: "agendado" | "confirmado" | "concluido" | "cancelado";
   created_at: string;
   serviceName?: string; // Opcional - vem do JOIN
+  package_id?: number; // ID do pacote relacionado
 }
 
 // Dados mock para fallback quando Supabase falhar
@@ -42,6 +44,7 @@ export function useAppointments() {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const { toast } = useToast();
+  const { useSession } = usePackages();
 
   const loadAppointments = useCallback(async () => {
     setIsLoading(true);
@@ -103,8 +106,12 @@ export function useAppointments() {
 
       if (error) throw error;
 
-      // Se for uma sessão de pacote, registra no histórico
+      // Se for uma sessão de pacote, registra no histórico DO PACOTE
       if (package_id && appointment) {
+        // Registrar uso da sessão do pacote
+        await useSession(package_id, `Sessão do serviço: ${serviceName || 'não especificado'}`);
+        
+        // Registrar no histórico de sessões
         const { error: sessionError } = await supabase
           .from('session_history')
           .insert({
@@ -120,6 +127,11 @@ export function useAppointments() {
             description: "O agendamento foi criado, mas não foi possível registrar o uso da sessão. Por favor, ajuste manualmente no pacote.",
             variant: "destructive",
             duration: 10000,
+          });
+        } else {
+          toast({
+            title: "Sessão registrada!",
+            description: `Uma sessão foi abatida do pacote.`,
           });
         }
       }

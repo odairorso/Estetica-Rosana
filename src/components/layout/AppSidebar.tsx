@@ -20,7 +20,6 @@ import {
   Boxes,
   CreditCard,
   Settings2,
-  CheckCircle, // Novo ícone para Finalizados
 } from "lucide-react";
 import logoUrl from "@/assets/logo-rosana.jpg";
 
@@ -28,7 +27,7 @@ const items = [
   { title: "Dashboard", url: "/dashboard", icon: LayoutDashboard },
   { title: "Clientes", url: "/clientes", icon: Users2 },
   { title: "Agendamentos", url: "/agendamentos", icon: CalendarClock },
-  { title: "Finalizados", url: "/finalizados", icon: CheckCircle }, // Novo item
+  // O item 'Finalizados' foi removido para consolidar tudo em Agendamentos
   { title: "Pacotes", url: "/pacotes", icon: Package2 },
   { title: "Caixa", url: "/caixa", icon: ShoppingCart },
   { title: "Procedimentos", url: "/servicos", icon: Sparkles },

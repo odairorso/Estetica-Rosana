@@ -37,6 +37,13 @@ export default function Dashboard() {
   // Calcular métricas reais
   const metrics = getMetrics();
   
+  // Debug logs temporários
+  console.log('🔍 DEBUG - Dados carregados:');
+  console.log('📊 Clients:', clients.length, clients);
+  console.log('📦 Packages:', packages.length, packages);
+  console.log('📅 Appointments:', appointments.length, appointments);
+  console.log('💰 Metrics:', metrics);
+  
   // Clientes novos hoje
   const newClientsToday = clients.filter(client => {
     try {
@@ -89,8 +96,8 @@ export default function Dashboard() {
         <GlassCard className="p-8">
           <div className="flex flex-col items-start justify-between gap-6 md:flex-row md:items-center">
             <div>
-              <h1 className="text-3xl font-bold text-gradient-brand mb-2">Bem-vinda, equipe!</h1>
-              <p className="text-lg text-muted-foreground">Aqui está um resumo rápido do seu dia</p>
+              <h1 className="text-3xl font-bold text-gradient-brand mb-2">Bem-vinda, equipe! 🌟</h1>
+              <p className="text-lg text-muted-foreground">Aqui está um resumo rápido do seu dia - Dados Atualizados!</p>
             </div>
             <div className="flex flex-wrap gap-3">
               <NeonButton 

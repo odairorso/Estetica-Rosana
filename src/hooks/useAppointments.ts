@@ -132,9 +132,24 @@ export function useAppointments() {
         duration: restOfData.duration || 60,
       };
 
+      // Objeto limpo apenas com os campos que existem na tabela
+      const appointmentToInsert = {
+        client_id: validatedData.client_id,
+        service_id: validatedData.service_id,
+        appointment_date: validatedData.appointment_date,
+        appointment_time: validatedData.appointment_time,
+        duration: validatedData.duration,
+        price: validatedData.price,
+        notes: validatedData.notes,
+        status: validatedData.status,
+        client_name: validatedData.client_name,
+        client_phone: validatedData.client_phone,
+        type: validatedData.type,
+      };
+
       const { data: appointment, error } = await supabase
         .from('appointments')
-        .insert([validatedData])
+        .insert([appointmentToInsert])
         .select()
         .single();
 

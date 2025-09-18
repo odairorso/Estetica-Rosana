@@ -2,7 +2,7 @@ import { Helmet } from "react-helmet-async";
 import { useState, useEffect } from "react";
 import {
   Plus,
-  Calendar as CalendarIcon, // Alias para evitar conflito
+  Calendar as CalendarIcon,
   Clock,
   User,
   Package,
@@ -13,7 +13,7 @@ import {
   DollarSign,
   CalendarDays,
   TrendingUp,
-  RefreshCw, // Adicionando ícone de refresh
+  RefreshCw,
 } from "lucide-react";
 import { GlassCard } from "@/components/ui/glass-card";
 import { NeonButton } from "@/components/ui/neon-button";
@@ -50,22 +50,51 @@ export default function Appointments() {
   const [selectedAppointment, setSelectedAppointment] = useState<Appointment | null>(null);
   const [selectedTime, setSelectedTime] = useState("09:00");
 
-  // Debug: Verificar o que está chegando
+  // Debug detalhado
   useEffect(() => {
-    console.log("📊 Appointments carregados:", appointments.length);
-    console.log("💰 Sales carregadas:", sales.length);
+    console.log("=== DEBUG AGENDAMENTOS ===");
+    console.log("📊 Total appointments:", appointments.length);
+    console.log("💰 Total sales:", sales.length);
     console.log("⏳ Sales loading:", salesLoading);
-    console.log("📋 Primeiros appointments:", appointments.slice(0, 3));
-    console.log("💰 Primeiras sales:", sales.slice(0, 3));
-  }, [appointments, sales, salesLoading]);
+    console.log("📋 Appointments loading:", isLoading);
+    
+    if (sales.length > 0) {
+      console.log("💰 Primeira venda:", {
+        cliente: sales[0].clientName,
+        data: sales[0].sale_date,
+        itens: sales[0].items.length,
+        itens_detalhes: sales[0].items.map(item => ({
+          tipo: item.type,
+          nome: item.itemName,
+          preco: item.price,
+          quantidade: item.quantity
+        }))
+      });
+    }
+    
+    if (appointments.length > 0) {
+      console.log("📅 Primeiro agendamento:", {
+        cliente: appointments[0].client_name,
+        tipo: appointments[0].type,
+        status: appointments[0].status,
+        servico: appointments[0].service_name,
+        pacote: appointments[0].package_name
+      });
+    }
+  }, [appointments, sales, salesLoading, isLoading]);
 
   // Função para forçar criação de agendamentos (debug)
   const forceCreateAppointments = async () => {
     console.log("🚨 FORÇANDO criação de agendamentos...");
+    console.log("💰 Vendas para processar:", sales.length);
     let criados = 0;
 
     for (const sale of sales) {
+      console.log(`🔄 Processando venda: ${sale.clientName} (${sale.items.length} itens)`);
+      
       for (const item of sale.items) {
+        console.log(`📦 Item: ${item.itemName} (${item.type}) - R$${item.price}`);
+        
         const existingAppointment = appointments.find(apt => 
           apt.client_id === sale.client_id && 
           ((item.type === 'service' && apt.service_id === item.item_id) ||
@@ -75,7 +104,7 @@ export default function Appointments() {
 
         if (!existingAppointment) {
           console.log(`🆕 Criando agendamento forçado: ${sale.clientName} - ${item.itemName}`);
-          await createFromSale({
+          const result = await createFromSale({
             client_id: sale.client_id,
             client_name: sale.clientName,
             client_phone: '',
@@ -88,7 +117,15 @@ export default function Appointments() {
             sale_date: sale.sale_date,
             type: item.type === 'service' ? 'individual' : 'package_session',
           });
-          criados++;
+          
+          if (result) {
+            console.log(`✅ Agendamento criado com sucesso!`);
+            criados++;
+          } else {
+            console.log(`❌ Erro ao criar agendamento`);
+          }
+        } else {
+          console.log(`⏭️ Agendamento já existe, pulando...`);
         }
       }
     }
@@ -110,7 +147,7 @@ export default function Appointments() {
   useEffect(() => {
     if (salesLoading || appointments.length === 0) return;
 
-    console.log("🔄 Processando vendas do caixa...");
+    console.log("🔄 Processando vendas do caixa automaticamente...");
     let novosAgendamentos = 0;
 
     sales.forEach(sale => {

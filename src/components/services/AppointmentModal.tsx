@@ -32,6 +32,8 @@ interface AppointmentModalProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onSave: (appointment: any) => void;
+  service?: any; // Mantido para compatibilidade
+  packageToSchedule?: PackageType | null;
 }
 
 const timeSlots = Array.from({ length: 21 }, (_, i) => {
@@ -40,7 +42,7 @@ const timeSlots = Array.from({ length: 21 }, (_, i) => {
   return `${hour.toString().padStart(2, '0')}:${minute.toString().padStart(2, '0')}`;
 });
 
-export function AppointmentModal({ open, onOpenChange, onSave }: AppointmentModalProps) {
+export function AppointmentModal({ open, onOpenChange, onSave, packageToSchedule }: AppointmentModalProps) {
   const { packages } = usePackages();
   const { services } = useServices();
   const { clients } = useClients();
@@ -64,21 +66,39 @@ export function AppointmentModal({ open, onOpenChange, onSave }: AppointmentModa
 
   useEffect(() => {
     if (open) {
-      setFormData({
-        client_id: 0,
-        client_name: '',
-        client_phone: '',
-        package_id: 0,
-        service_id: 0,
-        serviceName: '',
-        date: new Date().toISOString().split('T')[0],
-        time: "09:00",
-        notes: '',
-      });
-      setSelectedPackage(null);
-      setSelectionType(null);
+      // Se um pacote foi passado para agendamento, pré-preenche o formulário
+      if (packageToSchedule) {
+        setFormData({
+          client_id: packageToSchedule.client_id,
+          client_name: packageToSchedule.clientName || '',
+          client_phone: '', // Pode ser buscado do cliente se necessário
+          package_id: packageToSchedule.id,
+          service_id: 0, // O serviço será selecionado
+          serviceName: '',
+          date: new Date().toISOString().split('T')[0],
+          time: "09:00",
+          notes: '',
+        });
+        setSelectedPackage(packageToSchedule);
+        setSelectionType('package');
+      } else {
+        // Reseta o formulário se for um novo agendamento normal
+        setFormData({
+          client_id: 0,
+          client_name: '',
+          client_phone: '',
+          package_id: 0,
+          service_id: 0,
+          serviceName: '',
+          date: new Date().toISOString().split('T')[0],
+          time: "09:00",
+          notes: '',
+        });
+        setSelectedPackage(null);
+        setSelectionType(null);
+      }
     }
-  }, [open]);
+  }, [open, packageToSchedule]);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -92,22 +112,27 @@ export function AppointmentModal({ open, onOpenChange, onSave }: AppointmentModa
       toast({ title: "Erro", description: "Selecione um pacote ou um serviço.", variant: "destructive" });
       return;
     }
+    
+    // Para agendamento de pacote, o serviço também precisa ser selecionado
+    if (formData.package_id && !formData.service_id) {
+      toast({ title: "Erro", description: "Selecione qual serviço do pacote será realizado.", variant: "destructive" });
+      return;
+    }
 
     const selectedService = services.find(s => s.id === formData.service_id);
-    const selectedPackage = packages.find(p => p.id === formData.package_id);
     const selectedClient = clients.find(c => c.id === formData.client_id);
 
     const dataForHook = {
       package_id: formData.package_id || null,
       service_id: formData.service_id || null,
-      serviceName: selectedService?.name || "",
+      serviceName: selectedService?.name || "Sessão de Pacote",
       client_id: formData.client_id,
       client_name: selectedClient?.name || formData.client_name,
       client_phone: selectedClient?.phone || formData.client_phone,
       appointment_date: formData.date,
       appointment_time: formData.time,
       duration: selectedService?.duration || 60,
-      price: 0,
+      price: selectionType === 'package' ? 0 : selectedService?.price || 0, // Preço é zero para sessão de pacote
       notes: formData.notes,
       status: "agendado" as const,
     };
@@ -131,25 +156,13 @@ export function AppointmentModal({ open, onOpenChange, onSave }: AppointmentModa
   };
 
   const handleSelectionTypeChange = (type: 'package' | 'service') => {
-    if (selectionType === type) {
-      // Deselect if clicking the same type
-      setSelectionType(null);
-      setFormData(prev => ({
-        ...prev,
-        package_id: 0,
-        service_id: 0
-      }));
-      setSelectedPackage(null);
-    } else {
-      // Select new type
-      setSelectionType(type);
-      setFormData(prev => ({
-        ...prev,
-        package_id: 0,
-        service_id: 0
-      }));
-      setSelectedPackage(null);
-    }
+    setSelectionType(type);
+    setFormData(prev => ({
+      ...prev,
+      package_id: 0,
+      service_id: 0
+    }));
+    setSelectedPackage(null);
   };
 
   const handlePackageSelect = (packageId: string) => {
@@ -193,7 +206,7 @@ export function AppointmentModal({ open, onOpenChange, onSave }: AppointmentModa
             <Label>Cliente *</Label>
             <Popover open={clientComboboxOpen} onOpenChange={setClientComboboxOpen}>
               <PopoverTrigger asChild>
-                <Button variant="outline" role="combobox" aria-expanded={clientComboboxOpen} className="w-full justify-between">
+                <Button variant="outline" role="combobox" aria-expanded={clientComboboxOpen} className="w-full justify-between" disabled={!!packageToSchedule}>
                   {formData.client_id ? clients.find(c => c.id === formData.client_id)?.name : "Selecione um cliente..."}
                   <User className="ml-2 h-4 w-4 shrink-0 opacity-50" />
                 </Button>
@@ -221,16 +234,17 @@ export function AppointmentModal({ open, onOpenChange, onSave }: AppointmentModa
 
           {/* Pacote ou Serviço */}
           <div className="space-y-2">
-            <Label>Selecionar Pacotes ou Procedimentos *</Label>
+            <Label>Tipo de Agendamento *</Label>
             <div className="grid grid-cols-2 gap-2">
               <Button
                 type="button"
                 variant={selectionType === 'package' ? "default" : "outline"}
                 className={selectionType === 'package' ? "bg-brand-gradient" : ""}
                 onClick={() => handleSelectionTypeChange('package')}
+                disabled={!!packageToSchedule}
               >
                 <Package className="mr-2 h-4 w-4" />
-                Pacote
+                Sessão de Pacote
               </Button>
               <Button
                 type="button"
@@ -239,7 +253,7 @@ export function AppointmentModal({ open, onOpenChange, onSave }: AppointmentModa
                 onClick={() => handleSelectionTypeChange('service')}
               >
                 <Sparkles className="mr-2 h-4 w-4" />
-                Procedimento
+                Procedimento Avulso
               </Button>
             </div>
           </div>
@@ -248,16 +262,16 @@ export function AppointmentModal({ open, onOpenChange, onSave }: AppointmentModa
           {selectionType === 'package' && (
             <div className="space-y-2">
               <Label htmlFor="package">Pacote</Label>
-              <Select value={formData.package_id.toString()} onValueChange={handlePackageSelect}>
+              <Select value={formData.package_id.toString()} onValueChange={handlePackageSelect} disabled={!!packageToSchedule}>
                 <SelectTrigger>
-                  <SelectValue placeholder="Selecione um pacote" />
+                  <SelectValue placeholder="Selecione um pacote do cliente" />
                 </SelectTrigger>
                 <SelectContent>
                   {packages
-                    .filter(p => p.status === 'active' && p.remaining_sessions > 0)
+                    .filter(p => p.client_id === formData.client_id && p.status === 'active' && p.remaining_sessions > 0)
                     .map((pkg) => (
                       <SelectItem key={pkg.id} value={pkg.id.toString()}>
-                        {pkg.name} - {pkg.clientName} ({pkg.remaining_sessions} sessões restantes)
+                        {pkg.name} ({pkg.remaining_sessions} restantes)
                       </SelectItem>
                     ))}
                 </SelectContent>
@@ -266,9 +280,11 @@ export function AppointmentModal({ open, onOpenChange, onSave }: AppointmentModa
           )}
 
           {/* Seleção de Serviço */}
-          {selectionType === 'service' && (
+          {(selectionType === 'service' || (selectionType === 'package' && formData.package_id > 0)) && (
             <div className="space-y-2">
-              <Label htmlFor="service">Serviço</Label>
+              <Label htmlFor="service">
+                {selectionType === 'package' ? "Serviço a ser realizado na sessão *" : "Procedimento *"}
+              </Label>
               <Select value={formData.service_id.toString()} onValueChange={handleServiceSelect}>
                 <SelectTrigger>
                   <SelectValue placeholder="Selecione o serviço" />
@@ -324,18 +340,6 @@ export function AppointmentModal({ open, onOpenChange, onSave }: AppointmentModa
               placeholder="Anotações sobre o agendamento..."
             />
           </div>
-
-          {/* Informações do pacote selecionado */}
-          {selectedPackage && (
-            <div className="p-3 rounded-lg bg-muted/50 border border-border">
-              <h4 className="font-medium text-sm mb-2">Informações do Pacote</h4>
-              <div className="text-xs space-y-1 text-muted-foreground">
-                <p>Cliente: {selectedPackage.clientName}</p>
-                <p>Sessões: {selectedPackage.used_sessions}/{selectedPackage.total_sessions}</p>
-                <p>Válido até: {format(new Date(selectedPackage.valid_until), "dd/MM/yyyy")}</p>
-              </div>
-            </div>
-          )}
 
           <div className="flex gap-3 pt-4">
             <Button type="button" variant="outline" onClick={() => onOpenChange(false)} className="flex-1">Cancelar</Button>

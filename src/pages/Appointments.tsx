@@ -53,14 +53,19 @@ export default function Appointments() {
 
   // Função para limpar todos os agendamentos (debug)
   const clearAllAppointments = () => {
+    console.log("🗑️ Iniciando limpeza de agendamentos...");
     if (confirm("⚠️ Tem certeza que deseja limpar TODOS os agendamentos? Esta ação não pode ser desfeita!")) {
+      console.log("🗑️ Confirmado - removendo do localStorage...");
       localStorage.removeItem('clinic-appointments-v2');
       localStorage.removeItem('clinic-appointments');
+      console.log("✅ Agendamentos removidos do localStorage");
       toast({
         title: "🗑️ Agendamentos limpos!",
         description: "Todos os agendamentos foram removidos. Recarregue a página.",
       });
       setTimeout(() => window.location.reload(), 1000);
+    } else {
+      console.log("❌ Limpeza cancelada");
     }
   };
 
@@ -95,7 +100,96 @@ export default function Appointments() {
       );
       console.log(`${hasAppointment ? '✅' : '❌'} ${item.itemName} (${item.type}): ${hasAppointment ? 'Tem agendamento' : 'SEM agendamento'}`);
     });
+    
+    console.log("=== FIM DO DEBUG ===");
   };
+
+  // Função para forçar criação de agendamentos
+  const forceCreateAppointments = async () => {
+    console.log("🚨 FORÇANDO criação de agendamentos...");
+    console.log("💰 Vendas para processar:", sales.length);
+    
+    if (sales.length === 0) {
+      console.log("❌ Nenhuma venda para processar");
+      toast({
+        title: "❌ Nenhuma venda",
+        description: "Não há vendas para criar agendamentos.",
+      });
+      return;
+    }
+    
+    let criados = 0;
+
+    for (const sale of sales) {
+      console.log(`🔄 Processando venda: ${sale.clientName} (${sale.items.length} itens)`);
+      
+      for (const item of sale.items) {
+        console.log(`📦 Item: ${item.itemName} (${item.type}) - R$${item.price}`);
+        
+        // Sempre criar agendamento quando forçado
+        if (item.type === 'service' || item.type === 'package') {
+          console.log(`🆕 Criando agendamento forçado: ${sale.clientName} - ${item.itemName}`);
+          const result = await createFromSale({
+            client_id: sale.client_id,
+            client_name: sale.clientName,
+            client_phone: '',
+            service_id: item.type === 'service' ? item.item_id : undefined,
+            service_name: item.itemName,
+            package_id: item.type === 'package' ? item.item_id : undefined,
+            package_name: item.itemName,
+            total_sessions: item.type === 'package' ? item.quantity : undefined,
+            price: item.price * item.quantity,
+            sale_date: sale.sale_date,
+            type: item.type === 'service' ? 'individual' : 'package_session',
+          });
+          
+          if (result) {
+            console.log(`✅ Agendamento criado com sucesso!`);
+            criados++;
+          } else {
+            console.log(`❌ Erro ao criar agendamento`);
+          }
+        } else {
+          console.log(`⏭️ Produto ${item.itemName} não gera agendamento`);
+        }
+      }
+    }
+
+    console.log(`📊 Total de agendamentos criados: ${criados}`);
+    
+    if (criados > 0) {
+      toast({
+        title: "✅ Agendamentos criados!",
+        description: `${criados} novos agendamentos foram criados dos caixas existentes.`,
+      });
+    } else {
+      toast({
+        title: "ℹ️ Nada para criar",
+        description: "Todos os itens do caixa já têm agendamentos.",
+      });
+    }
+  };
+
+  // Tornar funções acessíveis globalmente para debug via console
+  useEffect(() => {
+    // @ts-ignore
+    window.debugAppointments = debugSystem;
+    // @ts-ignore
+    window.clearAppointments = clearAllAppointments;
+    // @ts-ignore
+    window.forceAppointments = forceCreateAppointments;
+    // @ts-ignore
+    window.appointmentsData = appointments;
+    // @ts-ignore
+    window.salesData = sales;
+    
+    console.log("🛠️ Funções de debug disponíveis no console:");
+    console.log("  - debugAppointments() - Ver estado completo");
+    console.log("  - clearAppointments() - Limpar todos os agendamentos");
+    console.log("  - forceAppointments() - Forçar criação de agendamentos");
+    console.log("  - appointmentsData - Dados dos agendamentos");
+    console.log("  - salesData - Dados das vendas");
+  }, [appointments, sales]);
 
   // Debug detalhado
   useEffect(() => {

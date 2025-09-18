@@ -53,12 +53,19 @@ export default function Appointments() {
   const [historyModalOpen, setHistoryModalOpen] = useState(false);
   const [selectedPackage, setSelectedPackage] = useState<PackageType | null>(null);
 
+  // Função segura para filtrar agendamentos por data
   const filteredAppointments = appointments
     .filter((apt) => {
       if (!apt.appointment_date) return false;
-      const aptDate = parseISO(apt.appointment_date);
-      if (!isValid(aptDate)) return false;
-      return format(aptDate, "yyyy-MM-dd") === format(selectedDate, "yyyy-MM-dd");
+      
+      try {
+        const aptDate = parseISO(apt.appointment_date);
+        if (!isValid(aptDate)) return false;
+        
+        return format(aptDate, "yyyy-MM-dd") === format(selectedDate, "yyyy-MM-dd");
+      } catch {
+        return false;
+      }
     })
     .sort((a, b) => a.appointment_time.localeCompare(b.appointment_time));
 

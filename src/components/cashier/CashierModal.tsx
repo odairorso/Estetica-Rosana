@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -247,106 +247,39 @@ export function CashierModal({ open, onOpenChange, onSave }: CashierModalProps) 
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[600px]">
-        <DialogHeader>
+      <DialogContent className="sm:max-w-[600px] max-h-[90vh] flex flex-col">
+        <DialogHeader className="flex-shrink-0">
           <DialogTitle className="text-gradient-brand flex items-center gap-2">
             <ShoppingCart className="h-5 w-5" />
             Nova Venda com Carrinho
           </DialogTitle>
         </DialogHeader>
         
-        <form onSubmit={handleSubmit} className="space-y-6">
-          {/* Cliente */}
-          <div className="space-y-2">
-            <Label>Cliente *</Label>
-            <Popover open={clientComboboxOpen} onOpenChange={setClientComboboxOpen}>
-              <PopoverTrigger asChild>
-                <Button variant="outline" role="combobox" aria-expanded={clientComboboxOpen} className="w-full justify-between">
-                  {formData.client_id ? clients.find(c => c.id === formData.client_id)?.name : "Selecione um cliente..."}
-                  <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-                </Button>
-              </PopoverTrigger>
-              <PopoverContent className="w-[450px] p-0">
-                <Command>
-                  <CommandInput placeholder="Buscar cliente..." />
-                  <CommandEmpty>Nenhum cliente encontrado.</CommandEmpty>
-                  <CommandGroup>
-                    {clients.map((client) => (
-                      <CommandItem
-                        key={client.id}
-                        value={client.name}
-                        onSelect={() => handleClientSelect(client.id.toString())}
-                      >
-                        <Check className={cn("mr-2 h-4 w-4", formData.client_id === client.id ? "opacity-100" : "opacity-0")} />
-                        {client.name}
-                      </CommandItem>
-                    ))}
-                  </CommandGroup>
-                </Command>
-              </PopoverContent>
-            </Popover>
-          </div>
-
-          {/* Adicionar itens ao carrinho */}
-          <div className="space-y-4">
-            <Label>Adicionar Itens ao Carrinho</Label>
-            
-            {/* Tipo de item */}
-            <div className="grid grid-cols-3 gap-2">
-              <Button
-                type="button"
-                variant={currentItem.type === 'service' ? "default" : "outline"}
-                className={currentItem.type === 'service' ? "bg-brand-gradient" : ""}
-                onClick={() => setCurrentItem(prev => ({ ...prev, type: 'service', item_id: 0, itemName: '', price: 0 }))}
-              >
-                <Sparkles className="h-4 w-4 mr-2" />
-                Procedimento
-              </Button>
-              <Button
-                type="button"
-                variant={currentItem.type === 'package' ? "default" : "outline"}
-                className={currentItem.type === 'package' ? "bg-brand-gradient" : ""}
-                onClick={() => setCurrentItem(prev => ({ ...prev, type: 'package', item_id: 0, itemName: '', price: 0 }))}
-              >
-                <Package className="h-4 w-4 mr-2" />
-                Pacote
-              </Button>
-              <Button
-                type="button"
-                variant={currentItem.type === 'product' ? "default" : "outline"}
-                className={currentItem.type === 'product' ? "bg-brand-gradient" : ""}
-                onClick={() => setCurrentItem(prev => ({ ...prev, type: 'product', item_id: 0, itemName: '', price: 0 }))}
-              >
-                <Box className="h-4 w-4 mr-2" />
-                Produto
-              </Button>
-            </div>
-
-            {/* Seleção do item */}
+        <form onSubmit={handleSubmit} className="flex-1 flex flex-col min-h-0">
+          <div className="flex-1 overflow-y-auto space-y-4 p-1">
+            {/* Cliente */}
             <div className="space-y-2">
-              <Label>{getItemTypeName()} *</Label>
-              <Popover open={itemComboboxOpen} onOpenChange={setItemComboboxOpen}>
+              <Label>Cliente *</Label>
+              <Popover open={clientComboboxOpen} onOpenChange={setClientComboboxOpen}>
                 <PopoverTrigger asChild>
-                  <Button variant="outline" role="combobox" aria-expanded={itemComboboxOpen} className="w-full justify-between">
-                    {currentItem.item_id ? 
-                      getItemOptions().find(item => item.id === currentItem.item_id)?.name
-                      : `Selecione um ${getItemTypeName()}...`}
+                  <Button variant="outline" role="combobox" aria-expanded={clientComboboxOpen} className="w-full justify-between">
+                    {formData.client_id ? clients.find(c => c.id === formData.client_id)?.name : "Selecione um cliente..."}
                     <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
                   </Button>
                 </PopoverTrigger>
-                <PopoverContent className="w-full p-0">
+                <PopoverContent className="w-[450px] p-0">
                   <Command>
-                    <CommandInput placeholder={`Buscar ${getItemTypeName()}...`} />
-                    <CommandEmpty>{`Nenhum ${getItemTypeName()} encontrado.`}</CommandEmpty>
+                    <CommandInput placeholder="Buscar cliente..." />
+                    <CommandEmpty>Nenhum cliente encontrado.</CommandEmpty>
                     <CommandGroup>
-                      {getItemOptions().map((item) => (
+                      {clients.map((client) => (
                         <CommandItem
-                          key={item.id}
-                          value={item.name}
-                          onSelect={() => handleItemSelect(item.id.toString())}
+                          key={client.id}
+                          value={client.name}
+                          onSelect={() => handleClientSelect(client.id.toString())}
                         >
-                          <Check className={cn("mr-2 h-4 w-4", currentItem.item_id === item.id ? "opacity-100" : "opacity-0")} />
-                          {item.name}
+                          <Check className={cn("mr-2 h-4 w-4", formData.client_id === client.id ? "opacity-100" : "opacity-0")} />
+                          {client.name}
                         </CommandItem>
                       ))}
                     </CommandGroup>
@@ -355,167 +288,240 @@ export function CashierModal({ open, onOpenChange, onSave }: CashierModalProps) 
               </Popover>
             </div>
 
-            {/* Quantidade e Preço */}
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label htmlFor="quantity">Quantidade</Label>
-                <Input 
-                  id="quantity" 
-                  type="number" 
-                  min="1" 
-                  value={currentItem.quantity} 
-                  onChange={(e) => setCurrentItem(prev => ({ ...prev, quantity: parseInt(e.target.value) || 1 }))} 
-                />
+            {/* Adicionar itens ao carrinho */}
+            <div className="space-y-4">
+              <Label>Adicionar Itens ao Carrinho</Label>
+              
+              {/* Tipo de item */}
+              <div className="grid grid-cols-3 gap-2">
+                <Button
+                  type="button"
+                  variant={currentItem.type === 'service' ? "default" : "outline"}
+                  className={currentItem.type === 'service' ? "bg-brand-gradient" : ""}
+                  onClick={() => setCurrentItem(prev => ({ ...prev, type: 'service', item_id: 0, itemName: '', price: 0 }))}
+                >
+                  <Sparkles className="h-4 w-4 mr-2" />
+                  Procedimento
+                </Button>
+                <Button
+                  type="button"
+                  variant={currentItem.type === 'package' ? "default" : "outline"}
+                  className={currentItem.type === 'package' ? "bg-brand-gradient" : ""}
+                  onClick={() => setCurrentItem(prev => ({ ...prev, type: 'package', item_id: 0, itemName: '', price: 0 }))}
+                >
+                  <Package className="h-4 w-4 mr-2" />
+                  Pacote
+                </Button>
+                <Button
+                  type="button"
+                  variant={currentItem.type === 'product' ? "default" : "outline"}
+                  className={currentItem.type === 'product' ? "bg-brand-gradient" : ""}
+                  onClick={() => setCurrentItem(prev => ({ ...prev, type: 'product', item_id: 0, itemName: '', price: 0 }))}
+                >
+                  <Box className="h-4 w-4 mr-2" />
+                  Produto
+                </Button>
               </div>
+
+              {/* Seleção do item */}
               <div className="space-y-2">
-                <Label htmlFor="price">Preço (R$) *</Label>
-                <Input 
-                  id="price" 
-                  type="number" 
-                  min="0" 
-                  step="0.01" 
-                  value={currentItem.price} 
-                  onChange={(e) => setCurrentItem(prev => ({ ...prev, price: parseFloat(e.target.value) || 0 }))} 
-                  required 
-                />
+                <Label>{getItemTypeName()} *</Label>
+                <Popover open={itemComboboxOpen} onOpenChange={setItemComboboxOpen}>
+                  <PopoverTrigger asChild>
+                    <Button variant="outline" role="combobox" aria-expanded={itemComboboxOpen} className="w-full justify-between">
+                      {currentItem.item_id ? 
+                        getItemOptions().find(item => item.id === currentItem.item_id)?.name
+                        : `Selecione um ${getItemTypeName()}...`}
+                      <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-full p-0">
+                    <Command>
+                      <CommandInput placeholder={`Buscar ${getItemTypeName()}...`} />
+                      <CommandEmpty>{`Nenhum ${getItemTypeName()} encontrado.`}</CommandEmpty>
+                      <CommandGroup>
+                        {getItemOptions().map((item) => (
+                          <CommandItem
+                            key={item.id}
+                            value={item.name}
+                            onSelect={() => handleItemSelect(item.id.toString())}
+                          >
+                            <Check className={cn("mr-2 h-4 w-4", currentItem.item_id === item.id ? "opacity-100" : "opacity-0")} />
+                            {item.name}
+                          </CommandItem>
+                        ))}
+                      </CommandGroup>
+                    </Command>
+                  </PopoverContent>
+                </Popover>
               </div>
+
+              {/* Quantidade e Preço */}
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="quantity">Quantidade</Label>
+                  <Input 
+                    id="quantity" 
+                    type="number" 
+                    min="1" 
+                    value={currentItem.quantity} 
+                    onChange={(e) => setCurrentItem(prev => ({ ...prev, quantity: parseInt(e.target.value) || 1 }))} 
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="price">Preço (R$) *</Label>
+                  <Input 
+                    id="price" 
+                    type="number" 
+                    min="0" 
+                    step="0.01" 
+                    value={currentItem.price} 
+                    onChange={(e) => setCurrentItem(prev => ({ ...prev, price: parseFloat(e.target.value) || 0 }))} 
+                    required 
+                  />
+                </div>
+              </div>
+
+              {/* Botão para adicionar ao carrinho */}
+              <Button 
+                type="button" 
+                onClick={addToCart}
+                className="w-full bg-brand-gradient hover:opacity-90"
+              >
+                <Plus className="h-4 w-4 mr-2" />
+                Adicionar ao Carrinho
+              </Button>
             </div>
 
-            {/* Botão para adicionar ao carrinho */}
-            <Button 
-              type="button" 
-              onClick={addToCart}
-              className="w-full bg-brand-gradient hover:opacity-90"
-            >
-              <Plus className="h-4 w-4 mr-2" />
-              Adicionar ao Carrinho
-            </Button>
-          </div>
-
-          {/* Carrinho */}
-          {formData.items.length > 0 && (
-            <div className="space-y-3">
-              <Label>Carrinho ({formData.items.length} itens)</Label>
-              <div className="border rounded-lg divide-y">
-                {formData.items.map((item) => (
-                  <div key={item.id} className="p-3 flex items-center justify-between">
-                    <div className="flex-1">
-                      <div className="flex items-center gap-2">
-                        {getItemTypeIcon()}
-                        <span className="font-medium">{item.itemName}</span>
-                        <Badge variant="outline" className="text-xs">
-                          {getItemTypeName()}
-                        </Badge>
-                      </div>
-                      <p className="text-sm text-muted-foreground">
-                        R$ {item.price.toFixed(2).replace('.', ',')} cada
-                      </p>
-                    </div>
-                    
-                    <div className="flex items-center gap-3">
-                      <div className="flex items-center gap-2">
-                        <Button
-                          type="button"
-                          variant="outline"
-                          size="icon"
-                          className="h-6 w-6"
-                          onClick={() => updateQuantity(item.id, item.quantity - 1)}
-                        >
-                          <Minus className="h-3 w-3" />
-                        </Button>
-                        <span className="w-8 text-center font-medium">{item.quantity}</span>
-                        <Button
-                          type="button"
-                          variant="outline"
-                          size="icon"
-                          className="h-6 w-6"
-                          onClick={() => updateQuantity(item.id, item.quantity + 1)}
-                        >
-                          <Plus className="h-3 w-3" />
-                        </Button>
+            {/* Carrinho */}
+            {formData.items.length > 0 && (
+              <div className="space-y-3">
+                <Label>Carrinho ({formData.items.length} itens)</Label>
+                <div className="border rounded-lg divide-y max-h-40 overflow-y-auto">
+                  {formData.items.map((item) => (
+                    <div key={item.id} className="p-3 flex items-center justify-between">
+                      <div className="flex-1">
+                        <div className="flex items-center gap-2">
+                          {getItemTypeIcon()}
+                          <span className="font-medium">{item.itemName}</span>
+                          {item.quantity > 1 && (
+                            <span className="text-muted-foreground">x{item.quantity}</span>
+                          )}
+                          <Badge variant="outline" className="text-xs">
+                            {getItemTypeName()}
+                          </Badge>
+                        </div>
+                        <p className="text-sm text-muted-foreground">
+                          R$ {item.price.toFixed(2).replace('.', ',')} cada
+                        </p>
                       </div>
                       
-                      <span className="font-medium text-green-600 min-w-[80px] text-right">
-                        R$ {(item.price * item.quantity).toFixed(2).replace('.', ',')}
+                      <div className="flex items-center gap-3">
+                        <div className="flex items-center gap-2">
+                          <Button
+                            type="button"
+                            variant="outline"
+                            size="icon"
+                            className="h-6 w-6"
+                            onClick={() => updateQuantity(item.id, item.quantity - 1)}
+                          >
+                            <Minus className="h-3 w-3" />
+                          </Button>
+                          <span className="w-8 text-center font-medium">{item.quantity}</span>
+                          <Button
+                            type="button"
+                            variant="outline"
+                            size="icon"
+                            className="h-6 w-6"
+                            onClick={() => updateQuantity(item.id, item.quantity + 1)}
+                          >
+                            <Plus className="h-3 w-3" />
+                          </Button>
+                        </div>
+                        
+                        <span className="font-medium text-green-600 min-w-[80px] text-right">
+                          R$ {(item.price * item.quantity).toFixed(2).replace('.', ',')}
+                        </span>
+                        
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="icon"
+                          className="h-6 w-6 text-destructive"
+                          onClick={() => removeFromCart(item.id)}
+                        >
+                          <Trash2 className="h-3 w-3" />
+                        </Button>
+                      </div>
+                    </div>
+                  ))}
+                  
+                  {/* Total */}
+                  <div className="p-3 bg-muted/50 sticky bottom-0">
+                    <div className="flex items-center justify-between font-semibold">
+                      <span>Total:</span>
+                      <span className="text-green-600 text-lg">
+                        R$ {total.toFixed(2).replace('.', ',')}
                       </span>
-                      
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        size="icon"
-                        className="h-6 w-6 text-destructive"
-                        onClick={() => removeFromCart(item.id)}
-                      >
-                        <Trash2 className="h-3 w-3" />
-                      </Button>
                     </div>
-                  </div>
-                ))}
-                
-                {/* Total */}
-                <div className="p-3 bg-muted/50">
-                  <div className="flex items-center justify-between font-semibold">
-                    <span>Total:</span>
-                    <span className="text-green-600 text-lg">
-                      R$ {total.toFixed(2).replace('.', ',')}
-                    </span>
                   </div>
                 </div>
               </div>
+            )}
+
+            {/* Forma de Pagamento */}
+            <div className="space-y-2">
+              <Label>Forma de Pagamento *</Label>
+              <Select 
+                value={formData.payment_method} 
+                onValueChange={(value) => setFormData(prev => ({ ...prev, payment_method: value }))}
+              >
+                <SelectTrigger>
+                  <SelectValue>
+                    <div className="flex items-center gap-2">
+                      {getPaymentMethodIcon(formData.payment_method)}
+                      {getPaymentMethodName(formData.payment_method)}
+                    </div>
+                  </SelectValue>
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="dinheiro">
+                    <div className="flex items-center gap-2">
+                      <Banknote className="h-4 w-4" />
+                      Dinheiro
+                    </div>
+                  </SelectItem>
+                  <SelectItem value="pix">
+                    <div className="flex items-center gap-2">
+                      <QrCode className="h-4 w-4" />
+                      PIX
+                    </div>
+                  </SelectItem>
+                  <SelectItem value="cartao">
+                    <div className="flex items-center gap-2">
+                      <CreditCard className="h-4 w-4" />
+                      Cartão
+                    </div>
+                  </SelectItem>
+                </SelectContent>
+              </Select>
             </div>
-          )}
 
-          {/* Forma de Pagamento */}
-          <div className="space-y-2">
-            <Label>Forma de Pagamento *</Label>
-            <Select 
-              value={formData.payment_method} 
-              onValueChange={(value) => setFormData(prev => ({ ...prev, payment_method: value }))}
-            >
-              <SelectTrigger>
-                <SelectValue>
-                  <div className="flex items-center gap-2">
-                    {getPaymentMethodIcon(formData.payment_method)}
-                    {getPaymentMethodName(formData.payment_method)}
-                  </div>
-                </SelectValue>
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="dinheiro">
-                  <div className="flex items-center gap-2">
-                    <Banknote className="h-4 w-4" />
-                    Dinheiro
-                  </div>
-                </SelectItem>
-                <SelectItem value="pix">
-                  <div className="flex items-center gap-2">
-                    <QrCode className="h-4 w-4" />
-                    PIX
-                  </div>
-                </SelectItem>
-                <SelectItem value="cartao">
-                  <div className="flex items-center gap-2">
-                    <CreditCard className="h-4 w-4" />
-                    Cartão
-                  </div>
-                </SelectItem>
-              </SelectContent>
-            </Select>
+            {/* Observações */}
+            <div className="space-y-2">
+              <Label htmlFor="notes">Observações</Label>
+              <Textarea 
+                id="notes" 
+                value={formData.notes} 
+                onChange={(e) => setFormData(prev => ({ ...prev, notes: e.target.value }))} 
+                rows={3} 
+                placeholder="Observações sobre a venda..."
+              />
+            </div>
           </div>
 
-          {/* Observações */}
-          <div className="space-y-2">
-            <Label htmlFor="notes">Observações</Label>
-            <Textarea 
-              id="notes" 
-              value={formData.notes} 
-              onChange={(e) => setFormData(prev => ({ ...prev, notes: e.target.value }))} 
-              rows={3} 
-              placeholder="Observações sobre a venda..."
-            />
-          </div>
-
-          <div className="flex gap-3 pt-4">
+          {/* Botões de ação - SEMPRE VISÍVEIS */}
+          <DialogFooter className="flex-shrink-0 pt-4 border-t border-border/30">
             <Button type="button" variant="outline" onClick={() => onOpenChange(false)} className="flex-1">
               Cancelar
             </Button>
@@ -526,7 +532,7 @@ export function CashierModal({ open, onOpenChange, onSave }: CashierModalProps) 
             >
               Finalizar Venda
             </Button>
-          </div>
+          </DialogFooter>
         </form>
       </DialogContent>
     </Dialog>

@@ -117,7 +117,7 @@ export default function Cashier() {
         </div>
 
         {/* Vendas registradas */}
-        <div className="space-y-4">
+        <div className="space-y-4 max-h-[60vh] overflow-y-auto">
           {sales.map((sale) => (
             <GlassCard key={sale.id} className="p-4 hover-lift">
               <div className="flex items-start justify-between">
@@ -217,28 +217,30 @@ export default function Cashier() {
           </GlassCard>
         )}
 
-        {/* Resumo do dia */}
+        {/* Resumo do dia - FIXO na parte inferior */}
         {sales.length > 0 && (
-          <GlassCard className="p-4">
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              <div className="text-center">
-                <p className="text-sm text-muted-foreground">Total de Vendas</p>
-                <p className="text-2xl font-bold">{sales.length}</p>
+          <div className="sticky bottom-0 bg-background/80 backdrop-blur-sm p-4 border-t border-border/50">
+            <GlassCard className="p-4">
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div className="text-center">
+                  <p className="text-sm text-muted-foreground">Total de Vendas</p>
+                  <p className="text-2xl font-bold">{sales.length}</p>
+                </div>
+                <div className="text-center">
+                  <p className="text-sm text-muted-foreground">Faturamento do Dia</p>
+                  <p className="text-2xl font-bold text-green-600">
+                    R$ {totalRevenue.toFixed(2).replace('.', ',')}
+                  </p>
+                </div>
+                <div className="text-center">
+                  <p className="text-sm text-muted-foreground">Ticket Médio</p>
+                  <p className="text-2xl font-bold">
+                    R$ {(totalRevenue / sales.length).toFixed(2).replace('.', ',')}
+                  </p>
+                </div>
               </div>
-              <div className="text-center">
-                <p className="text-sm text-muted-foreground">Faturamento do Dia</p>
-                <p className="text-2xl font-bold text-green-600">
-                  R$ {totalRevenue.toFixed(2).replace('.', ',')}
-                </p>
-              </div>
-              <div className="text-center">
-                <p className="text-sm text-muted-foreground">Ticket Médio</p>
-                <p className="text-2xl font-bold">
-                  R$ {(totalRevenue / sales.length).toFixed(2).replace('.', ',')}
-                </p>
-              </div>
-            </div>
-          </GlassCard>
+            </GlassCard>
+          </div>
         )}
 
         {/* Modal de nova venda com carrinho */}

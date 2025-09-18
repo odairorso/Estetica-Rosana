@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/lib/supabase';
 import { useToast } from "@/hooks/use-toast";
 import { usePackages } from './usePackages';
+import { isValid, parseISO } from 'date-fns';
 
 export interface Appointment {
   id: number;
@@ -70,10 +71,19 @@ export function useAppointments() {
 
       if (dbError) throw dbError;
 
-      const formattedData = (data || []).map(a => ({
-        ...a,
-        serviceName: a.services ? a.services.name : 'Serviço Removido',
-      }));
+      // Filtrar e formatar dados para garantir datas válidas
+      const formattedData = (data || [])
+        .map(a => ({
+          ...a,
+          serviceName: a.services ? a.services.name : 'Serviço Removido',
+          // Garantir que appointment_date seja válida
+          appointment_date: a.appointment_date && isValid(parseISO(a.appointment_date)) 
+            ? a.appointment_date 
+            : new Date().toISOString().split('T')[0],
+          // Garantir que appointment_time seja válida
+          appointment_time: a.appointment_time || "09:00",
+        }))
+        .filter(a => a.appointment_date && a.appointment_time); // Remover agendamentos sem data/hora
       
       setAppointments(formattedData as any);
     } catch (err: any) {
@@ -91,16 +101,25 @@ export function useAppointments() {
 
   const addAppointment = async (appointmentData: any) => {
     if (!supabase) {
-      alert('Modo Offline: O agendamento não pode ser salvo.');
+      alert('Modo Offline: O agendamento não pode essere salvo.');
       return null;
     }
     
     try {
       const { package_id, serviceName, ...restOfData } = appointmentData;
 
+      // Validar e formatar dados antes de enviar
+      const validatedData = {
+        ...restOfData,
+        appointment_date: restOfData.appointment_date || new Date().toISOString().split('T')[0],
+        appointment_time: restOfData.appointment_time || "09:00",
+        price: restOfData.price || 0,
+        duration: restOfData.duration || 60,
+      };
+
       const { data: appointment, error } = await supabase
         .from('appointments')
-        .insert([restOfData])
+        .insert([validatedData])
         .select()
         .single();
 
@@ -147,12 +166,21 @@ export function useAppointments() {
 
   const updateAppointment = async (id: number, appointmentData: Partial<Appointment>) => {
     if (!supabase) {
-      alert('Modo Offline: O agendamento não pode ser atualizado.');
+      alert('Modo Offline: O agendamento não pode essere atualizado.');
       return;
     }
     
     try {
-      const { error } = await supabase.from('appointments').update(appointmentData).eq('id', id);
+      // Validar dados antes de atualizar
+      const validatedData = {
+        ...appointmentData,
+        appointment_date: appointmentData.appointment_date && isValid(parseISO(appointmentData.appointment_date))
+          ? appointmentData.appointment_date
+          : new Date().toISOString().split('T')[0],
+        appointment_time: appointmentData.appointment_time || "09:00",
+      };
+
+      const { error } = await supabase.from('appointments').update(validatedData).eq('id', id);
       if (error) throw error;
       await loadAppointments(); // Recarrega a lista
     } catch (err) {

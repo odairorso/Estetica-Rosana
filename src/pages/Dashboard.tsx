@@ -3,6 +3,11 @@ import { useNavigate } from "react-router-dom";
 import { GlassCard } from "@/components/ui/glass-card";
 import { NeonButton } from "@/components/ui/neon-button";
 import { Progress } from "@/components/ui/progress";
+import { useFinance } from "@/hooks/useFinance";
+import { useClients } from "@/hooks/useClients";
+import { usePackages } from "@/hooks/usePackages";
+import { useAppointments } from "@/hooks/useAppointments";
+import { isToday, isThisMonth, parseISO } from "date-fns";
 import { 
   CalendarClock, 
   Sparkles, 
@@ -22,6 +27,54 @@ import {
 
 export default function Dashboard() {
   const navigate = useNavigate();
+  
+  // Hooks para dados reais
+  const { getMetrics } = useFinance();
+  const { clients } = useClients();
+  const { packages } = usePackages();
+  const { appointments } = useAppointments();
+  
+  // Calcular métricas reais
+  const metrics = getMetrics();
+  
+  // Clientes novos hoje
+  const newClientsToday = clients.filter(client => {
+    try {
+      return client.createdAt && client.createdAt.trim() !== '' && isToday(parseISO(client.createdAt));
+    } catch (error) {
+      console.warn('Invalid date format for client:', client.id, client.createdAt);
+      return false;
+    }
+  }).length;
+  
+  // Total de clientes atendidos hoje
+  const clientsToday = appointments.filter(appointment => {
+    try {
+      return appointment.date && appointment.date.trim() !== '' && isToday(parseISO(appointment.date)) && 
+        (appointment.status === 'concluido' || appointment.status === 'confirmado');
+    } catch (error) {
+      console.warn('Invalid date format for appointment:', appointment.id, appointment.date);
+      return false;
+    }
+  }).length;
+  
+  // Pacotes vendidos este mês
+  const packagesThisMonth = packages.filter(pkg => {
+    try {
+      return pkg.created_at && pkg.created_at.trim() !== '' && isThisMonth(parseISO(pkg.created_at));
+    } catch (error) {
+      console.warn('Invalid date format for package:', pkg.id, pkg.created_at);
+      return false;
+    }
+  }).length;
+  
+  // Formatação de moeda
+  const formatCurrency = (value: number) => {
+    return new Intl.NumberFormat('pt-BR', {
+      style: 'currency',
+      currency: 'BRL'
+    }).format(value);
+  };
 
   return (
     <>
@@ -62,41 +115,41 @@ export default function Dashboard() {
       {/* Grid de Métricas Principais */}
       <section className="mb-8">
         <div className="grid gap-6 md:grid-cols-2 xl:grid-cols-4">
-          <GlassCard className="hover-lift">
+          <GlassCard className="hover-lift cursor-pointer transition-all duration-300 hover:scale-105" onClick={() => navigate('/financeiro')}>
             <div className="flex items-center gap-4">
               <div className="p-3 rounded-full bg-brand-gradient neon-glow">
                 <TrendingUp className="h-6 w-6 text-white icon-glow" />
               </div>
               <div>
                 <p className="text-sm text-muted-foreground">Faturamento Hoje</p>
-                <p className="text-2xl font-bold text-gradient-brand">R$ 2.450</p>
-                <p className="text-xs text-green-600">+12% vs ontem</p>
+                <p className="text-2xl font-bold text-gradient-brand">{formatCurrency(metrics.todayIncome)}</p>
+                <p className="text-xs text-green-600">Clique para ver detalhes</p>
               </div>
             </div>
           </GlassCard>
 
-          <GlassCard className="hover-lift">
+          <GlassCard className="hover-lift cursor-pointer transition-all duration-300 hover:scale-105" onClick={() => navigate('/clientes')}>
             <div className="flex items-center gap-4">
               <div className="p-3 rounded-full bg-neon-gradient neon-glow">
                 <Users className="h-6 w-6 text-white icon-glow" />
               </div>
               <div>
                 <p className="text-sm text-muted-foreground">Clientes Hoje</p>
-                <p className="text-2xl font-bold text-gradient-brand">24</p>
-                <p className="text-xs text-blue-600">8 novos clientes</p>
+                <p className="text-2xl font-bold text-gradient-brand">{clientsToday}</p>
+                <p className="text-xs text-blue-600">{newClientsToday} novos clientes</p>
               </div>
             </div>
           </GlassCard>
 
-          <GlassCard className="hover-lift">
+          <GlassCard className="hover-lift cursor-pointer transition-all duration-300 hover:scale-105" onClick={() => navigate('/pacotes')}>
             <div className="flex items-center gap-4">
               <div className="p-3 rounded-full bg-brand-gradient neon-glow">
                 <Package className="h-6 w-6 text-white icon-glow" />
               </div>
               <div>
                 <p className="text-sm text-muted-foreground">Pacotes Vendidos</p>
-                <p className="text-2xl font-bold text-gradient-brand">12</p>
-                <p className="text-xs text-purple-600">Meta: 15/mês</p>
+                <p className="text-2xl font-bold text-gradient-brand">{packagesThisMonth}</p>
+                <p className="text-xs text-purple-600">Este mês</p>
               </div>
             </div>
           </GlassCard>
@@ -123,31 +176,42 @@ export default function Dashboard() {
           {/* Próximos Atendimentos */}
           <GlassCard title="Próximos Atendimentos" className="hover-lift">
             <div className="space-y-4">
-              {[
-                { time: "14:00", service: "Limpeza de Pele", client: "Ana Silva", room: "Sala 2", status: "confirmado" },
-                { time: "15:30", service: "Drenagem Linfática", client: "Beatriz Costa", room: "Sala 1", status: "confirmado" },
-                { time: "16:00", service: "Botox", client: "Carlos Oliveira", room: "Sala 3", status: "pendente" },
-                { time: "17:00", service: "Preenchimento", client: "Diana Santos", room: "Sala 2", status: "confirmado" }
-              ].map((appointment, index) => (
-                <div key={index} className="flex items-center justify-between p-4 rounded-lg bg-card/50 border border-border/30">
-                  <div className="flex items-center gap-4">
-                    <div className="text-center">
-                      <p className="font-bold text-gradient-brand">{appointment.time}</p>
-                      <div className={`w-2 h-2 rounded-full mx-auto mt-1 ${
-                        appointment.status === 'confirmado' ? 'bg-green-500' : 'bg-yellow-500'
-                      }`} />
+              {appointments
+                .filter(appointment => 
+                  (appointment.status === 'agendado' || appointment.status === 'confirmado') &&
+                  new Date(appointment.date + 'T' + appointment.time) >= new Date()
+                )
+                .sort((a, b) => new Date(a.date + 'T' + a.time).getTime() - new Date(b.date + 'T' + b.time).getTime())
+                .slice(0, 4)
+                .map((appointment) => (
+                  <div key={appointment.id} className="flex items-center justify-between p-4 rounded-lg bg-card/50 border border-border/30 hover:bg-card/70 transition-colors cursor-pointer" onClick={() => navigate('/agendamentos')}>
+                    <div className="flex items-center gap-4">
+                      <div className="text-center">
+                        <p className="font-bold text-gradient-brand">{appointment.time}</p>
+                        <div className={`w-2 h-2 rounded-full mx-auto mt-1 ${
+                          appointment.status === 'confirmado' ? 'bg-green-500' : 'bg-yellow-500'
+                        }`} />
+                      </div>
+                      <div>
+                        <p className="font-semibold">{appointment.serviceName}</p>
+                        <p className="text-sm text-muted-foreground">{appointment.clientName}</p>
+                      </div>
                     </div>
-                    <div>
-                      <p className="font-semibold">{appointment.service}</p>
-                      <p className="text-sm text-muted-foreground">{appointment.client}</p>
+                    <div className="text-right">
+                      <p className="text-sm font-medium">{formatCurrency(appointment.price)}</p>
+                      <p className="text-xs text-muted-foreground capitalize">{appointment.status}</p>
                     </div>
                   </div>
-                  <div className="text-right">
-                    <p className="text-sm font-medium">{appointment.room}</p>
-                    <p className="text-xs text-muted-foreground capitalize">{appointment.status}</p>
-                  </div>
+                ))}
+              {appointments.filter(appointment => 
+                (appointment.status === 'agendado' || appointment.status === 'confirmado') &&
+                new Date(appointment.date + 'T' + appointment.time) >= new Date()
+              ).length === 0 && (
+                <div className="text-center py-8 text-muted-foreground">
+                  <Calendar className="h-12 w-12 mx-auto mb-4 opacity-50" />
+                  <p>Nenhum atendimento agendado</p>
                 </div>
-              ))}
+              )}
             </div>
             <div className="mt-6">
               <NeonButton 
@@ -163,33 +227,33 @@ export default function Dashboard() {
           </GlassCard>
 
           {/* Metas do Mês */}
-          <GlassCard title="Metas do Mês" className="hover-lift">
+          <GlassCard title="Metas do Mês" className="hover-lift cursor-pointer" onClick={() => navigate('/financeiro')}>
             <div className="space-y-6">
               <div>
                 <div className="flex justify-between mb-2">
                   <span className="text-sm font-medium">Faturamento</span>
-                  <span className="text-sm text-muted-foreground">R$ 18.750 / R$ 25.000</span>
+                  <span className="text-sm text-muted-foreground">{formatCurrency(metrics.monthIncome)} / {formatCurrency(25000)}</span>
                 </div>
-                <Progress value={75} className="h-2" />
-                <p className="text-xs text-muted-foreground mt-1">75% da meta mensal</p>
+                <Progress value={Math.min((metrics.monthIncome / 25000) * 100, 100)} className="h-2" />
+                <p className="text-xs text-muted-foreground mt-1">{Math.round((metrics.monthIncome / 25000) * 100)}% da meta mensal</p>
               </div>
               
               <div>
                 <div className="flex justify-between mb-2">
                   <span className="text-sm font-medium">Novos Clientes</span>
-                  <span className="text-sm text-muted-foreground">28 / 40</span>
+                  <span className="text-sm text-muted-foreground">{clients.filter(c => isThisMonth(parseISO(c.createdAt))).length} / 40</span>
                 </div>
-                <Progress value={70} className="h-2" />
-                <p className="text-xs text-muted-foreground mt-1">70% da meta mensal</p>
+                <Progress value={Math.min((clients.filter(c => isThisMonth(parseISO(c.createdAt))).length / 40) * 100, 100)} className="h-2" />
+                <p className="text-xs text-muted-foreground mt-1">{Math.round((clients.filter(c => isThisMonth(parseISO(c.createdAt))).length / 40) * 100)}% da meta mensal</p>
               </div>
               
               <div>
                 <div className="flex justify-between mb-2">
                   <span className="text-sm font-medium">Pacotes Vendidos</span>
-                  <span className="text-sm text-muted-foreground">12 / 15</span>
+                  <span className="text-sm text-muted-foreground">{packagesThisMonth} / 15</span>
                 </div>
-                <Progress value={80} className="h-2" />
-                <p className="text-xs text-muted-foreground mt-1">80% da meta mensal</p>
+                <Progress value={Math.min((packagesThisMonth / 15) * 100, 100)} className="h-2" />
+                <p className="text-xs text-muted-foreground mt-1">{Math.round((packagesThisMonth / 15) * 100)}% da meta mensal</p>
               </div>
             </div>
           </GlassCard>

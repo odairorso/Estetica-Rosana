@@ -1,4 +1,6 @@
 import { useState, useEffect } from 'react';
+import { supabase } from '@/lib/supabase';
+import { getCurrentDateString, dateToString } from '@/lib/utils';
 
 export interface Product {
   id: number;
@@ -82,7 +84,7 @@ export function useInventory() {
     const newProduct: Product = {
       ...productData,
       id: Math.max(0, ...products.map(p => p.id)) + 1,
-      lastUpdated: new Date().toISOString().split('T')[0]
+      lastUpdated: getCurrentDateString()
     };
     setProducts([...products, newProduct]);
     return newProduct;
@@ -90,7 +92,7 @@ export function useInventory() {
 
   const updateProduct = (id: number, productData: Partial<Product>) => {
     setProducts(products.map(product => 
-      product.id === id ? { ...product, ...productData, lastUpdated: new Date().toISOString().split('T')[0] } : product
+      product.id === id ? { ...product, ...productData, lastUpdated: getCurrentDateString() } : product
     ));
   };
 

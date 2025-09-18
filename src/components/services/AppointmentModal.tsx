@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
-import { Calendar, Clock, User, MessageSquare, CalendarIcon, Sparkles } from "lucide-react";
+import { Calendar, Clock, User, MessageSquare, CalendarIcon, Sparkles, Package as PackageIcon } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -10,14 +10,17 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Calendar as CalendarComponent } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { cn } from "@/lib/utils";
 import { useServices } from "@/hooks/useServices";
+import { usePackages } from "@/hooks/usePackages";
 import { useClients } from "@/hooks/useClients";
 import { useToast } from "@/hooks/use-toast";
 
 interface Appointment {
   id?: number;
-  service_id: number;
+  service_id?: number;
+  package_id?: string;
   client_id: number;
   client_name: string;
   client_phone: string;
@@ -27,6 +30,7 @@ interface Appointment {
   price: number;
   notes: string;
   status: "agendado" | "confirmado" | "concluido" | "cancelado";
+  type: "service" | "package";
 }
 
 interface AppointmentModalProps {
@@ -44,11 +48,14 @@ const timeSlots = Array.from({ length: 21 }, (_, i) => {
 
 export function AppointmentModal({ open, onOpenChange, onSave }: AppointmentModalProps) {
   const { services, isLoading: servicesLoading } = useServices();
+  const { packages, isLoading: packagesLoading } = usePackages();
   const { clients, isLoading: clientsLoading } = useClients();
   const { toast } = useToast();
   
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
+  const [appointmentType, setAppointmentType] = useState<"service" | "package">("service");
   const [selectedServiceId, setSelectedServiceId] = useState<string>("");
+  const [selectedPackageId, setSelectedPackageId] = useState<string>("");
   const [selectedClientId, setSelectedClientId] = useState<string>("");
   const [selectedTime, setSelectedTime] = useState<string>("09:00");
   const [notes, setNotes] = useState<string>("");
@@ -57,7 +64,9 @@ export function AppointmentModal({ open, onOpenChange, onSave }: AppointmentModa
   useEffect(() => {
     if (open) {
       setSelectedDate(new Date());
+      setAppointmentType("service");
       setSelectedServiceId("");
+      setSelectedPackageId("");
       setSelectedClientId("");
       setSelectedTime("09:00");
       setNotes("");
@@ -65,14 +74,31 @@ export function AppointmentModal({ open, onOpenChange, onSave }: AppointmentModa
   }, [open]);
 
   const selectedService = services.find(s => s.id === selectedServiceId);
+  const selectedPackage = packages.find(p => p.id === selectedPackageId);
   const selectedClient = clients.find(c => c.id === selectedClientId);
+
+  // Filtrar pacotes ativos do cliente selecionado
+  const availablePackages = packages.filter(pkg => 
+    pkg.status === "active" && 
+    pkg.remaining_sessions > 0 &&
+    (!selectedClientId || pkg.client_id === parseInt(selectedClientId))
+  );
 
   const handleSave = () => {
     // Validações
-    if (!selectedServiceId) {
+    if (appointmentType === "service" && !selectedServiceId) {
       toast({
         title: "Erro",
         description: "Por favor, selecione um serviço.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (appointmentType === "package" && !selectedPackageId) {
+      toast({
+        title: "Erro",
+        description: "Por favor, selecione um pacote.",
         variant: "destructive",
       });
       return;
@@ -97,16 +123,17 @@ export function AppointmentModal({ open, onOpenChange, onSave }: AppointmentModa
     }
 
     const appointment: Omit<Appointment, 'id'> = {
-      service_id: parseInt(selectedServiceId),
+      ...(appointmentType === "service" ? { service_id: parseInt(selectedServiceId) } : { package_id: selectedPackageId }),
       client_id: parseInt(selectedClientId),
       client_name: selectedClient?.name || "",
       client_phone: selectedClient?.phone || "",
       appointment_date: format(selectedDate, 'yyyy-MM-dd'),
       appointment_time: selectedTime,
-      duration: selectedService?.duration || 60,
-      price: selectedService?.price || 0,
+      duration: appointmentType === "service" ? (selectedService?.duration || 60) : 60,
+      price: appointmentType === "service" ? (selectedService?.price || 0) : 0,
       notes: notes,
-      status: "agendado"
+      status: "agendado",
+      type: appointmentType
     };
     
     onSave(appointment);
@@ -129,40 +156,29 @@ export function AppointmentModal({ open, onOpenChange, onSave }: AppointmentModa
         </DialogHeader>
         
         <div className="space-y-4 sm:space-y-6 py-2 sm:py-4">
-          {/* Seleção de Serviço */}
-          <div className="space-y-2 sm:space-y-3">
-            <div className="flex items-center gap-2">
-              <Sparkles className="h-4 w-4 text-primary" />
-              <Label className="text-sm sm:text-base font-medium">Serviço *</Label>
-            </div>
-            <Select value={selectedServiceId} onValueChange={setSelectedServiceId}>
-              <SelectTrigger className="h-11 sm:h-12">
-                <SelectValue placeholder="Escolha um serviço" />
-              </SelectTrigger>
-              <SelectContent>
-                {servicesLoading ? (
-                  <SelectItem value="loading" disabled>Carregando serviços...</SelectItem>
-                ) : services.length === 0 ? (
-                  <SelectItem value="empty" disabled>Nenhum serviço cadastrado</SelectItem>
-                ) : (
-                  services.map((service) => (
-                    <SelectItem key={service.id} value={service.id}>
-                      <div className="flex flex-col">
-                        <span className="font-medium">{service.name}</span>
-                        <span className="text-xs text-muted-foreground">
-                          {service.duration}min • R$ {service.price.toFixed(2).replace('.', ',')}
-                        </span>
-                      </div>
-                    </SelectItem>
-                  ))
-                )}
-              </SelectContent>
-            </Select>
-            {selectedService && (
-              <div className="p-3 bg-primary/5 rounded-lg border border-primary/20">
-                <p className="text-sm text-muted-foreground">{selectedService.description}</p>
+          {/* Tipo de Agendamento */}
+          <div className="space-y-3">
+            <Label className="text-base font-medium">Tipo de Agendamento *</Label>
+            <RadioGroup value={appointmentType} onValueChange={(value: "service" | "package") => {
+              setAppointmentType(value);
+              setSelectedServiceId("");
+              setSelectedPackageId("");
+            }}>
+              <div className="flex items-center space-x-2">
+                <RadioGroupItem value="service" id="service" />
+                <Label htmlFor="service" className="flex items-center gap-2 cursor-pointer">
+                  <Sparkles className="h-4 w-4 text-primary" />
+                  Serviço Avulso
+                </Label>
               </div>
-            )}
+              <div className="flex items-center space-x-2">
+                <RadioGroupItem value="package" id="package" />
+                <Label htmlFor="package" className="flex items-center gap-2 cursor-pointer">
+                  <PackageIcon className="h-4 w-4 text-primary" />
+                  Usar Sessão do Pacote
+                </Label>
+              </div>
+            </RadioGroup>
           </div>
 
           {/* Seleção de Cliente */}
@@ -171,7 +187,13 @@ export function AppointmentModal({ open, onOpenChange, onSave }: AppointmentModa
               <User className="h-4 w-4 text-primary" />
               <Label className="text-sm sm:text-base font-medium">Cliente *</Label>
             </div>
-            <Select value={selectedClientId} onValueChange={setSelectedClientId}>
+            <Select value={selectedClientId} onValueChange={(value) => {
+              setSelectedClientId(value);
+              // Reset package selection when client changes
+              if (appointmentType === "package") {
+                setSelectedPackageId("");
+              }
+            }}>
               <SelectTrigger className="h-11 sm:h-12">
                 <SelectValue placeholder="Selecione um cliente" />
               </SelectTrigger>
@@ -193,6 +215,84 @@ export function AppointmentModal({ open, onOpenChange, onSave }: AppointmentModa
               </SelectContent>
             </Select>
           </div>
+
+          {/* Seleção de Serviço ou Pacote */}
+          {appointmentType === "service" ? (
+            <div className="space-y-2 sm:space-y-3">
+              <div className="flex items-center gap-2">
+                <Sparkles className="h-4 w-4 text-primary" />
+                <Label className="text-sm sm:text-base font-medium">Serviço *</Label>
+              </div>
+              <Select value={selectedServiceId} onValueChange={setSelectedServiceId}>
+                <SelectTrigger className="h-11 sm:h-12">
+                  <SelectValue placeholder="Escolha um serviço" />
+                </SelectTrigger>
+                <SelectContent>
+                  {servicesLoading ? (
+                    <SelectItem value="loading" disabled>Carregando serviços...</SelectItem>
+                  ) : services.length === 0 ? (
+                    <SelectItem value="empty" disabled>Nenhum serviço cadastrado</SelectItem>
+                  ) : (
+                    services.map((service) => (
+                      <SelectItem key={service.id} value={service.id}>
+                        <div className="flex flex-col">
+                          <span className="font-medium">{service.name}</span>
+                          <span className="text-xs text-muted-foreground">
+                            {service.duration}min • R$ {service.price.toFixed(2).replace('.', ',')}
+                          </span>
+                        </div>
+                      </SelectItem>
+                    ))
+                  )}
+                </SelectContent>
+              </Select>
+              {selectedService && (
+                <div className="p-3 bg-primary/5 rounded-lg border border-primary/20">
+                  <p className="text-sm text-muted-foreground">{selectedService.description}</p>
+                </div>
+              )}
+            </div>
+          ) : (
+            <div className="space-y-2 sm:space-y-3">
+              <div className="flex items-center gap-2">
+                <PackageIcon className="h-4 w-4 text-primary" />
+                <Label className="text-sm sm:text-base font-medium">Pacote *</Label>
+              </div>
+              <Select value={selectedPackageId} onValueChange={setSelectedPackageId}>
+                <SelectTrigger className="h-11 sm:h-12">
+                  <SelectValue placeholder="Escolha um pacote" />
+                </SelectTrigger>
+                <SelectContent>
+                  {packagesLoading ? (
+                    <SelectItem value="loading" disabled>Carregando pacotes...</SelectItem>
+                  ) : availablePackages.length === 0 ? (
+                    <SelectItem value="empty" disabled>
+                      {selectedClientId ? "Cliente não possui pacotes ativos" : "Selecione um cliente primeiro"}
+                    </SelectItem>
+                  ) : (
+                    availablePackages.map((pkg) => (
+                      <SelectItem key={pkg.id} value={pkg.id}>
+                        <div className="flex flex-col">
+                          <span className="font-medium">{pkg.name}</span>
+                          <span className="text-xs text-muted-foreground">
+                            {pkg.remaining_sessions} sessões restantes
+                          </span>
+                        </div>
+                      </SelectItem>
+                    ))
+                  )}
+                </SelectContent>
+              </Select>
+              {selectedPackage && (
+                <div className="p-3 bg-primary/5 rounded-lg border border-primary/20">
+                  <p className="text-sm text-muted-foreground">{selectedPackage.description}</p>
+                  <p className="text-sm font-medium text-primary mt-1">
+                    Sessões restantes: {selectedPackage.remaining_sessions}
+                  </p>
+                </div>
+              )}
+            </div>
+          )}
 
           {/* Data e Horário */}
           <div className="space-y-3">
@@ -270,7 +370,7 @@ export function AppointmentModal({ open, onOpenChange, onSave }: AppointmentModa
           </div>
 
           {/* Resumo */}
-          {selectedService && selectedClient && (
+          {((appointmentType === "service" && selectedService) || (appointmentType === "package" && selectedPackage)) && selectedClient && (
             <div className="p-4 bg-gradient-to-r from-primary/5 to-primary/10 rounded-lg border border-primary/20">
               <h4 className="font-semibold mb-3 text-primary">Resumo do Agendamento</h4>
               <div className="space-y-2 text-sm">
@@ -283,8 +383,18 @@ export function AppointmentModal({ open, onOpenChange, onSave }: AppointmentModa
                   <span>{selectedClient.phone}</span>
                 </div>
                 <div className="flex justify-between">
-                  <span className="text-muted-foreground">Serviço:</span>
-                  <span className="font-medium">{selectedService.name}</span>
+                  <span className="text-muted-foreground">Tipo:</span>
+                  <span className="font-medium">
+                    {appointmentType === "service" ? "Serviço Avulso" : "Sessão do Pacote"}
+                  </span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">
+                    {appointmentType === "service" ? "Serviço:" : "Pacote:"}
+                  </span>
+                  <span className="font-medium">
+                    {appointmentType === "service" ? selectedService?.name : selectedPackage?.name}
+                  </span>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-muted-foreground">Data:</span>
@@ -292,12 +402,22 @@ export function AppointmentModal({ open, onOpenChange, onSave }: AppointmentModa
                 </div>
                 <div className="flex justify-between">
                   <span className="text-muted-foreground">Duração:</span>
-                  <span>{selectedService.duration} minutos</span>
+                  <span>
+                    {appointmentType === "service" ? selectedService?.duration : "60"} minutos
+                  </span>
                 </div>
-                <div className="flex justify-between font-semibold text-primary">
-                  <span>Valor:</span>
-                  <span>R$ {selectedService.price.toFixed(2).replace('.', ',')}</span>
-                </div>
+                {appointmentType === "service" && (
+                  <div className="flex justify-between font-semibold text-primary">
+                    <span>Valor:</span>
+                    <span>R$ {selectedService?.price.toFixed(2).replace('.', ',')}</span>
+                  </div>
+                )}
+                {appointmentType === "package" && selectedPackage && (
+                  <div className="flex justify-between font-semibold text-primary">
+                    <span>Sessões restantes:</span>
+                    <span>{selectedPackage.remaining_sessions - 1} (após este agendamento)</span>
+                  </div>
+                )}
               </div>
             </div>
           )}
@@ -316,7 +436,11 @@ export function AppointmentModal({ open, onOpenChange, onSave }: AppointmentModa
           <Button 
             onClick={handleSave} 
             className="flex-1 h-11 sm:h-12 bg-primary hover:bg-primary/90 order-1 sm:order-2"
-            disabled={!selectedServiceId || !selectedClientId}
+            disabled={
+              !selectedClientId || 
+              (appointmentType === "service" && !selectedServiceId) ||
+              (appointmentType === "package" && !selectedPackageId)
+            }
           >
             Confirmar Agendamento
           </Button>

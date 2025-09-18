@@ -1,6 +1,6 @@
 import { Helmet } from "react-helmet-async";
 import { useState } from "react";
-import { Plus, Clock, DollarSign, Edit, Calendar } from "lucide-react";
+import { Plus, Clock, DollarSign, Edit, Calendar as CalendarIcon } from "lucide-react";
 import { SearchBar } from "@/components/ui/search-bar";
 import { GlassCard } from "@/components/ui/glass-card";
 import { NeonButton } from "@/components/ui/neon-button";
@@ -189,7 +189,7 @@ export default function Services() {
                       className="flex-1 text-xs h-8"
                       onClick={() => handleScheduleService(service)}
                     >
-                      <Calendar className="h-3 w-3 mr-1" />
+                      <CalendarIcon className="h-3 w-3 mr-1" />
                       Agendar
                     </Button>
                     <Button

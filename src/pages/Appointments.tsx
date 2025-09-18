@@ -1,23 +1,28 @@
 import { Helmet } from "react-helmet-async";
 import { useState, useEffect } from "react";
-import { Plus, Calendar as CalendarIcon, MoreVertical, Filter } from "lucide-react";
+import { Plus, Calendar as CalendarIcon, MoreVertical, Filter, Clock, User, Phone, MapPin, Search } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Calendar } from "@/components/ui/calendar";
+import { Input } from "@/components/ui/input";
+import { Calendar as CalendarComponent } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Card, CardContent } from "@/components/ui/card";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { AppointmentModal } from '../components/services/AppointmentModal';
 import { useAppointments, Appointment } from "@/hooks/useAppointments";
 import { useToast } from "@/hooks/use-toast";
-import { format, isToday, isTomorrow, isYesterday } from "date-fns";
+import { format, isToday, isTomorrow, isYesterday, parseISO, startOfDay, endOfDay } from "date-fns";
 import { ptBR } from "date-fns/locale";
+import { cn } from "@/lib/utils";
 
 export default function Appointments() {
-  const { appointments, isLoading, error, updateAppointment } = useAppointments();
+  const { appointments, isLoading, error, updateAppointment, addAppointment } = useAppointments();
   const { toast } = useToast();
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
   const [statusFilter, setStatusFilter] = useState<string>("all");
-  const [modalOpen, setModalOpen] = useState(false);
+  const [clientSearch, setClientSearch] = useState<string>("");
+  const [isModalOpen, setIsModalOpen] = useState(false);
   const [openDropdown, setOpenDropdown] = useState<string | null>(null);
 
   // Fechar dropdown quando clicar fora
@@ -32,57 +37,75 @@ export default function Appointments() {
     return () => document.removeEventListener('click', handleClickOutside);
   }, [openDropdown]);
 
-  // Função para normalizar datas
-  const normalizeDate = (dateString: string) => {
-    const date = new Date(dateString + 'T00:00:00');
-    return format(date, 'yyyy-MM-dd');
+  // Normalizar data para comparação
+  const normalizeDate = (date: Date) => {
+    return new Date(date.getFullYear(), date.getMonth(), date.getDate());
   };
 
-  // Filtrar agendamentos por data e status
-  const filteredAppointments = appointments.filter(apt => {
-    const aptDate = normalizeDate(apt.appointment_date);
-    const selectedDateStr = format(selectedDate, 'yyyy-MM-dd');
+  // Filtrar agendamentos por data, status e cliente
+  const filteredAppointments = appointments.filter((appointment) => {
+    const appointmentDate = parseISO(appointment.appointment_date);
+    const matchesDate = selectedDate ? 
+      appointmentDate >= startOfDay(selectedDate) && appointmentDate <= endOfDay(selectedDate) : true;
+    const matchesStatus = statusFilter === "all" || appointment.status === statusFilter;
+    const matchesClient = clientSearch === "" || 
+      appointment.client_name.toLowerCase().includes(clientSearch.toLowerCase()) ||
+      appointment.client_phone.includes(clientSearch);
     
-    const dateMatch = aptDate === selectedDateStr;
-    const statusMatch = statusFilter === "all" || apt.status === statusFilter;
-    
-    return dateMatch && statusMatch;
+    return matchesDate && matchesStatus && matchesClient;
   });
 
-  // Função para obter propriedades do status
-  const getStatusProps = (status: string) => {
+  // Obter propriedades do status
+  const getStatusVariant = (status: string) => {
     switch (status) {
-      case 'agendado':
-        return { variant: 'secondary' as const, text: 'Agendado' };
-      case 'confirmado':
-        return { variant: 'default' as const, text: 'Confirmado' };
-      case 'concluido':
-        return { variant: 'success' as const, text: 'Concluído' };
-      case 'cancelado':
-        return { variant: 'destructive' as const, text: 'Cancelado' };
+      case "agendado":
+        return "secondary" as const;
+      case "confirmado":
+        return "default" as const;
+      case "concluido":
+        return "success" as const;
+      case "cancelado":
+        return "destructive" as const;
       default:
-        return { variant: 'secondary' as const, text: 'Agendado' };
+        return "secondary" as const;
     }
   };
 
-  // Função para alterar status do agendamento
-  const handleStatusChange = async (appointment: Appointment, newStatus: string) => {
+  const getStatusLabel = (status: string) => {
+    switch (status) {
+      case "agendado":
+        return "Agendado";
+      case "confirmado":
+        return "Confirmado";
+      case "concluido":
+        return "Concluído";
+      case "cancelado":
+        return "Cancelado";
+      default:
+        return status;
+    }
+  };
+
+  // Alterar status do agendamento
+  const handleStatusChange = async (appointmentId: number, newStatus: string) => {
     try {
-      await updateAppointment(appointment.id, { status: newStatus as any });
-      toast({
-        title: "Status atualizado",
-        description: `Agendamento ${newStatus} com sucesso.`,
-      });
+      await updateAppointment(appointmentId, newStatus);
+      setOpenDropdown(null);
     } catch (error) {
-      toast({
-        title: "Erro",
-        description: "Não foi possível atualizar o status do agendamento.",
-        variant: "destructive",
-      });
+      console.error("Erro ao alterar status:", error);
     }
   };
 
-  // Função para formatar data relativa
+  // Salvar novo agendamento
+  const handleSaveAppointment = async (appointmentData: any) => {
+    try {
+      await addAppointment(appointmentData);
+      setIsModalOpen(false);
+    } catch (error) {
+      console.error("Erro ao salvar agendamento:", error);
+    }
+  };
+
   const getRelativeDate = (date: Date) => {
     if (isToday(date)) return "Hoje";
     if (isTomorrow(date)) return "Amanhã";
@@ -90,13 +113,7 @@ export default function Appointments() {
     return format(date, "dd 'de' MMMM", { locale: ptBR });
   };
 
-  const handleSaveAppointment = () => {
-    setModalOpen(false);
-    toast({
-      title: "Agendamento criado",
-      description: "Novo agendamento foi criado com sucesso.",
-    });
-  };
+
 
   if (error) {
     return (
@@ -113,163 +130,207 @@ export default function Appointments() {
     <>
       <Helmet>
         <title>Agendamentos - Estética Rosana</title>
+        <meta name="description" content="Gerencie seus agendamentos de serviços e pacotes" />
       </Helmet>
 
       <div className="space-y-6">
         {/* Header */}
-        <div className="flex justify-between items-center">
-          <h1 className="text-3xl font-bold">Agendamentos</h1>
-          <Button onClick={() => setModalOpen(true)}>
-            <Plus className="mr-2 h-4 w-4" />
+        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+          <div>
+            <h1 className="text-2xl sm:text-3xl font-bold text-gray-900">Agendamentos</h1>
+            <p className="text-gray-600 mt-1">Gerencie seus agendamentos de serviços e pacotes</p>
+          </div>
+          <Button onClick={() => setIsModalOpen(true)} className="w-full sm:w-auto">
+            <Plus className="h-4 w-4 mr-2" />
             Novo Agendamento
           </Button>
         </div>
 
         {/* Filtros */}
-        <div className="flex flex-col sm:flex-row gap-4">
-          {/* Seletor de Data */}
-          <Popover>
-            <PopoverTrigger asChild>
-              <Button variant="outline" className="justify-start">
-                <CalendarIcon className="mr-2 h-4 w-4" />
-                {getRelativeDate(selectedDate)}
-              </Button>
-            </PopoverTrigger>
-            <PopoverContent className="w-auto p-0" align="start">
-              <Calendar
-                mode="single"
-                selected={selectedDate}
-                onSelect={(date) => date && setSelectedDate(date)}
-                locale={ptBR}
-                initialFocus
-              />
-            </PopoverContent>
-          </Popover>
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          {/* Filtro por Data */}
+          <div className="space-y-2">
+            <label className="text-sm font-medium text-gray-700">Data</label>
+            <Popover>
+              <PopoverTrigger asChild>
+                <Button
+                  variant="outline"
+                  className={cn(
+                    "w-full justify-start text-left font-normal",
+                    !selectedDate && "text-muted-foreground"
+                  )}
+                >
+                  <CalendarIcon className="mr-2 h-4 w-4" />
+                  {selectedDate ? (
+                    format(selectedDate, "dd/MM/yyyy", { locale: ptBR })
+                  ) : (
+                    <span>Selecione uma data</span>
+                  )}
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-auto p-0" align="start">
+                <CalendarComponent
+                  mode="single"
+                  selected={selectedDate}
+                  onSelect={setSelectedDate}
+                  initialFocus
+                  locale={ptBR}
+                />
+              </PopoverContent>
+            </Popover>
+          </div>
 
-          {/* Filtro de Status */}
-          <Select value={statusFilter} onValueChange={setStatusFilter}>
-            <SelectTrigger className="w-[180px]">
-              <Filter className="mr-2 h-4 w-4" />
-              <SelectValue placeholder="Filtrar por status" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">Todos os status</SelectItem>
-              <SelectItem value="agendado">Agendado</SelectItem>
-              <SelectItem value="confirmado">Confirmado</SelectItem>
-              <SelectItem value="concluido">Concluído</SelectItem>
-              <SelectItem value="cancelado">Cancelado</SelectItem>
-            </SelectContent>
-          </Select>
+          {/* Filtro por Status */}
+          <div className="space-y-2">
+            <label className="text-sm font-medium text-gray-700">Status</label>
+            <Select value={statusFilter} onValueChange={setStatusFilter}>
+              <SelectTrigger>
+                <SelectValue placeholder="Filtrar por status" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Todos os status</SelectItem>
+                <SelectItem value="agendado">Agendado</SelectItem>
+                <SelectItem value="confirmado">Confirmado</SelectItem>
+                <SelectItem value="concluido">Concluído</SelectItem>
+                <SelectItem value="cancelado">Cancelado</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+
+          {/* Busca por Cliente */}
+          <div className="space-y-2">
+            <label className="text-sm font-medium text-gray-700">Cliente</label>
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+              <Input
+                placeholder="Buscar por nome ou telefone..."
+                value={clientSearch}
+                onChange={(e) => setClientSearch(e.target.value)}
+                className="pl-10"
+              />
+            </div>
+          </div>
         </div>
 
         {/* Lista de Agendamentos */}
         <div className="space-y-4">
           {isLoading ? (
-            <div className="flex items-center justify-center h-32">
-              <div className="text-center">
-                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-2"></div>
-                <p className="text-sm text-muted-foreground">Carregando agendamentos...</p>
-              </div>
+            <div className="text-center py-8">
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto"></div>
+              <p className="text-gray-500 mt-2">Carregando agendamentos...</p>
             </div>
-          ) : filteredAppointments.length > 0 ? (
-            filteredAppointments.map((apt) => {
-              const statusProps = getStatusProps(apt.status);
-              
-              return (
-                <div key={apt.id} className="p-4 border rounded-lg bg-card">
+          ) : filteredAppointments.length === 0 ? (
+            <Card>
+              <CardContent className="text-center py-8">
+                <CalendarIcon className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+                <h3 className="text-lg font-medium text-gray-900 mb-2">
+                  {clientSearch ? "Nenhum agendamento encontrado" : "Nenhum agendamento para esta data"}
+                </h3>
+                <p className="text-gray-500 mb-4">
+                  {clientSearch 
+                    ? `Não encontramos agendamentos para "${clientSearch}"`
+                    : "Que tal criar um novo agendamento?"
+                  }
+                </p>
+                {!clientSearch && (
+                  <Button onClick={() => setIsModalOpen(true)}>
+                    <Plus className="h-4 w-4 mr-2" />
+                    Novo Agendamento
+                  </Button>
+                )}
+              </CardContent>
+            </Card>
+          ) : (
+            filteredAppointments.map((appointment) => (
+              <Card key={appointment.id} className="hover:shadow-md transition-shadow">
+                <CardContent className="p-4">
                   <div className="flex items-center justify-between">
                     <div className="flex-1">
                       <div className="flex items-center gap-3 mb-2">
-                        <h3 className="font-semibold">{apt.client_name}</h3>
-                        <Badge variant={statusProps.variant}>
-                          {statusProps.text}
+                        <div className="flex items-center gap-2">
+                          <User className="h-4 w-4 text-gray-500" />
+                          <span className="font-medium text-gray-900">{appointment.client_name}</span>
+                        </div>
+                        <Badge variant={getStatusVariant(appointment.status)}>
+                          {getStatusLabel(appointment.status)}
                         </Badge>
                       </div>
-                      <div className="text-sm text-muted-foreground space-y-1">
-                        <p><strong>Serviço:</strong> {apt.serviceName}</p>
-                        <p><strong>Horário:</strong> {apt.appointment_time}</p>
-                        <p><strong>Telefone:</strong> {apt.client_phone}</p>
-                        {apt.notes && <p><strong>Observações:</strong> {apt.notes}</p>}
-                      </div>
-                    </div>
-                    
-                    {/* Dropdown de Ações */}
-                    <div className="relative">
-                      <Button 
-                        variant="ghost" 
-                        size="sm" 
-                        className="h-8 w-8 p-0"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          setOpenDropdown(openDropdown === apt.id.toString() ? null : apt.id.toString());
-                        }}
-                      >
-                        <MoreVertical className="h-4 w-4" />
-                      </Button>
-                      {openDropdown === apt.id.toString() && (
-                        <div className="absolute right-0 top-full mt-1 bg-white border border-gray-200 rounded-md shadow-lg z-50 min-w-[120px]">
-                          <div className="py-1">
-                            {apt.status !== 'confirmado' && (
-                              <button 
-                                className="block w-full text-left px-3 py-2 text-sm hover:bg-gray-100"
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  handleStatusChange(apt, 'confirmado');
-                                  setOpenDropdown(null);
-                                }}
-                              >
-                                Confirmar
-                              </button>
-                            )}
-                            {apt.status !== 'concluido' && (
-                              <button 
-                                className="block w-full text-left px-3 py-2 text-sm hover:bg-gray-100"
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  handleStatusChange(apt, 'concluido');
-                                  setOpenDropdown(null);
-                                }}
-                              >
-                                Concluir
-                              </button>
-                            )}
-                            {apt.status !== 'cancelado' && (
-                              <button 
-                                className="block w-full text-left px-3 py-2 text-sm hover:bg-gray-100 text-red-600"
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  handleStatusChange(apt, 'cancelado');
-                                  setOpenDropdown(null);
-                                }}
-                              >
-                                Cancelar
-                              </button>
-                            )}
-                          </div>
+                      
+                      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2 text-sm text-gray-600">
+                        <div className="flex items-center gap-1">
+                          <Phone className="h-3 w-3" />
+                          <span>{appointment.client_phone}</span>
                         </div>
+                        <div className="flex items-center gap-1">
+                          <Clock className="h-3 w-3" />
+                          <span>{appointment.appointment_time}</span>
+                        </div>
+                        <div className="flex items-center gap-1">
+                          <MapPin className="h-3 w-3" />
+                          <span>
+                            {appointment.type === "service" 
+                              ? `Serviço: ${appointment.service_name || "N/A"}`
+                              : `Pacote: ${appointment.package_name || "N/A"}`
+                            }
+                          </span>
+                        </div>
+                        <div className="flex items-center gap-1">
+                          <span className="font-medium">
+                            {appointment.type === "service" 
+                              ? `R$ ${appointment.price.toFixed(2).replace('.', ',')}`
+                              : "Sessão do Pacote"
+                            }
+                          </span>
+                        </div>
+                      </div>
+                      
+                      {appointment.notes && (
+                        <p className="text-sm text-gray-500 mt-2 italic">{appointment.notes}</p>
                       )}
                     </div>
+                    
+                    <DropdownMenu 
+                      open={openDropdown === appointment.id.toString()} 
+                      onOpenChange={(open) => setOpenDropdown(open ? appointment.id.toString() : null)}
+                    >
+                      <DropdownMenuTrigger asChild>
+                        <Button variant="ghost" size="sm">
+                          <MoreVertical className="h-4 w-4" />
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end">
+                        {appointment.status === "agendado" && (
+                          <DropdownMenuItem onClick={() => handleStatusChange(appointment.id, "confirmado")}>
+                            Confirmar
+                          </DropdownMenuItem>
+                        )}
+                        {(appointment.status === "agendado" || appointment.status === "confirmado") && (
+                          <DropdownMenuItem onClick={() => handleStatusChange(appointment.id, "concluido")}>
+                            Marcar como Concluído
+                          </DropdownMenuItem>
+                        )}
+                        {appointment.status !== "cancelado" && appointment.status !== "concluido" && (
+                          <DropdownMenuItem 
+                            onClick={() => handleStatusChange(appointment.id, "cancelado")}
+                            className="text-red-600"
+                          >
+                            Cancelar
+                          </DropdownMenuItem>
+                        )}
+                      </DropdownMenuContent>
+                    </DropdownMenu>
                   </div>
-                </div>
-              );
-            })
-          ) : (
-            <div className="text-center py-8">
-              <p className="text-muted-foreground">
-                Nenhum agendamento encontrado para {getRelativeDate(selectedDate)}
-                {statusFilter !== "all" && ` com status "${statusFilter}"`}.
-              </p>
-            </div>
+                </CardContent>
+              </Card>
+            ))
           )}
         </div>
       </div>
 
-      {/* Modal de Novo Agendamento */}
       <AppointmentModal
-        open={modalOpen}
-        onOpenChange={setModalOpen}
+        open={isModalOpen}
+        onOpenChange={setIsModalOpen}
         onSave={handleSaveAppointment}
-        service={null}
       />
     </>
   );

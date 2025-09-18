@@ -5,6 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
+import { getCurrentDateString } from "@/lib/utils";
 
 interface TransactionModalProps {
   open: boolean;
@@ -14,11 +15,12 @@ interface TransactionModalProps {
 
 export function TransactionModal({ open, onOpenChange, onSave }: TransactionModalProps) {
   const { toast } = useToast();
+
   const [formData, setFormData] = useState({
     type: 'expense' as 'income' | 'expense',
     description: '',
     amount: 0,
-    date: new Date().toISOString().split('T')[0],
+    date: getCurrentDateString(),
     category: ''
   });
 
@@ -28,7 +30,7 @@ export function TransactionModal({ open, onOpenChange, onSave }: TransactionModa
         type: 'expense',
         description: '',
         amount: 0,
-        date: new Date().toISOString().split('T')[0],
+        date: getCurrentDateString(),
         category: ''
       });
     }

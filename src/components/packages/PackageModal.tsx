@@ -8,6 +8,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Package } from "@/hooks/usePackages";
 import { useClients } from "@/hooks/useClients";
 import { useToast } from "@/hooks/use-toast";
+import { dateToString } from "@/lib/utils";
 
 interface PackageModalProps {
   open: boolean;
@@ -51,7 +52,7 @@ export function PackageModal({ open, onOpenChange, package: pkg, onSave, mode }:
         clientName: '',
         totalSessions: 1,
         price: 0,
-        validUntil: futureDate.toISOString().split('T')[0]
+        validUntil: dateToString(futureDate)
       });
     }
   }, [pkg, mode, open]);

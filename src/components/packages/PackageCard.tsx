@@ -1,4 +1,4 @@
-import { Package, Clock, User, Calendar, AlertCircle, Edit, Trash2, MoreVertical, Play, History } from "lucide-react";
+import { Package, Clock, User, Calendar, AlertCircle, Edit, Trash2, MoreVertical, History } from "lucide-react";
 import { GlassCard } from "@/components/ui/glass-card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -15,11 +15,10 @@ interface PackageCardProps {
   package: PackageType;
   onEdit: (pkg: PackageType) => void;
   onDelete: (id: number) => void;
-  onUseSession: (id: number) => void;
   onViewHistory: (pkg: PackageType) => void;
 }
 
-export function PackageCard({ package: pkg, onEdit, onDelete, onUseSession, onViewHistory }: PackageCardProps) {
+export function PackageCard({ package: pkg, onEdit, onDelete, onViewHistory }: PackageCardProps) {
   const getStatusColor = (status: string) => {
     switch (status) {
       case "active": return "bg-green-500/20 text-green-600";
@@ -45,8 +44,6 @@ export function PackageCard({ package: pkg, onEdit, onDelete, onUseSession, onVi
     return new Date(dateString).toLocaleDateString('pt-BR');
   };
 
-  const canUseSession = pkg.status === "active" && pkg.remainingSessions > 0;
-
   return (
     <GlassCard className="relative transition-all hover:scale-[1.02]">
       <div className="space-y-4">
@@ -63,12 +60,6 @@ export function PackageCard({ package: pkg, onEdit, onDelete, onUseSession, onVi
                 <History className="h-4 w-4 mr-2" />
                 Ver Histórico
               </DropdownMenuItem>
-              {canUseSession && (
-                <DropdownMenuItem onClick={() => onUseSession(pkg.id)} className="cursor-pointer text-green-600">
-                  <Play className="h-4 w-4 mr-2" />
-                  Usar Sessão
-                </DropdownMenuItem>
-              )}
               <DropdownMenuItem onClick={() => onEdit(pkg)} className="cursor-pointer">
                 <Edit className="h-4 w-4 mr-2" />
                 Editar
@@ -98,113 +89,78 @@ export function PackageCard({ package: pkg, onEdit, onDelete, onUseSession, onVi
                 <User className="h-3 w-3" />
                 {pkg.clientName}
               </p>
-              <p className="text-xs text-blue-600 mt-1 flex items-center gap-1">
-                <History className="h-3 w-3" />
-                {(pkg.sessionHistory || []).length} sessões registradas - clique para ver histórico
-              </p>
             </div>
           </div>
         </div>
 
-        {/* Status badge */}
-        <div className="flex justify-end">
+        {/* Status */}
+        <div className="flex items-center justify-between">
           <Badge className={getStatusColor(pkg.status)}>
             {getStatusText(pkg.status)}
           </Badge>
+          {pkg.status === "expiring" && (
+            <div className="flex items-center gap-1 text-yellow-600">
+              <AlertCircle className="h-3 w-3" />
+              <span className="text-xs">Vence em breve</span>
+            </div>
+          )}
         </div>
 
-        {/* Descrição */}
-        {pkg.description && (
-          <p className="text-sm text-muted-foreground line-clamp-2">
-            {pkg.description}
-          </p>
-        )}
-
-        {/* Progresso das sessões */}
-        <div className="space-y-2">
-          <div className="flex items-center justify-between text-sm">
-            <span className="text-muted-foreground">Sessões utilizadas</span>
-            <span className="font-medium">
-              {pkg.usedSessions}/{pkg.totalSessions}
-            </span>
-          </div>
-          <Progress 
-            value={(pkg.usedSessions / pkg.totalSessions) * 100} 
-            className="h-2"
-          />
-          <div className="text-center">
-            <span className="text-lg font-bold text-brand-start">
-              {pkg.remainingSessions}
-            </span>
-            <span className="text-sm text-muted-foreground ml-1">
-              sessões restantes
-            </span>
-          </div>
-        </div>
-
-        {/* Informações adicionais */}
-        <div className="space-y-2 text-sm">
-          <div className="flex items-center justify-between">
-            <span className="text-muted-foreground">Valor:</span>
-            <span className="font-semibold text-green-600">
-              R$ {pkg.price.toFixed(2).replace('.', ',')}
-            </span>
-          </div>
-          <div className="flex items-center justify-between">
-            <span className="text-muted-foreground">Última sessão:</span>
-            <span>{formatDate(pkg.lastUsed)}</span>
-          </div>
-          <div className="flex items-center justify-between">
-            <span className="text-muted-foreground">Válido até:</span>
-            <span className={`flex items-center gap-1 ${
-              pkg.status === "expiring" ? "text-yellow-600" : ""
-            }`}>
-              {pkg.status === "expiring" && <AlertCircle className="h-3 w-3" />}
-              {formatDate(pkg.validUntil)}
-            </span>
-          </div>
-        </div>
-
-        {/* Alertas */}
-        {pkg.status === "expiring" && (
-          <div className="rounded-lg bg-yellow-500/10 border border-yellow-500/20 p-3 text-sm">
-            <div className="flex items-center gap-2 text-yellow-600">
-              <Clock className="h-4 w-4" />
-              <span className="font-medium">Pacote vencendo em breve!</span>
+        {/* Informações do pacote */}
+        <div className="space-y-3">
+          {/* Progresso das sessões */}
+          <div className="space-y-2">
+            <div className="flex justify-between text-sm">
+              <span className="text-muted-foreground">Sessões</span>
+              <span className="font-medium">
+                {pkg.usedSessions}/{pkg.totalSessions}
+              </span>
+            </div>
+            <Progress 
+              value={(pkg.usedSessions / pkg.totalSessions) * 100} 
+              className="h-2"
+            />
+            <div className="text-xs text-muted-foreground">
+              {pkg.remainingSessions} sessões restantes
             </div>
           </div>
-        )}
 
-        {pkg.remainingSessions <= 2 && pkg.status === "active" && (
-          <div className="rounded-lg bg-blue-500/10 border border-blue-500/20 p-3 text-sm">
-            <div className="flex items-center gap-2 text-blue-600">
-              <Calendar className="h-4 w-4" />
-              <span className="font-medium">
-                {pkg.remainingSessions === 0 ? "Pacote finalizado!" : "Poucas sessões restantes"}
+          {/* Datas */}
+          <div className="grid grid-cols-2 gap-3 text-sm">
+            <div className="space-y-1">
+              <div className="flex items-center gap-1 text-muted-foreground">
+                <Calendar className="h-3 w-3" />
+                <span>Início</span>
+              </div>
+              <div className="font-medium">{formatDate(pkg.startDate)}</div>
+            </div>
+            <div className="space-y-1">
+              <div className="flex items-center gap-1 text-muted-foreground">
+                <Clock className="h-3 w-3" />
+                <span>Validade</span>
+              </div>
+              <div className="font-medium">{formatDate(pkg.expiryDate)}</div>
+            </div>
+          </div>
+
+          {/* Valor */}
+          <div className="pt-2 border-t border-border/50">
+            <div className="flex justify-between items-center">
+              <span className="text-sm text-muted-foreground">Valor total</span>
+              <span className="font-semibold text-brand-start">
+                R$ {pkg.price?.toFixed(2) || '0.00'}
               </span>
             </div>
           </div>
-        )}
+        </div>
 
-        {pkg.status === "expired" && (
-          <div className="rounded-lg bg-red-500/10 border border-red-500/20 p-3 text-sm">
-            <div className="flex items-center gap-2 text-red-600">
-              <AlertCircle className="h-4 w-4" />
-              <span className="font-medium">Pacote expirado</span>
-            </div>
+        {/* Observações */}
+        {pkg.notes && (
+          <div className="pt-2 border-t border-border/50">
+            <p className="text-xs text-muted-foreground line-clamp-2">
+              {pkg.notes}
+            </p>
           </div>
-        )}
-
-        {/* Botão de ação rápida */}
-        {canUseSession && (
-          <Button 
-            onClick={() => onUseSession(pkg.id)}
-            className="w-full bg-brand-gradient hover:opacity-90"
-            size="sm"
-          >
-            <Play className="h-4 w-4 mr-2" />
-            Usar uma sessão
-          </Button>
         )}
       </div>
     </GlassCard>

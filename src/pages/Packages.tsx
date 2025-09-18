@@ -22,7 +22,7 @@ import {
 
 export default function Packages() {
   const { toast } = useToast();
-  const { packages, addPackage, updatePackage, deletePackage, useSession } = usePackages();
+  const { packages, addPackage, updatePackage, deletePackage } = usePackages();
   const [searchTerm, setSearchTerm] = useState("");
   const [filter, setFilter] = useState("all");
   const [modalOpen, setModalOpen] = useState(false);
@@ -82,17 +82,6 @@ export default function Packages() {
     }
   };
 
-  const handleUseSession = (id: number) => {
-    const pkg = packages.find(p => p.id === id);
-    if (pkg && pkg.remainingSessions > 0) {
-      useSession(id);
-      toast({
-        title: "Sessão utilizada",
-        description: `Uma sessão do pacote "${pkg.name}" foi marcada como utilizada.`,
-      });
-    }
-  };
-
   const handleViewHistory = (pkg: PackageType) => {
     setSelectedPackageHistory(pkg);
     setHistoryModalOpen(true);
@@ -102,7 +91,7 @@ export default function Packages() {
     <>
       <Helmet>
         <title>Pacotes | Gestão de Clínica Estética</title>
-        <meta name="description" content="Criação e controle de pacotes promocionais com sessões." />
+        <meta name="description" content="Visualização e controle de pacotes promocionais." />
         <link rel="canonical" href="/pacotes" />
       </Helmet>
 
@@ -111,7 +100,7 @@ export default function Packages() {
         <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
           <div>
             <h1 className="text-2xl font-bold text-gradient-brand">Pacotes</h1>
-            <p className="text-muted-foreground">Controle de pacotes promocionais e sessões</p>
+            <p className="text-muted-foreground">Visualização e controle de pacotes promocionais</p>
           </div>
           <div className="flex gap-3">
             <SearchBar 
@@ -156,7 +145,6 @@ export default function Packages() {
               package={pkg}
               onEdit={handleEditPackage}
               onDelete={handleDeletePackage}
-              onUseSession={handleUseSession}
               onViewHistory={handleViewHistory}
             />
           ))}

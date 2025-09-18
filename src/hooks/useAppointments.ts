@@ -1,5 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/lib/supabase';
+import { useToast } from "@/hooks/use-toast";
+import { usePackages } from './usePackages';
 
 export interface Appointment {
   id: number;
@@ -7,44 +9,77 @@ export interface Appointment {
   client_id: number;
   client_name: string;
   client_phone: string;
-  appointment_date: string;
+  appointment_date: string; // YYYY-MM-DD
   appointment_time: string;
   duration: number;
   price: number;
   notes: string;
   status: "agendado" | "confirmado" | "concluido" | "cancelado";
   created_at: string;
-  serviceName?: string;
+  serviceName?: string; // Opcional - vem do JOIN
+  package_id?: number; // ID do pacote relacionado
 }
+
+// Dados mock para fallback quando Supabase falhar
+const MOCK_APPOINTMENTS: Appointment[] = [
+  {
+    id: 1,
+    service_id: 1,
+    client_id: 1,
+    client_name: "Ana Silva (Exemplo)",
+    client_phone: "(11) 99999-9999",
+    appointment_date: new Date().toISOString().split('T')[0],
+    appointment_time: "14:00",
+    duration: 60,
+    price: 150,
+    notes: "Este é um agendamento de exemplo para modo offline.",
+    status: "confirmado",
+    created_at: "2024-01-10T10:00:00Z",
+    serviceName: "Limpeza de Pele (Exemplo)"
+  },
+];
 
 export function useAppointments() {
   const [appointments, setAppointments] = useState<Appointment[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const { toast } = useToast();
+  const { useSession } = usePackages();
 
   const loadAppointments = useCallback(async () => {
     setIsLoading(true);
     setError(null);
+    
+    if (!supabase) {
+      console.warn('⚠️ Supabase não conectado. Usando dados de exemplo locais.');
+      setAppointments(MOCK_APPOINTMENTS);
+      setError('Você está em modo offline. Os dados não estão sendo salvos no servidor.');
+      setIsLoading(false);
+      return;
+    }
+    
     try {
-      const { data, error } = await supabase
+      const { data, error: dbError } = await supabase
         .from('appointments')
-        .select('*, services(name)')
-        .order('appointment_date', { ascending: true })
-        .order('appointment_time', { ascending: true });
+        .select(`
+          *,
+          services (name)
+        `)
+        .order('appointment_date', { ascending: false })
+        .order('appointment_time', { ascending: false });
 
-      if (error) throw error;
-      
-      // Use 'any' to avoid TS errors from Supabase type inference
-      const formattedData = (data as any[]).map(apt => ({
-        ...apt,
-        appointment_time: apt.appointment_time.substring(0, 5),
-        serviceName: apt.services?.name ?? 'Serviço não encontrado'
+      if (dbError) throw dbError;
+
+      const formattedData = (data || []).map(a => ({
+        ...a,
+        serviceName: a.services ? a.services.name : 'Serviço Removido',
       }));
-
-      setAppointments(formattedData);
+      
+      setAppointments(formattedData as any);
     } catch (err: any) {
-      console.error("Erro ao carregar agendamentos:", err);
-      setError("Falha ao buscar dados. Tente novamente.");
+      console.error('❌ Erro crítico ao carregar agendamentos:', err);
+      setError('Falha ao buscar dados do servidor. Verifique sua conexão.');
+      setAppointments(MOCK_APPOINTMENTS); // Fallback para dados de exemplo em caso de erro
     } finally {
       setIsLoading(false);
     }
@@ -54,27 +89,84 @@ export function useAppointments() {
     loadAppointments();
   }, [loadAppointments]);
 
-  const addAppointment = async (appointmentData: Omit<Appointment, 'id' | 'created_at' | 'serviceName'>) => {
+  const addAppointment = async (appointmentData: any) => {
+    if (!supabase) {
+      alert('Modo Offline: O agendamento não pode ser salvo.');
+      return null;
+    }
+    
     try {
-      const { data, error } = await supabase.from('appointments').insert([appointmentData] as any).select();
+      const { package_id, serviceName, ...restOfData } = appointmentData;
+
+      const { data: appointment, error } = await supabase
+        .from('appointments')
+        .insert([restOfData])
+        .select()
+        .single();
+
       if (error) throw error;
-      await loadAppointments();
-      return data;
-    } catch (err: any) {
-      console.error("Erro ao adicionar agendamento:", err);
+
+      // Se for uma sessão de pacote, registra no histórico DO PACOTE
+      if (package_id && appointment) {
+        // Registrar uso da sessão do pacote
+        await useSession(package_id, `Sessão do serviço: ${serviceName || 'não especificado'}`);
+        
+        // Registrar no histórico de sessões
+        const { error: sessionError } = await supabase
+          .from('session_history')
+          .insert({
+            package_id: package_id,
+            session_date: appointment.appointment_date,
+            notes: `Sessão referente ao agendamento do serviço: ${serviceName || 'não especificado'}. ${restOfData.notes || ''}`.trim()
+          });
+        
+        if (sessionError) {
+          console.error('❌ Erro ao registrar sessão do pacote:', sessionError);
+          toast({
+            title: "Atenção: Erro ao abater sessão",
+            description: "O agendamento foi criado, mas não foi possível registrar o uso da sessão. Por favor, ajuste manualmente no pacote.",
+            variant: "destructive",
+            duration: 10000,
+          });
+        } else {
+          toast({
+            title: "Sessão registrada!",
+            description: `Uma sessão foi abatida do pacote.`,
+          });
+        }
+      }
+
+      await loadAppointments(); // Recarrega a lista
+      return { ...appointment, serviceName };
+    } catch (err) {
+      console.error('❌ Erro ao adicionar agendamento:', err);
+      setError('Não foi possível salvar o agendamento.');
       return null;
     }
   };
 
-  const updateAppointment = async (id: number, appointmentData: Partial<Omit<Appointment, 'serviceName'>>) => {
+  const updateAppointment = async (id: number, appointmentData: Partial<Appointment>) => {
+    if (!supabase) {
+      alert('Modo Offline: O agendamento não pode ser atualizado.');
+      return;
+    }
+    
     try {
-      const { error } = await supabase.from('appointments').update(appointmentData as any).eq('id', id);
+      const { error } = await supabase.from('appointments').update(appointmentData).eq('id', id);
       if (error) throw error;
-      await loadAppointments();
-    } catch (err: any) {
-      console.error("Erro ao atualizar agendamento:", err);
+      await loadAppointments(); // Recarrega a lista
+    } catch (err) {
+      console.error('❌ Erro ao atualizar agendamento:', err);
+      setError('Não foi possível atualizar o agendamento.');
     }
   };
 
-  return { appointments, isLoading, error, addAppointment, updateAppointment };
+  return {
+    appointments,
+    isLoading,
+    error,
+    addAppointment,
+    updateAppointment,
+    refreshAppointments: loadAppointments,
+  };
 }

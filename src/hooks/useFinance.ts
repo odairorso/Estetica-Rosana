@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useAppointments } from "./useAppointments";
 import { usePackages } from "./usePackages";
+import { useSales } from "./useSales";
 import { useMemo } from "react";
 import { isToday, isThisMonth, parseISO } from "date-fns";
 
@@ -20,6 +21,7 @@ export function useFinance() {
   const [isLoading, setIsLoading] = useState(true);
   const { appointments } = useAppointments();
   const { packages } = usePackages();
+  const { sales } = useSales();
 
   // Load transactions from localStorage on mount
   useEffect(() => {
@@ -87,7 +89,7 @@ export function useFinance() {
         type: 'income' as const,
         description: `Serviço: ${a.serviceName || 'Serviço'} (${a.client_name})`,
         amount: a.price || 0,
-        date: new Date().toLocaleDateString('pt-BR'), // Formato brasileiro
+        date: new Date(a.appointment_date).toLocaleDateString('pt-BR'),
         category: 'Serviços'
       }));
   }, [appointments]);
@@ -98,20 +100,31 @@ export function useFinance() {
       type: 'income' as const,
       description: `Pacote: ${p.name} (${p.clientName || 'Cliente'})`,
       amount: p.price || 0,
-      date: new Date().toLocaleDateString('pt-BR'), // Formato brasileiro
+      date: new Date().toLocaleDateString('pt-BR'),
       category: 'Pacotes'
     }));
   }, [packages]);
 
+  const incomeFromSales = useMemo(() => {
+    return sales.map(sale => ({
+      id: sale.id * 100000, // Different ID space to avoid conflicts
+      type: 'income' as const,
+      description: `Venda Caixa: ${sale.client_name}`,
+      amount: sale.total || 0,
+      date: new Date(sale.sale_date).toLocaleDateString('pt-BR'),
+      category: 'Vendas Caixa'
+    }));
+  }, [sales]);
+
   const allTransactions = useMemo(() => {
-    const all = [...manualTransactions, ...incomeFromAppointments, ...incomeFromPackages];
+    const all = [...manualTransactions, ...incomeFromAppointments, ...incomeFromPackages, ...incomeFromSales];
     return all.sort((a, b) => {
       // Converter datas brasileiras para comparação
       const dateA = a.date ? new Date(a.date.split('/').reverse().join('-')) : new Date(0);
       const dateB = b.date ? new Date(b.date.split('/').reverse().join('-')) : new Date(0);
       return dateB.getTime() - dateA.getTime();
     });
-  }, [manualTransactions, incomeFromAppointments, incomeFromPackages]);
+  }, [manualTransactions, incomeFromAppointments, incomeFromPackages, incomeFromSales]);
 
   const getMetrics = () => {
     const today = new Date().toLocaleDateString('pt-BR');

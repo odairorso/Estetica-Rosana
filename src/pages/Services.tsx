@@ -1,6 +1,6 @@
 import { Helmet } from "react-helmet-async";
 import { useState } from "react";
-import { Plus, Clock, DollarSign, Edit, Calendar as CalendarIcon } from "lucide-react";
+import { Plus, Clock, DollarSign, Edit, Calendar } from "lucide-react";
 import { SearchBar } from "@/components/ui/search-bar";
 import { GlassCard } from "@/components/ui/glass-card";
 import { NeonButton } from "@/components/ui/neon-button";
@@ -22,7 +22,7 @@ export default function Services() {
   const [editingService, setEditingService] = useState<Service | null>(null);
   const [selectedServiceForAppointment, setSelectedServiceForAppointment] = useState<Service | null>(null);
   
-  const { services, addService, updateService, deleteService, getServiceIcon } = useServices();
+  const { services, addService, updateService, getServiceIcon } = useServices();
   const { addAppointment } = useAppointments();
   const { toast } = useToast();
 
@@ -65,12 +65,16 @@ export default function Services() {
     setAppointmentModalOpen(true);
   };
 
-  const handleSaveAppointment = (appointmentData: any) => {
-    const appointment = addAppointment(appointmentData);
-    toast({
-      title: "Agendamento confirmado!",
-      description: `${appointment.serviceName} agendado para ${appointment.clientName} em ${new Date(appointment.date).toLocaleDateString('pt-BR')} às ${appointment.time}.`,
-    });
+  const handleSaveAppointment = async (appointmentData: any) => {
+    const result = await addAppointment(appointmentData);
+    if (result) {
+      toast({
+        title: "Agendamento confirmado!",
+        description: `${result.serviceName} agendado para ${result.client_name}.`,
+      });
+    } else {
+      toast({ title: "Erro", description: "Não foi possível criar o agendamento.", variant: "destructive" });
+    }
   };
 
   const getCategoryColor = (category: string) => {
@@ -85,7 +89,7 @@ export default function Services() {
     <>
       <Helmet>
         <title>Serviços | Gestão de Clínica Estética</title>
-        <meta name="description" content="Catálogo de procedimentos e tratamentos com preços e duração." />
+        <meta name="description" content="Catálogo de serviços e tratamentos com preços e duração." />
         <link rel="canonical" href="/servicos" />
       </Helmet>
 
@@ -94,7 +98,7 @@ export default function Services() {
         <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
           <div>
             <h1 className="text-2xl font-bold text-gradient-brand">Serviços</h1>
-            <p className="text-muted-foreground">Catálogo de procedimentos e tratamentos</p>
+            <p className="text-muted-foreground">Catálogo de serviços e tratamentos</p>
           </div>
           <div className="flex gap-3">
             <SearchBar 
@@ -114,7 +118,7 @@ export default function Services() {
             <button
               key={category}
               onClick={() => setSelectedCategory(category)}
-              className={`px-4 py-2 rounded-full text-sm font-medium transition-all whitespace-nowrap ${
+              className={`px-4 py-2 rounded-full text-sm font-medium transition-all whitespace-nowrap ${ 
                 selectedCategory === category
                   ? "bg-primary text-primary-foreground shadow-lg"
                   : "bg-secondary/50 text-muted-foreground hover:bg-secondary hover:text-secondary-foreground"
@@ -189,7 +193,7 @@ export default function Services() {
                       className="flex-1 text-xs h-8"
                       onClick={() => handleScheduleService(service)}
                     >
-                      <CalendarIcon className="h-3 w-3 mr-1" />
+                      <Calendar className="h-3 w-3 mr-1" />
                       Agendar
                     </Button>
                     <Button

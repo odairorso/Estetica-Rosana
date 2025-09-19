@@ -1,36 +1,33 @@
-import { NavLink, useLocation } from "react-router-dom";
-import {
-  Sidebar,
-  SidebarContent,
-  SidebarGroup,
-  SidebarGroupContent,
-  SidebarGroupLabel,
-  SidebarMenu,
-  SidebarMenuButton,
-  SidebarMenuItem,
-  useSidebar,
-} from "@/components/ui/sidebar";
-import {
-  LayoutDashboard,
-  Users2,
-  CalendarClock,
-  Package2,
-  ShoppingCart,
+import { 
+  CalendarClock, 
+  CreditCard, 
+  Package2, 
+  Settings2, 
+  ShoppingCart, 
   Sparkles,
   Boxes,
-  CreditCard,
-  Settings2,
+  Users2,
+  LayoutDashboard
 } from "lucide-react";
-import logoUrl from "@/assets/logo-rosana.jpg";
+import { 
+  Sidebar, 
+  SidebarContent, 
+  SidebarGroup, 
+  SidebarGroupContent, 
+  SidebarGroupLabel, 
+  SidebarMenu, 
+  SidebarMenuButton, 
+  SidebarMenuItem 
+} from "@/components/ui/sidebar";
+import { NavLink, useLocation } from "react-router-dom";
+import { useSidebar } from "@/components/ui/sidebar";
+import logoUrl from "@/assets/logo.png";
 
 const items = [
   { title: "Dashboard", url: "/dashboard", icon: LayoutDashboard },
   { title: "Clientes", url: "/clientes", icon: Users2 },
-  { title: "Agendamentos", url: "/agendamentos", icon: CalendarClock },
-<<<<<<< HEAD
-=======
   // O item 'Finalizados' foi removido para consolidar tudo em Agendamentos
->>>>>>> 1be9b827db6afc3e4a1a015d739fa37e6574b522
+  { title: "Agendamentos", url: "/agendamentos", icon: CalendarClock },
   { title: "Pacotes", url: "/pacotes", icon: Package2 },
   { title: "Caixa", url: "/caixa", icon: ShoppingCart },
   { title: "Procedimentos", url: "/procedimentos", icon: Sparkles },
@@ -98,8 +95,4 @@ export function AppSidebar() {
   );
 }
 
-<<<<<<< HEAD
 export default AppSidebar;
-=======
-export default AppSidebar;
->>>>>>> 1be9b827db6afc3e4a1a015d739fa37e6574b522

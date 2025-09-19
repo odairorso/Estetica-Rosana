@@ -1468,77 +1468,6 @@ export default function Appointments() {
                   client_id: pkg.client_id
                 });
                 
-                // BUSCAR DADOS DA VENDA ORIGINAL FORÇADAMENTE - COM LOGS DETALHADOS
-                let realTotalSessions = pkg.total_sessions || 1;
-                
-                console.log(`🔍 BUSCANDO venda original para:`);
-                console.log(`  - Cliente: ${pkg.client_name}`);
-                console.log(`  - Pacote: ${pkg.package_name}`);
-                console.log(`  - Total atual: ${pkg.total_sessions}`);
-                
-                try {
-                  const salesStorage = localStorage.getItem('clinic-sales-v2');
-                  if (salesStorage) {
-                    const salesData = JSON.parse(salesStorage);
-                    console.log(`📊 ${salesData.length} vendas encontradas no localStorage`);
-                    
-                    // BUSCAR com múltiplos critérios
-                    for (let i = 0; i < salesData.length; i++) {
-                      const sale = salesData[i];
-                      console.log(`🔍 Venda ${i + 1}:`);
-                      console.log(`  - Cliente da venda: ${sale.clientName || sale.client_name}`);
-                      console.log(`  - Itens: ${sale.items ? sale.items.length : 0}`);
-                      
-                      if (sale.items && Array.isArray(sale.items)) {
-                        for (let j = 0; j < sale.items.length; j++) {
-                          const item = sale.items[j];
-                          console.log(`    Item ${j + 1}: ${item.itemName} (${item.type}) - Qty: ${item.quantity}`);
-                          
-                          // VERIFICAÇÃO MAIS FLEXÍVEL
-                          const clienteCompativel = (
-                            sale.clientName === pkg.client_name ||
-                            sale.client_name === pkg.client_name ||
-                            pkg.client_name.includes(sale.clientName) ||
-                            (sale.clientName && sale.clientName.includes(pkg.client_name))
-                          );
-                          
-                          const pacoteCompativel = (
-                            item.type === 'package' && (
-                              item.itemName === pkg.package_name ||
-                              pkg.package_name.includes(item.itemName) ||
-                              (item.itemName && item.itemName.includes('Bronze'))
-                            )
-                          );
-                          
-                          console.log(`    - Cliente compatível: ${clienteCompativel}`);
-                          console.log(`    - Pacote compatível: ${pacoteCompativel}`);
-                          
-                          if (clienteCompativel && pacoteCompativel) {
-                            realTotalSessions = item.quantity || 1;
-                            console.log(`✅ ENCONTRADO! ${pkg.package_name} tem ${realTotalSessions} sessões da venda original`);
-                            console.log(`📊 Item da venda completo:`, item);
-                            break;
-                          }
-                        }
-                      }
-                      
-                      // Se encontrou, parar de buscar
-                      if (realTotalSessions > 1) break;
-                    }
-                    
-                    // FORÇAR 3 SESSÕES SE FOR PACOTE BRONZE E NÃO ENCONTROU
-                    if (realTotalSessions === 1 && pkg.package_name && pkg.package_name.includes('Bronze')) {
-                      console.log(`🛠️ FORÇANDO 3 sessões para Pacote Bronze (não encontrou na venda)`);
-                      realTotalSessions = 3;
-                    }
-                    
-                  } else {
-                    console.log(`⚠️ Nenhuma venda encontrada no localStorage`);
-                  }
-                } catch (error) {
-                  console.error('❌ Erro ao buscar venda original:', error);
-                }
-                
                 // Calcular sessões realizadas (status 'concluido')
                 const completedSessions = appointments.filter(apt => 
                   apt.package_id === pkg.package_id && 
@@ -1546,6 +1475,7 @@ export default function Appointments() {
                   apt.status === 'concluido'
                 ).length;
                 
+                const realTotalSessions = pkg.total_sessions || 0; // Use 0 as a safe fallback
                 const remainingSessions = realTotalSessions - completedSessions;
                 const progress = realTotalSessions ? (completedSessions / realTotalSessions) * 100 : 0;
                 

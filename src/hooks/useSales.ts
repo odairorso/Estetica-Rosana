@@ -125,9 +125,7 @@ export function useSales() {
               sale_date: saleData.sale_date,
               type: item.type === 'service' ? 'individual' as const : 'package_session' as const,
             });
-            if (result) agendamentosCriados++;
-          } catch (appointmentError) {
-            console.error(`❌ Erro ao criar agendamento para ${item.itemName}:`, appointmentError);
+if (result && result.length > 0) agendamentosCriados += result.length;
           }
         }
       }
@@ -173,7 +171,7 @@ export function useSales() {
       setSales(prev => [newSale, ...prev]);
 
       let agendamentosCriados = 0;
-      for (const item of newSale.items) {
+      for (const item of saleData.items) {
         if (item.type === 'service' || item.type === 'package') {
           try {
             const result = await createFromSale({

@@ -201,28 +201,46 @@ export function useAppointments() {
       };
 
       // Para pacotes, precisamos calcular o session_number
-      if (saleData.type === 'package_session') {
-        const { count, error: countError } = await supabase
+      if (saleData.type === 'package_session' && saleData.total_sessions) {
+        const appointmentsToInsert = [];
+        for (let i = 1; i <= saleData.total_sessions; i++) {
+          appointmentsToInsert.push({
+            client_id: saleData.client_id,
+            client_name: saleData.client_name,
+            client_phone: saleData.client_phone,
+            package_id: saleData.package_id,
+            package_name: saleData.package_name,
+            total_sessions: saleData.total_sessions,
+            session_number: i,
+            price: 0,
+            sale_date: saleData.sale_date,
+            type: 'package_session',
+            status: 'agendado',
+            notes: `Sessão ${i} de ${saleData.total_sessions}`,
+            duration: 60,
+            date: '', 
+            time: '',
+          });
+        }
+
+        const { data, error } = await supabase
           .from('appointments')
-          .select('id', { count: 'exact', head: true })
-          .eq('client_id', saleData.client_id)
-          .eq('package_id', saleData.package_id);
+          .insert(appointmentsToInsert)
+          .select();
 
-        if (countError) {
-          console.error('❌ Erro ao contar sessões existentes:', countError);
-          toast({ title: "Erro no Servidor", description: "Não foi possível verificar as sessões do pacote.", variant: "destructive" });
+        if (error) {
+          console.error('❌ Erro ao criar sessões do pacote no Supabase:', error);
+          toast({ title: "Erro no Servidor", description: `Não foi possível criar as sessões do pacote: ${error.message}`, variant: "destructive" });
           return null;
         }
 
-        const nextSessionNumber = (count || 0) + 1;
-        if (nextSessionNumber > (saleData.total_sessions || 0)) {
-          toast({ title: "Pacote Completo", description: "Todas as sessões para este pacote já foram criadas.", variant: "destructive" });
-          return null;
+        if (data) {
+          console.log('✅ Sessões do pacote criadas no Supabase:', data);
+          setAppointments(prev => [...data, ...prev]);
+          saveToStorage([...data, ...appointments]);
         }
-        appointmentToInsert.session_number = nextSessionNumber;
-        appointmentToInsert.notes = `Sessão ${nextSessionNumber} de ${saleData.total_sessions}`;
-        appointmentToInsert.price = 0; // Sessão de pacote não tem preço individual
-      }
+        return data;
+      } else {
 
       const { data, error } = await supabase
         .from('appointments')

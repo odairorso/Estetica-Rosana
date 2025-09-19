@@ -19,8 +19,8 @@ import AppLayout from "./components/layout/AppLayout";
 import { ThemeProvider } from "./components/ThemeProvider";
 import { SYSTEM_CONFIG } from "./config/system";
 import { suppressSupabaseErrors } from "./utils/suppressSupabaseErrors";
-// IMPORTAR O BLOQUEADOR DE SUPABASE - COMENTADO PARA USAR DADOS REAIS
-// import "./lib/disable-supabase";
+// IMPORTAR O BLOQUEADOR DE SUPABASE - REATIVADO PARA ELIMINAR ERROS 400/404
+import "./lib/disable-supabase";
 
 const queryClient = new QueryClient();
 

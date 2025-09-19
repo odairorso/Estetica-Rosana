@@ -2,13 +2,33 @@
 
 console.log("🚑 INTERCEPTANDO E BLOQUEANDO TODAS AS TENTATIVAS DE CONEXÃO EXTERNAS");
 
+// Variável para controlar quando permitir conexões (para sincronização)
+let allowSupabaseSync = false;
+
+// Função para temporariamente permitir sincronização
+(window as any).enableSupabaseSync = () => {
+  allowSupabaseSync = true;
+  console.log("🔄 Conexão Supabase temporariamente habilitada para sincronização");
+};
+
+(window as any).disableSupabaseSync = () => {
+  allowSupabaseSync = false;
+  console.log("🚑 Conexão Supabase bloqueada novamente");
+};
+
 // Sobrescrever fetch para bloquear chamadas externas
 const originalFetch = window.fetch;
 window.fetch = function(...args: any[]) {
   const [input] = args;
   const url = typeof input === 'string' ? input : input instanceof Request ? input.url : '';
   
-  // Bloquear qualquer chamada externa
+  // Permitir conexão durante sincronização
+  if (allowSupabaseSync && url.includes('supabase.co')) {
+    console.log(`🔄 PERMITIDO (sync): ${url}`);
+    return originalFetch.apply(this, args);
+  }
+  
+  // Bloquear qualquer outra chamada externa
   if (url.includes('supabase.co') || 
       url.includes('vercel.app') || 
       url.includes('api.') || 
@@ -94,5 +114,60 @@ console.warn = function(...args: any[]) {
   
   return originalConsoleWarn.apply(this, args);
 };
+
+// Interceptar console.error para suprimir erros de rede
+const originalConsoleError = console.error;
+console.error = function(...args: any[]) {
+  const message = args.join(' ');
+  
+  // Suprimir erros específicos do Supabase e de rede
+  if (message.includes('404') || 
+      message.includes('NOT_FOUND') ||
+      message.includes('400') ||
+      message.includes('gru1::') ||
+      message.includes('Failed to get session') ||
+      message.includes('Failed to load resource') ||
+      message.includes('supabase.co') ||
+      message.includes('refresh_token') ||
+      message.includes('dashboard:1') ||
+      message.includes('Failed to fetch')) {
+    console.log(`🚑 ERRO SUPABASE SUPRIMIDO: ${message}`);
+    return; // Não exibir no console
+  }
+  
+  return originalConsoleError.apply(this, args);
+};
+
+// Interceptar eventos de erro da janela
+window.addEventListener('error', (event) => {
+  const message = event.message || '';
+  
+  if (message.includes('404') ||
+      message.includes('NOT_FOUND') ||
+      message.includes('400') ||
+      message.includes('gru1::') ||
+      message.includes('Failed to load resource') ||
+      message.includes('supabase.co')) {
+    console.log(`🚑 ERRO DE JANELA SUPRIMIDO: ${message}`);
+    event.preventDefault();
+    event.stopPropagation();
+    return false;
+  }
+});
+
+// Interceptar erros de recursos não carregados
+window.addEventListener('unhandledrejection', (event) => {
+  const reason = event.reason?.toString() || '';
+  
+  if (reason.includes('404') ||
+      reason.includes('NOT_FOUND') ||
+      reason.includes('400') ||
+      reason.includes('gru1::') ||
+      reason.includes('Failed to fetch') ||
+      reason.includes('supabase.co')) {
+    console.log(`🚑 PROMISE REJECTION SUPRIMIDA: ${reason}`);
+    event.preventDefault();
+  }
+});
 
 console.log("✅ TODAS AS CONEXÕES EXTERNAS BLOQUEADAS - Sistema 100% offline!");

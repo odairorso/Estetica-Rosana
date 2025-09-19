@@ -4,12 +4,26 @@ import { createClient } from '@supabase/supabase-js';
 const supabaseUrl = 'https://zojtuknkuwvkbnaorfqd.supabase.co';
 const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InpvanR1a25rdXd2a2JuYW9yZnFkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTgwNTMyNDksImV4cCI6MjA3MzYyOTI0OX0.RpA1fg0EMLK0mBrGBVljgzozi6c6J7tFw_S90LjxaiI';
 
-const supabase = createClient(supabaseUrl, supabaseKey);
+// Criar cliente Supabase apenas para sincronização
+let supabase: any = null;
 
 export async function clearAndSyncDatabase() {
   console.log("🗑️ INICIANDO LIMPEZA E SINCRONIZAÇÃO DO BANCO DE DADOS...");
   
   try {
+    // Habilitar temporariamente conexões para sincronização
+    (window as any).enableSupabaseSync?.();
+    
+    // Criar cliente Supabase temporário
+    if (!supabase) {
+      supabase = createClient(supabaseUrl, supabaseKey, {
+        auth: {
+          persistSession: false,
+          autoRefreshToken: false,
+          detectSessionInUrl: false
+        }
+      });
+    }
     // 1. LIMPAR TODAS AS TABELAS DO SUPABASE
     console.log("🗑️ Limpando tabelas do Supabase...");
     
@@ -149,6 +163,9 @@ export async function clearAndSyncDatabase() {
     
     console.log("✅ Dados enviados para o Supabase:", uploadResults);
     
+    // Desabilitar conexões novamente
+    (window as any).disableSupabaseSync?.();
+    
     return {
       success: true,
       message: 'Banco limpo e sincronizado com sucesso!',
@@ -163,6 +180,10 @@ export async function clearAndSyncDatabase() {
     
   } catch (error) {
     console.error('❌ Erro na sincronização:', error);
+    
+    // Garantir que as conexões sejam desabilitadas mesmo em caso de erro
+    (window as any).disableSupabaseSync?.();
+    
     return {
       success: false,
       message: 'Erro ao sincronizar dados',

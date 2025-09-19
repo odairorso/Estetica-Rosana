@@ -108,22 +108,6 @@ export function PackageCard({ package: pkg, onEdit, onDelete, onViewHistory }: P
 
         {/* Informações do pacote */}
         <div className="space-y-3">
-          {/* Progresso das sessões */}
-          <div className="space-y-2">
-            <div className="flex justify-between text-sm">
-              <span className="text-muted-foreground">Sessões</span>
-              <span className="font-medium">
-                {pkg.used_sessions}/{pkg.total_sessions}
-              </span>
-            </div>
-            <Progress
-              value={(pkg.used_sessions / pkg.total_sessions) * 100}
-              className="h-2"
-            />
-            <div className="text-xs text-muted-foreground">
-              {pkg.remaining_sessions} sessões restantes
-            </div>
-          </div>
 
           {/* Datas */}
           <div className="grid grid-cols-2 gap-3 text-sm">

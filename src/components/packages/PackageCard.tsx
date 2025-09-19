@@ -41,7 +41,7 @@ export function PackageCard({ package: pkg, onEdit, onDelete, onViewHistory }: P
 
   const formatDate = (dateString: string | null) => {
     if (!dateString) return "-";
-    return new Date(dateString).toLocaleDateString('pt-BR');
+    return new Date(dateString).toLocaleDateString("pt-BR");
   };
 
   return (
@@ -64,8 +64,8 @@ export function PackageCard({ package: pkg, onEdit, onDelete, onViewHistory }: P
                 <Edit className="h-4 w-4 mr-2" />
                 Editar
               </DropdownMenuItem>
-              <DropdownMenuItem 
-                onClick={() => onDelete(pkg.id)} 
+              <DropdownMenuItem
+                onClick={() => onDelete(pkg.id)}
                 className="cursor-pointer text-destructive"
               >
                 <Trash2 className="h-4 w-4 mr-2" />
@@ -116,8 +116,8 @@ export function PackageCard({ package: pkg, onEdit, onDelete, onViewHistory }: P
                 {pkg.usedSessions}/{pkg.totalSessions}
               </span>
             </div>
-            <Progress 
-              value={(pkg.usedSessions / pkg.totalSessions) * 100} 
+            <Progress
+              value={(pkg.usedSessions / pkg.totalSessions) * 100}
               className="h-2"
             />
             <div className="text-xs text-muted-foreground">
@@ -148,7 +148,7 @@ export function PackageCard({ package: pkg, onEdit, onDelete, onViewHistory }: P
             <div className="flex justify-between items-center">
               <span className="text-sm text-muted-foreground">Valor total</span>
               <span className="font-semibold text-brand-start">
-                R$ {pkg.price?.toFixed(2) || '0.00'}
+                R$ {(typeof pkg.price === "number" ? pkg.price : Number(pkg.price || 0)).toFixed(2)}
               </span>
             </div>
           </div>

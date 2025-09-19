@@ -1,0 +1,144 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Verificar Dados Reais do Sistema</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        .section { margin: 20px 0; padding: 15px; border: 1px solid #ccc; }
+        .data { background: #f5f5f5; padding: 10px; margin: 10px 0; }
+        button { padding: 10px 20px; margin: 5px; }
+    </style>
+</head>
+<body>
+    <h1>🔍 Verificação de Dados Reais do Sistema</h1>
+    
+    <div class="section">
+        <h2>📊 Vendas no localStorage</h2>
+        <button onclick="checkSales()">Verificar Vendas</button>
+        <div id="sales-data" class="data"></div>
+    </div>
+    
+    <div class="section">
+        <h2>👥 Clientes Cadastrados</h2>
+        <button onclick="checkClients()">Verificar Clientes</button>
+        <div id="clients-data" class="data"></div>
+    </div>
+    
+    <div class="section">
+        <h2>📅 Agendamentos</h2>
+        <button onclick="checkAppointments()">Verificar Agendamentos</button>
+        <div id="appointments-data" class="data"></div>
+    </div>
+    
+    <div class="section">
+        <h2>🧹 Limpar Dados de Teste</h2>
+        <button onclick="clearTestData()" style="background: red; color: white;">Limpar Dados de Teste</button>
+        <div id="clear-result" class="data"></div>
+    </div>
+
+    <script>
+        function checkSales() {
+            const salesData = localStorage.getItem('clinic-sales-v2');
+            const salesDiv = document.getElementById('sales-data');
+            
+            if (!salesData) {
+                salesDiv.innerHTML = '❌ Nenhuma venda encontrada no localStorage';
+                return;
+            }
+            
+            try {
+                const sales = JSON.parse(salesData);
+                salesDiv.innerHTML = `
+                    <strong>Total de vendas: ${sales.length}</strong><br><br>
+                    ${sales.map((sale, i) => `
+                        <div style="border: 1px solid #ddd; padding: 10px; margin: 5px 0;">
+                            <strong>Venda ${i+1}:</strong><br>
+                            Cliente: ${sale.clientName || sale.client_name || 'SEM NOME'}<br>
+                            Telefone: ${sale.clientPhone || sale.client_phone || 'SEM TELEFONE'}<br>
+                            Data: ${sale.sale_date || 'SEM DATA'}<br>
+                            Itens: ${sale.items?.length || 0}<br>
+                            ${sale.items ? sale.items.map(item => 
+                                `&nbsp;&nbsp;• ${item.itemName} (${item.type}) - R$ ${item.price}`
+                            ).join('<br>') : ''}
+                        </div>
+                    `).join('')}
+                `;
+            } catch (error) {
+                salesDiv.innerHTML = `❌ Erro ao ler vendas: ${error.message}`;
+            }
+        }
+        
+        function checkClients() {
+            const clientsData = localStorage.getItem('clinic-clients-v2');
+            const clientsDiv = document.getElementById('clients-data');
+            
+            if (!clientsData) {
+                clientsDiv.innerHTML = '❌ Nenhum cliente encontrado no localStorage';
+                return;
+            }
+            
+            try {
+                const clients = JSON.parse(clientsData);
+                clientsDiv.innerHTML = `
+                    <strong>Total de clientes: ${clients.length}</strong><br><br>
+                    ${clients.map((client, i) => `
+                        <div style="border: 1px solid #ddd; padding: 10px; margin: 5px 0;">
+                            <strong>Cliente ${i+1}:</strong><br>
+                            Nome: ${client.name}<br>
+                            Telefone: ${client.phone}<br>
+                            Email: ${client.email || 'SEM EMAIL'}<br>
+                        </div>
+                    `).join('')}
+                `;
+            } catch (error) {
+                clientsDiv.innerHTML = `❌ Erro ao ler clientes: ${error.message}`;
+            }
+        }
+        
+        function checkAppointments() {
+            const appointmentsData = localStorage.getItem('clinic-appointments-v2');
+            const appointmentsDiv = document.getElementById('appointments-data');
+            
+            if (!appointmentsData) {
+                appointmentsDiv.innerHTML = '❌ Nenhum agendamento encontrado no localStorage';
+                return;
+            }
+            
+            try {
+                const appointments = JSON.parse(appointmentsData);
+                appointmentsDiv.innerHTML = `
+                    <strong>Total de agendamentos: ${appointments.length}</strong><br><br>
+                    ${appointments.slice(0, 5).map((apt, i) => `
+                        <div style="border: 1px solid #ddd; padding: 10px; margin: 5px 0;">
+                            <strong>Agendamento ${i+1}:</strong><br>
+                            Cliente: ${apt.client_name}<br>
+                            Serviço: ${apt.service_name || apt.package_name}<br>
+                            Tipo: ${apt.type}<br>
+                            Status: ${apt.status}<br>
+                        </div>
+                    `).join('')}
+                    ${appointments.length > 5 ? `<br><em>... e mais ${appointments.length - 5} agendamentos</em>` : ''}
+                `;
+            } catch (error) {
+                appointmentsDiv.innerHTML = `❌ Erro ao ler agendamentos: ${error.message}`;
+            }
+        }
+        
+        function clearTestData() {
+            const result = document.getElementById('clear-result');
+            
+            // Limpar dados de teste
+            localStorage.removeItem('clinic-sales-v2');
+            localStorage.removeItem('clinic-appointments-v2');
+            
+            result.innerHTML = `
+                ✅ <strong>Dados de teste removidos!</strong><br>
+                - Vendas de teste removidas<br>
+                - Agendamentos de teste removidos<br>
+                <br>
+                <em>Recarregue a página para ver o sistema limpo.</em>
+            `;
+        }
+    </script>
+</body>
+</html>

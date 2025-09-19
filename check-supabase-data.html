@@ -1,0 +1,472 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Verificar Dados Reais do Supabase</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; background: #f5f5f5; }
+        .container { max-width: 1200px; margin: 0 auto; }
+        .section { margin: 20px 0; padding: 20px; background: white; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+        .data { background: #f8f9fa; padding: 15px; margin: 10px 0; border-radius: 4px; border-left: 4px solid #007bff; }
+        .error { background: #f8d7da; color: #721c24; border-left-color: #dc3545; }
+        .success { background: #d4edda; color: #155724; border-left-color: #28a745; }
+        button { padding: 12px 24px; margin: 8px; background: #007bff; color: white; border: none; border-radius: 4px; cursor: pointer; }
+        button:hover { background: #0056b3; }
+        .delete-button { background: #dc3545; }
+        .delete-button:hover { background: #c82333; }
+        .loading { color: #6c757d; font-style: italic; }
+        table { width: 100%; border-collapse: collapse; margin: 10px 0; }
+        th, td { padding: 8px 12px; text-align: left; border-bottom: 1px solid #ddd; }
+        th { background: #f8f9fa; font-weight: bold; }
+        .count { font-size: 18px; font-weight: bold; color: #007bff; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🔍 Verificação de Dados Reais do Supabase</h1>
+        
+        <div class="section">
+            <h2>🛒 Vendas do Caixa (Supabase)</h2>
+            <button onclick="checkSupabaseSales()">Verificar Vendas no Supabase</button>
+            <div id="supabase-sales-data" class="data"></div>
+        </div>
+        
+        <div class="section">
+            <h2>👥 Clientes Cadastrados (Supabase)</h2>
+            <button onclick="checkSupabaseClients()">Verificar Clientes no Supabase</button>
+            <div id="supabase-clients-data" class="data"></div>
+        </div>
+        
+        <div class="section">
+            <h2>📦 Pacotes (Supabase)</h2>
+            <button onclick="checkSupabasePackages()">Verificar Pacotes no Supabase</button>
+            <div id="supabase-packages-data" class="data"></div>
+        </div>
+        
+        <div class="section">
+            <h2>🔧 Procedimentos/Serviços (Supabase)</h2>
+            <button onclick="checkSupabaseServices()">Verificar Serviços no Supabase</button>
+            <div id="supabase-services-data" class="data"></div>
+        </div>
+        
+        <div class="section">
+            <h2>📅 Agendamentos (Supabase)</h2>
+            <button onclick="checkSupabaseAppointments()">Verificar Agendamentos no Supabase</button>
+            <div id="supabase-appointments-data" class="data"></div>
+        </div>
+        
+        <div class="section">
+            <h2>⚡ Processar Vendas Reais</h2>
+            <button onclick="processRealSales()" style="background: #28a745;">Processar Vendas do Supabase para Agendamentos</button>
+            <div id="process-result" class="data"></div>
+        </div>
+
+        <div class="section">
+            <h2>🗑️ Limpar Dados de Teste</h2>
+            <button onclick="clearAllData()" class="delete-button">Limpar Todos os Dados de Teste</button>
+            <div id="delete-result" class="data"></div>
+        </div>
+    </div>
+
+    <script type="module">
+        // Importar configuração do Supabase
+        import { createClient } from 'https://cdn.skypack.dev/@supabase/supabase-js@2';
+        
+        // Configuração do Supabase (você precisa configurar isso)
+        const SUPABASE_URL = 'https://your-project.supabase.co'; // Substitua pela sua URL
+        const SUPABASE_ANON_KEY = 'your-anon-key'; // Substitua pela sua chave
+        
+        let supabase;
+        
+        // Tentar obter configuração do localStorage ou variáveis
+        try {
+            const config = JSON.parse(localStorage.getItem('supabase-config') || '{}');
+            if (config.url && config.key) {
+                supabase = createClient(config.url, config.key);
+            }
+        } catch (error) {
+            console.log('Erro ao carregar config do localStorage:', error);
+        }
+        
+        // Função para configurar Supabase manualmente
+        window.configureSupabase = function() {
+            const url = prompt('Digite a URL do Supabase:');
+            const key = prompt('Digite a chave anônima do Supabase:');
+            
+            if (url && key) {
+                supabase = createClient(url, key);
+                localStorage.setItem('supabase-config', JSON.stringify({url, key}));
+                alert('Configuração salva! Agora você pode verificar os dados.');
+            }
+        };
+        
+        window.checkSupabaseSales = async function() {
+            const div = document.getElementById('supabase-sales-data');
+            div.innerHTML = '<div class="loading">Carregando vendas do Supabase...</div>';
+            
+            if (!supabase) {
+                div.innerHTML = '<div class="error">❌ Supabase não configurado. <button onclick="configureSupabase()">Configurar Agora</button></div>';
+                return;
+            }
+            
+            try {
+                const { data: sales, error } = await supabase
+                    .from('sales')
+                    .select('*')
+                    .order('created_at', { ascending: false });
+                
+                if (error) throw error;
+                
+                div.innerHTML = `
+                    <div class="success">✅ <span class="count">${sales.length}</span> vendas encontradas no Supabase</div>
+                    <table>
+                        <tr>
+                            <th>ID</th>
+                            <th>Cliente</th>
+                            <th>Telefone</th>
+                            <th>Total</th>
+                            <th>Data</th>
+                            <th>Itens</th>
+                        </tr>
+                        ${sales.map(sale => `
+                            <tr>
+                                <td>${sale.id}</td>
+                                <td>${sale.client_name || 'N/A'}</td>
+                                <td>${sale.client_phone || 'N/A'}</td>
+                                <td>R$ ${sale.total || 0}</td>
+                                <td>${new Date(sale.created_at).toLocaleDateString('pt-BR')}</td>
+                                <td>${sale.items ? JSON.parse(sale.items).length : 0} itens</td>
+                            </tr>
+                        `).join('')}
+                    </table>
+                `;
+            } catch (error) {
+                div.innerHTML = `<div class="error">❌ Erro ao buscar vendas: ${error.message}</div>`;
+            }
+        };
+        
+        window.checkSupabaseClients = async function() {
+            const div = document.getElementById('supabase-clients-data');
+            div.innerHTML = '<div class="loading">Carregando clientes do Supabase...</div>';
+            
+            if (!supabase) {
+                div.innerHTML = '<div class="error">❌ Supabase não configurado. <button onclick="configureSupabase()">Configurar Agora</button></div>';
+                return;
+            }
+            
+            try {
+                const { data: clients, error } = await supabase
+                    .from('clients')
+                    .select('*')
+                    .order('created_at', { ascending: false });
+                
+                if (error) throw error;
+                
+                div.innerHTML = `
+                    <div class="success">✅ <span class="count">${clients.length}</span> clientes encontrados no Supabase</div>
+                    <table>
+                        <tr>
+                            <th>ID</th>
+                            <th>Nome</th>
+                            <th>Telefone</th>
+                            <th>Email</th>
+                            <th>Data Cadastro</th>
+                        </tr>
+                        ${clients.map(client => `
+                            <tr>
+                                <td>${client.id}</td>
+                                <td>${client.name}</td>
+                                <td>${client.phone || 'N/A'}</td>
+                                <td>${client.email || 'N/A'}</td>
+                                <td>${new Date(client.created_at).toLocaleDateString('pt-BR')}</td>
+                            </tr>
+                        `).join('')}
+                    </table>
+                `;
+            } catch (error) {
+                div.innerHTML = `<div class="error">❌ Erro ao buscar clientes: ${error.message}</div>`;
+            }
+        };
+        
+        window.checkSupabasePackages = async function() {
+            const div = document.getElementById('supabase-packages-data');
+            div.innerHTML = '<div class="loading">Carregando pacotes do Supabase...</div>';
+            
+            if (!supabase) {
+                div.innerHTML = '<div class="error">❌ Supabase não configurado. <button onclick="configureSupabase()">Configurar Agora</button></div>';
+                return;
+            }
+            
+            try {
+                const { data: packages, error } = await supabase
+                    .from('packages')
+                    .select('*')
+                    .order('created_at', { ascending: false });
+                
+                if (error) throw error;
+                
+                div.innerHTML = `
+                    <div class="success">✅ <span class="count">${packages.length}</span> pacotes encontrados no Supabase</div>
+                    <table>
+                        <tr>
+                            <th>ID</th>
+                            <th>Nome</th>
+                            <th>Preço</th>
+                            <th>Sessões</th>
+                            <th>Descrição</th>
+                        </tr>
+                        ${packages.map(pkg => `
+                            <tr>
+                                <td>${pkg.id}</td>
+                                <td>${pkg.name}</td>
+                                <td>R$ ${pkg.price || 0}</td>
+                                <td>${pkg.sessions || 'N/A'}</td>
+                                <td>${pkg.description || 'N/A'}</td>
+                            </tr>
+                        `).join('')}
+                    </table>
+                `;
+            } catch (error) {
+                div.innerHTML = `<div class="error">❌ Erro ao buscar pacotes: ${error.message}</div>`;
+            }
+        };
+        
+        window.checkSupabaseServices = async function() {
+            const div = document.getElementById('supabase-services-data');
+            div.innerHTML = '<div class="loading">Carregando serviços do Supabase...</div>';
+            
+            if (!supabase) {
+                div.innerHTML = '<div class="error">❌ Supabase não configurado. <button onclick="configureSupabase()">Configurar Agora</button></div>';
+                return;
+            }
+            
+            try {
+                const { data: services, error } = await supabase
+                    .from('services')
+                    .select('*')
+                    .order('created_at', { ascending: false });
+                
+                if (error) throw error;
+                
+                div.innerHTML = `
+                    <div class="success">✅ <span class="count">${services.length}</span> serviços encontrados no Supabase</div>
+                    <table>
+                        <tr>
+                            <th>ID</th>
+                            <th>Nome</th>
+                            <th>Preço</th>
+                            <th>Duração</th>
+                            <th>Categoria</th>
+                        </tr>
+                        ${services.map(service => `
+                            <tr>
+                                <td>${service.id}</td>
+                                <td>${service.name}</td>
+                                <td>R$ ${service.price || 0}</td>
+                                <td>${service.duration || 'N/A'} min</td>
+                                <td>${service.category || 'N/A'}</td>
+                            </tr>
+                        `).join('')}
+                    </table>
+                `;
+            } catch (error) {
+                div.innerHTML = `<div class="error">❌ Erro ao buscar serviços: ${error.message}</div>`;
+            }
+        };
+        
+        window.checkSupabaseAppointments = async function() {
+            const div = document.getElementById('supabase-appointments-data');
+            div.innerHTML = '<div class="loading">Carregando agendamentos do Supabase...</div>';
+            
+            if (!supabase) {
+                div.innerHTML = '<div class="error">❌ Supabase não configurado. <button onclick="configureSupabase()">Configurar Agora</button></div>';
+                return;
+            }
+            
+            try {
+                const { data: appointments, error } = await supabase
+                    .from('appointments')
+                    .select('*')
+                    .order('created_at', { ascending: false });
+                
+                if (error) throw error;
+                
+                div.innerHTML = `
+                    <div class="success">✅ <span class="count">${appointments.length}</span> agendamentos encontrados no Supabase</div>
+                    <table>
+                        <tr>
+                            <th>ID</th>
+                            <th>Cliente</th>
+                            <th>Serviço/Pacote</th>
+                            <th>Data</th>
+                            <th>Status</th>
+                            <th>Tipo</th>
+                        </tr>
+                        ${appointments.slice(0, 10).map(apt => `
+                            <tr>
+                                <td>${apt.id}</td>
+                                <td>${apt.client_name || 'N/A'}</td>
+                                <td>${apt.service_name || apt.package_name || 'N/A'}</td>
+                                <td>${apt.appointment_date || 'N/A'}</td>
+                                <td>${apt.status || 'N/A'}</td>
+                                <td>${apt.type || 'N/A'}</td>
+                            </tr>
+                        `).join('')}
+                    </table>
+                    ${appointments.length > 10 ? `<p><em>Mostrando 10 de ${appointments.length} agendamentos</em></p>` : ''}
+                `;
+            } catch (error) {
+                div.innerHTML = `<div class="error">❌ Erro ao buscar agendamentos: ${error.message}</div>`;
+            }
+        };
+        
+        window.processRealSales = async function() {
+            const div = document.getElementById('process-result');
+            div.innerHTML = '<div class="loading">Processando vendas reais do Supabase...</div>';
+            
+            if (!supabase) {
+                div.innerHTML = '<div class="error">❌ Supabase não configurado. <button onclick="configureSupabase()">Configurar Agora</button></div>';
+                return;
+            }
+            
+            try {
+                // Buscar vendas do Supabase
+                const { data: sales, error: salesError } = await supabase
+                    .from('sales')
+                    .select('*');
+                
+                if (salesError) throw salesError;
+                
+                if (sales.length === 0) {
+                    div.innerHTML = '<div class="error">❌ Nenhuma venda encontrada no Supabase para processar</div>';
+                    return;
+                }
+                
+                let processedCount = 0;
+                let appointmentsCreated = [];
+                
+                for (const sale of sales) {
+                    try {
+                        const items = sale.items ? JSON.parse(sale.items) : [];
+                        
+                        for (const item of items) {
+                            if (item.type === 'package') {
+                                // Criar agendamentos para cada sessão do pacote
+                                const sessions = item.sessions || 1;
+                                for (let i = 1; i <= sessions; i++) {
+                                    const appointment = {
+                                        client_name: sale.client_name,
+                                        client_phone: sale.client_phone,
+                                        package_name: item.itemName,
+                                        service_name: `Sessão ${i} - ${item.itemName}`,
+                                        type: 'package_session',
+                                        session_number: i,
+                                        total_sessions: sessions,
+                                        price: item.price / sessions,
+                                        status: 'agendado',
+                                        duration: 60,
+                                        sale_id: sale.id,
+                                        created_at: new Date().toISOString()
+                                    };
+                                    
+                                    const { data, error } = await supabase
+                                        .from('appointments')
+                                        .insert([appointment])
+                                        .select();
+                                    
+                                    if (!error && data) {
+                                        appointmentsCreated.push(data[0]);
+                                    }
+                                }
+                            } else {
+                                // Criar agendamento para serviço individual
+                                const appointment = {
+                                    client_name: sale.client_name,
+                                    client_phone: sale.client_phone,
+                                    service_name: item.itemName,
+                                    type: 'service',
+                                    price: item.price,
+                                    status: 'agendado',
+                                    duration: 60,
+                                    sale_id: sale.id,
+                                    created_at: new Date().toISOString()
+                                };
+                                
+                                const { data, error } = await supabase
+                                    .from('appointments')
+                                    .insert([appointment])
+                                    .select();
+                                
+                                if (!error && data) {
+                                    appointmentsCreated.push(data[0]);
+                                }
+                            }
+                        }
+                        processedCount++;
+                    } catch (itemError) {
+                        console.error('Erro ao processar venda:', sale.id, itemError);
+                    }
+                }
+                
+                div.innerHTML = `
+                    <div class="success">
+                        ✅ <strong>Processamento concluído!</strong><br>
+                        📊 Vendas processadas: ${processedCount}<br>
+                        📅 Agendamentos criados: ${appointmentsCreated.length}<br>
+                        <br>
+                        <em>Os agendamentos foram criados diretamente no Supabase!</em>
+                    </div>
+                `;
+                
+                // Atualizar a lista de agendamentos
+                setTimeout(() => {
+                    checkSupabaseAppointments();
+                }, 1000);
+                
+            } catch (error) {
+                div.innerHTML = `<div class="error">❌ Erro ao processar vendas: ${error.message}</div>`;
+            }
+        };
+
+        window.clearAllData = async function() {
+            const div = document.getElementById('delete-result');
+            div.innerHTML = '<div class="loading">Limpando dados de teste...</div>';
+
+            if (!supabase) {
+                div.innerHTML = '<div class="error">❌ Supabase não configurado. <button onclick="configureSupabase()">Configurar Agora</button></div>';
+                return;
+            }
+
+            if (!confirm('Você tem certeza que deseja apagar TODOS os dados de agendamentos, vendas, pacotes e clientes? Esta ação não pode ser desfeita.')) {
+                div.innerHTML = 'Ação cancelada.';
+                return;
+            }
+
+            try {
+                // Deletar dados em ordem para evitar problemas com chaves estrangeiras
+                const { error: appointmentsError } = await supabase.from('appointments').delete().neq('id', 0);
+                if (appointmentsError) throw appointmentsError;
+
+                const { error: salesError } = await supabase.from('sales').delete().neq('id', 0);
+                if (salesError) throw salesError;
+
+                const { error: packagesError } = await supabase.from('packages').delete().neq('id', 0);
+                if (packagesError) throw packagesError;
+
+                const { error: clientsError } = await supabase.from('clients').delete().neq('id', 0);
+                if (clientsError) throw clientsError;
+
+                div.innerHTML = '<div class="success">✅ Todos os dados de teste foram limpos com sucesso!</div>';
+
+                // Atualizar visualizações
+                checkSupabaseAppointments();
+                checkSupabaseSales();
+                checkSupabasePackages();
+                checkSupabaseClients();
+
+            } catch (error) {
+                div.innerHTML = `<div class="error">❌ Erro ao limpar dados: ${error.message}</div>`;
+            }
+        };
+    </script>
+</body>
+</html>

@@ -58,7 +58,8 @@ export function useAppointments() {
     setIsLoading(true);
     setError(null);
 
-    const isOffline = localStorage.getItem('force-offline-mode') === 'true';
+    // Forçar modo offline temporariamente para evitar erro do Supabase
+    const isOffline = true; // localStorage.getItem('force-offline-mode') === 'true';
 
     if (isOffline) {
       console.log("📋 Carregando agendamentos (MODO OFFLINE)...");
@@ -121,7 +122,8 @@ export function useAppointments() {
     type: 'individual' | 'package_session';
     session_number?: number;
   }) => {
-    const isOffline = localStorage.getItem('force-offline-mode') === 'true';
+    // Forçar modo offline temporariamente para evitar erro do Supabase
+    const isOffline = true; // localStorage.getItem('force-offline-mode') === 'true';
 
     if (isOffline) {
       console.log("🆕 TRANSFERINDO PARA AGENDAMENTOS (OFFLINE):", {

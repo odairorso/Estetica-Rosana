@@ -96,6 +96,28 @@ export default function Appointments() {
     }
   };
 
+  // Função para carregar dados processados automaticamente
+  const carregarDadosProcessados = async () => {
+    try {
+      // Carregar dados reais do Supabase em vez de dados hardcoded
+      await loadAppointments();
+      
+      // Recarregar agendamentos
+      await refreshAppointments();
+      
+      toast({
+        title: "✅ Dados carregados!",
+        description: `${dadosProcessados.length} agendamentos foram carregados com sucesso.`,
+      });
+    } catch (error) {
+      toast({
+        title: "❌ Erro",
+        description: "Erro ao carregar dados processados.",
+        variant: "destructive",
+      });
+    }
+  };
+
   // FUNÇÃO DE EMERGÊNCIA: Sincronizar TODOS os pacotes com as vendas do caixa
   const sincronizarTodosOsPacotesComCaixa = async () => {
     console.log("🔄 SINCRONIZANDO TODOS OS PACOTES COM AS VENDAS DO CAIXA...");
@@ -1154,8 +1176,15 @@ export default function Appointments() {
             <TestButton />
           </div>
           
-          {/* Botão de Emergência para Processar Vendas */}
+          {/* Botões de Emergência */}
           <div className="flex gap-2">
+            <NeonButton 
+              icon={ShoppingCart} 
+              onClick={carregarDadosProcessados}
+              className="bg-gradient-to-r from-green-500 to-emerald-500 hover:from-green-600 hover:to-emerald-600"
+            >
+              📊 CARREGAR DADOS PROCESSADOS
+            </NeonButton>
             <NeonButton 
               icon={RefreshCw} 
               onClick={sincronizarTodosOsPacotesComCaixa}

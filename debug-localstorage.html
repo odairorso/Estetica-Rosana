@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Debug LocalStorage</title>
+    <meta charset="utf-8">
+</head>
+<body>
+    <h1>Debug LocalStorage Data</h1>
+    <pre id="output"></pre>
+    
+    <script>
+        function debugLocalStorage() {
+            let output = "=== DEBUG LOCALSTORAGE ===\n\n";
+            
+            // Verificar vendas
+            try {
+                const salesData = localStorage.getItem('clinic-sales-v2');
+                if (salesData) {
+                    const sales = JSON.parse(salesData);
+                    output += "📦 VENDAS ENCONTRADAS: " + sales.length + "\n";
+                    sales.forEach((sale, index) => {
+                        output += "\n--- Venda " + (index + 1) + " ---\n";
+                        output += "Cliente: " + (sale.clientName || sale.client_name || 'N/A') + "\n";
+                        output += "Data: " + (sale.sale_date || 'N/A') + "\n";
+                        output += "Total: R$ " + (sale.total || '0') + "\n";
+                        output += "Itens: " + (sale.items ? sale.items.length : 0) + "\n";
+                        
+                        if (sale.items) {
+                            sale.items.forEach((item, itemIndex) => {
+                                output += "  Item " + (itemIndex + 1) + ": " + (item.itemName || 'N/A') + " (" + (item.type || 'N/A') + ") - Qty: " + (item.quantity || 'N/A') + " - R$ " + (item.price || '0') + "\n";
+                            });
+                        }
+                    });
+                } else {
+                    output += "❌ Nenhuma venda encontrada\n";
+                }
+            } catch (error) {
+                output += "❌ Erro ao ler vendas: " + error.message + "\n";
+            }
+            
+            // Verificar agendamentos
+            try {
+                const appointmentsData = localStorage.getItem('clinic-appointments-v2');
+                if (appointmentsData) {
+                    const appointments = JSON.parse(appointmentsData);
+                    output += "\n📅 AGENDAMENTOS ENCONTRADOS: " + appointments.length + "\n";
+                    appointments.forEach((apt, index) => {
+                        output += "\n--- Agendamento " + (index + 1) + " ---\n";
+                        output += "Cliente: " + (apt.client_name || 'N/A') + "\n";
+                        output += "Tipo: " + (apt.type || 'N/A') + "\n";
+                        output += "Pacote: " + (apt.package_name || 'N/A') + "\n";
+                        output += "Serviço: " + (apt.service_name || 'N/A') + "\n";
+                        output += "Total Sessions: " + (apt.total_sessions || 'N/A') + "\n";
+                        output += "Session Number: " + (apt.session_number || 'N/A') + "\n";
+                        output += "Status: " + (apt.status || 'N/A') + "\n";
+                    });
+                } else {
+                    output += "\n❌ Nenhum agendamento encontrado\n";
+                }
+            } catch (error) {
+                output += "\n❌ Erro ao ler agendamentos: " + error.message + "\n";
+            }
+            
+            document.getElementById('output').textContent = output;
+        }
+        
+        // Executar quando a página carregar
+        window.onload = debugLocalStorage;
+    </script>
+</body>
+</html>

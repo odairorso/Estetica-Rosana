@@ -4,7 +4,6 @@ import { twMerge } from "tailwind-merge";
 export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
 }
-<<<<<<< HEAD
 
 /**
  * Função utilitária para obter data atual no formato YYYY-MM-DD de forma segura
@@ -52,5 +51,3 @@ export function dateToString(date: Date): string {
     return getCurrentDateString();
   }
 }
-=======
->>>>>>> 1be9b827db6afc3e4a1a015d739fa37e6574b522

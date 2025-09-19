@@ -23,7 +23,7 @@ export default function Services() {
   const [selectedServiceForAppointment, setSelectedServiceForAppointment] = useState<Service | null>(null);
   
   const { services, addService, updateService, getServiceIcon } = useServices();
-  const { addAppointment } = useAppointments();
+  const { addAppointment, createFromSale } = useAppointments();
   const { toast } = useToast();
 
   const filteredServices = services.filter(service => {
@@ -66,11 +66,20 @@ export default function Services() {
   };
 
   const handleSaveAppointment = async (appointmentData: any) => {
-    const result = await addAppointment(appointmentData);
+    const result = await createFromSale({
+      client_id: appointmentData.client_id,
+      client_name: appointmentData.client_name,
+      client_phone: appointmentData.client_phone,
+      service_id: appointmentData.service_id,
+      service_name: appointmentData.service_name,
+      price: appointmentData.price,
+      sale_date: new Date().toISOString(),
+      type: 'individual'
+    });
     if (result) {
       toast({
         title: "Agendamento confirmado!",
-        description: `${result.serviceName} agendado para ${result.client_name}.`,
+        description: `${appointmentData.service_name} agendado para ${appointmentData.client_name}.`,
       });
     } else {
       toast({ title: "Erro", description: "Não foi possível criar o agendamento.", variant: "destructive" });
@@ -118,11 +127,7 @@ export default function Services() {
             <button
               key={category}
               onClick={() => setSelectedCategory(category)}
-<<<<<<< HEAD
-              className={`px-4 py-2 rounded-full text-sm font-medium transition-all whitespace-nowrap ${ 
-=======
               className={`px-4 py-2 rounded-full text-sm font-medium transition-all whitespace-nowrap ${
->>>>>>> 1be9b827db6afc3e4a1a015d739fa37e6574b522
                 selectedCategory === category
                   ? "bg-primary text-primary-foreground shadow-lg"
                   : "bg-secondary/50 text-muted-foreground hover:bg-secondary hover:text-secondary-foreground"

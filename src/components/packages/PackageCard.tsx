@@ -105,6 +105,11 @@ export function PackageCard({ package: pkg, onEdit, onDelete, onViewHistory }: P
         {/* Informações do pacote */}
         <div className="space-y-3">
 
+          <div className="flex justify-between text-sm">
+            <span className="text-muted-foreground">Total de Sessões</span>
+            <span className="font-medium">{pkg.total_sessions}</span>
+          </div>
+
           {/* Datas */}
           <div className="grid grid-cols-2 gap-3 text-sm">
             <div className="space-y-1">

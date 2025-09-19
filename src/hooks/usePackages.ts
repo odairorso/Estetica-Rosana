@@ -163,8 +163,15 @@ export function usePackages() {
     });
   };
 
+  const uniquePackagesByName = packages.reduce((acc: Package[], current) => {
+    if (!acc.some(item => item.name === current.name)) {
+      acc.push(current);
+    }
+    return acc;
+  }, []);
+
   return {
-    packages,
+    packages: uniquePackagesByName,
     isLoading,
     addPackage,
     updatePackage,

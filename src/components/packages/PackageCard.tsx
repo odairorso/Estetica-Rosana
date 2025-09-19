@@ -85,10 +85,6 @@ export function PackageCard({ package: pkg, onEdit, onDelete, onViewHistory }: P
               <h3 className="font-semibold text-foreground line-clamp-2 hover:text-brand-start transition-colors">
                 {pkg.name}
               </h3>
-              <p className="text-sm text-muted-foreground flex items-center gap-1">
-                <User className="h-3 w-3" />
-                {pkg.clientName}
-              </p>
             </div>
           </div>
         </div>

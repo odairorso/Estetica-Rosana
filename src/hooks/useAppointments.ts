@@ -181,45 +181,34 @@ export function useAppointments() {
       // LÓGICA ONLINE
       console.log("☁️ Criando agendamento a partir de venda (ONLINE - SUPABASE):", saleData);
 
+      // Apenas campos que existem na tabela appointments do Supabase
       const appointmentToInsert = {
-        client_id: saleData.client_id,
         client_name: saleData.client_name,
         client_phone: saleData.client_phone,
-        service_id: saleData.service_id,
-        service_name: saleData.service_name,
-        package_id: saleData.package_id,
-        package_name: saleData.package_name,
-        total_sessions: saleData.total_sessions,
-        price: saleData.price,
-        sale_date: saleData.sale_date,
-        type: saleData.type,
-        status: 'agendado',
-        notes: `Aguardando agendamento - ${saleData.service_name || saleData.package_name}`,
+        service_name: saleData.service_name || saleData.package_name,
+        date: '2024-01-01', // Data temporária - será agendada depois
+        time: '09:00',      // Horário temporário - será agendado depois
         duration: 60,
-        date: '', 
-        time: '',
+        price: saleData.price,
+        notes: `Aguardando agendamento - ${saleData.service_name || saleData.package_name}`,
+        status: 'agendado'
       };
 
       // Para pacotes, precisamos calcular o session_number
       if (saleData.type === 'package_session' && saleData.total_sessions) {
         const appointmentsToInsert = [];
         for (let i = 1; i <= saleData.total_sessions; i++) {
+          // Apenas campos que existem na tabela appointments do Supabase
           appointmentsToInsert.push({
-            client_id: saleData.client_id,
             client_name: saleData.client_name,
             client_phone: saleData.client_phone,
-            package_id: saleData.package_id,
-            package_name: saleData.package_name,
-            total_sessions: saleData.total_sessions,
-            session_number: i,
-            price: 0,
-            sale_date: saleData.sale_date,
-            type: 'package_session',
-            status: 'agendado',
-            notes: `Sessão ${i} de ${saleData.total_sessions}`,
+            service_name: `${saleData.package_name} - Sessão ${i}`,
+            date: '2024-01-01', // Data temporária - será agendada depois
+            time: '09:00',      // Horário temporário - será agendado depois
             duration: 60,
-            date: '', 
-            time: '',
+            price: 0,
+            notes: `Sessão ${i} de ${saleData.total_sessions} - ${saleData.package_name}`,
+            status: 'agendado'
           });
         }
 
@@ -236,8 +225,20 @@ export function useAppointments() {
 
         if (data) {
           console.log('✅ Sessões do pacote criadas no Supabase:', data);
-          setAppointments(prev => [...data, ...prev]);
-          saveToStorage([...data, ...appointments]);
+          
+          // Adicionar campos extras para funcionalidade local
+          const enhancedData = data.map((appointment, index) => ({
+            ...appointment,
+            package_id: saleData.package_id,
+            package_name: saleData.package_name,
+            total_sessions: saleData.total_sessions,
+            session_number: index + 1,
+            type: 'package_session',
+            sale_date: saleData.sale_date
+          }));
+          
+          setAppointments(prev => [...enhancedData, ...prev]);
+          saveToStorage([...enhancedData, ...appointments]);
         }
         return data;
       } else {
@@ -255,8 +256,17 @@ export function useAppointments() {
         const createdAppointment = data?.[0];
         if (createdAppointment) {
           console.log('✅ Agendamento criado no Supabase:', createdAppointment);
-          setAppointments(prev => [createdAppointment, ...prev]);
-          saveToStorage([createdAppointment, ...appointments]);
+          
+          // Adicionar campos extras para funcionalidade local
+          const enhancedAppointment = {
+            ...createdAppointment,
+            service_id: saleData.service_id,
+            type: saleData.type,
+            sale_date: saleData.sale_date
+          };
+          
+          setAppointments(prev => [enhancedAppointment, ...prev]);
+          saveToStorage([enhancedAppointment, ...appointments]);
         }
         return createdAppointment;
       }

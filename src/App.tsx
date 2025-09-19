@@ -19,8 +19,8 @@ import AppLayout from "./components/layout/AppLayout";
 import { ThemeProvider } from "./components/ThemeProvider";
 import { SYSTEM_CONFIG } from "./config/system";
 import { suppressSupabaseErrors } from "./utils/suppressSupabaseErrors";
-// IMPORTAR O BLOQUEADOR DE SUPABASE - REATIVADO PARA ELIMINAR ERROS 400/404
-import "./lib/disable-supabase";
+// SUPABASE HABILITADO PARA CONEXÃO REAL
+// import "./lib/disable-supabase";
 
 const queryClient = new QueryClient();
 
@@ -30,8 +30,8 @@ if (SYSTEM_CONFIG.DISABLE_SUPABASE) {
 }
 
 const App = () => {
-  // MODO OFFLINE FORÇADO - não verificar Supabase
-  console.log("🚫 Sistema iniciado em MODO OFFLINE COMPLETO");
+  // MODO ONLINE - conectado ao Supabase
+  console.log("☁️ Sistema iniciado CONECTADO AO SUPABASE");
   
   return (
     <HelmetProvider>

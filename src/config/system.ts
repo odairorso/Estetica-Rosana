@@ -1,8 +1,8 @@
 // Configurações do sistema para controlar comportamentos
 export const SYSTEM_CONFIG = {
-  // Forçar modo offline COMPLETO para evitar loops infinitos do Supabase
-  FORCE_OFFLINE_MODE: true,
-  DISABLE_SUPABASE: true, // Nova flag para desabilitar completamente o Supabase
+  // Conectar ao Supabase para usar dados reais
+  FORCE_OFFLINE_MODE: false,
+  DISABLE_SUPABASE: false, // Habilitar Supabase para dados reais
   
   // Configurações de debug
   DEBUG_MODE: true,

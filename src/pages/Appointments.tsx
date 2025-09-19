@@ -33,6 +33,8 @@ import { useAppointments, Appointment } from "@/hooks/useAppointments";
 import { useSales } from "@/hooks/useSales";
 import { useServices } from "@/hooks/useServices";
 import { useToast } from "@/hooks/use-toast";
+import { seedInitialClients } from "@/hooks/useClients"; // New import
+import { seedInitialPackages } from "@/hooks/usePackages"; // New import
 import { format, parseISO, isValid, isToday, isPast } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -586,6 +588,45 @@ export default function Appointments() {
       toast({
         title: "❌ Erro Fatal",
         description: "Erro inesperado durante a sincronização. Verifique o console.",
+        variant: "destructive",
+      });
+    }
+  };
+
+  // Função para semear o banco de dados com dados iniciais
+  const handleSeedDatabase = async () => {
+    if (!confirm("⚠️ ATENÇÃO! Esta ação irá:\n\n1. Inserir dados iniciais de Clientes e Pacotes no Supabase.\n2. Pode causar duplicatas se você já tiver dados.\n\nTem certeza que deseja continuar?")) {
+      return;
+    }
+
+    toast({
+      title: "🌱 Iniciando semeadura...",
+      description: "Inserindo dados iniciais no Supabase.",
+    });
+
+    try {
+      const clientResult = await seedInitialClients();
+      const packageResult = await seedInitialPackages();
+
+      let message = "✅ Semeadura concluída!\n";
+      if (clientResult.success) {
+        message += `Clientes semeados: ${clientResult.count}\n`;
+      } else {
+        message += `Erro ao semear clientes: ${clientResult.error}\n`;
+      }
+      if (packageResult.success) {
+        message += `Pacotes semeados: ${packageResult.count}\n`;
+      } else {
+        message += `Erro ao semear pacotes: ${packageResult.error}\n`;
+      }
+
+      alert(message);
+      refreshAppointments(); // Refresh data after seeding
+    } catch (error) {
+      console.error("❌ Erro na semeadura:", error);
+      toast({
+        title: "❌ Erro na Semeadura",
+        description: "Erro inesperado ao semear o banco de dados.",
         variant: "destructive",
       });
     }
@@ -1339,6 +1380,15 @@ export default function Appointments() {
             >
               <TrendingUp className="h-4 w-4 mr-2" />
               🔄 Sincronizar com Supabase
+            </Button>
+            <Button 
+              variant="outline" 
+              size="sm" 
+              onClick={handleSeedDatabase}
+              className="bg-purple-500/20 text-purple-700 hover:bg-purple-500/30"
+            >
+              <RefreshCw className="h-4 w-4 mr-2" />
+              🌱 Semear Dados Iniciais
             </Button>
           </div>
         </div>

@@ -113,15 +113,15 @@ export function PackageCard({ package: pkg, onEdit, onDelete, onViewHistory }: P
             <div className="flex justify-between text-sm">
               <span className="text-muted-foreground">Sessões</span>
               <span className="font-medium">
-                {pkg.usedSessions}/{pkg.totalSessions}
+                {pkg.used_sessions}/{pkg.total_sessions}
               </span>
             </div>
             <Progress
-              value={(pkg.usedSessions / pkg.totalSessions) * 100}
+              value={(pkg.used_sessions / pkg.total_sessions) * 100}
               className="h-2"
             />
             <div className="text-xs text-muted-foreground">
-              {pkg.remainingSessions} sessões restantes
+              {pkg.remaining_sessions} sessões restantes
             </div>
           </div>
 
@@ -132,14 +132,14 @@ export function PackageCard({ package: pkg, onEdit, onDelete, onViewHistory }: P
                 <Calendar className="h-3 w-3" />
                 <span>Início</span>
               </div>
-              <div className="font-medium">{formatDate(pkg.startDate)}</div>
+              <div className="font-medium">{formatDate(pkg.created_at)}</div>
             </div>
             <div className="space-y-1">
               <div className="flex items-center gap-1 text-muted-foreground">
                 <Clock className="h-3 w-3" />
                 <span>Validade</span>
               </div>
-              <div className="font-medium">{formatDate(pkg.expiryDate)}</div>
+              <div className="font-medium">{formatDate(pkg.valid_until)}</div>
             </div>
           </div>
 
@@ -153,15 +153,6 @@ export function PackageCard({ package: pkg, onEdit, onDelete, onViewHistory }: P
             </div>
           </div>
         </div>
-
-        {/* Observações */}
-        {pkg.notes && (
-          <div className="pt-2 border-t border-border/50">
-            <p className="text-xs text-muted-foreground line-clamp-2">
-              {pkg.notes}
-            </p>
-          </div>
-        )}
       </div>
     </GlassCard>
   );

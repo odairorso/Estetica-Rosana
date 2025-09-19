@@ -63,9 +63,10 @@ export function useSales() {
         console.error('❌ Erro ao buscar vendas do Supabase:', error);
         setSales([]);
       } else {
-        console.log('✅ Vendas carregadas do Supabase:', data.length);
-        setSales(data || []);
-        saveToStorage(data || []);
+        const transformedData = data.map(sale => ({ ...sale, clientName: sale.client_name }));
+        console.log('✅ Vendas carregadas do Supabase:', transformedData.length);
+        setSales(transformedData || []);
+        saveToStorage(transformedData || []);
       }
     }
     

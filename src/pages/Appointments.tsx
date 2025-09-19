@@ -1154,6 +1154,16 @@ export default function Appointments() {
             <TestButton />
           </div>
           
+          {/* Botão de Emergência para Processar Vendas */}
+          <div className="flex gap-2">
+            <NeonButton 
+              icon={RefreshCw} 
+              onClick={sincronizarTodosOsPacotesComCaixa}
+              className="bg-gradient-to-r from-orange-500 to-red-500 hover:from-orange-600 hover:to-red-600"
+            >
+              🚑 PROCESSAR VENDAS DO CAIXA
+            </NeonButton>
+          </div>
         </div>
 
         {error && (

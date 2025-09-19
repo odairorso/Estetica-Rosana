@@ -143,6 +143,7 @@ export function useSales() {
 
       const saleToInsert = {
         client_id: saleData.client_id,
+        client_name: saleData.clientName, // Adicionado para corrigir o erro de not-null
         items: saleData.items,
         total: saleData.total,
         sale_date: saleData.sale_date,

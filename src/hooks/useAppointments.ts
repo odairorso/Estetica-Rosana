@@ -135,7 +135,8 @@ export function useAppointments() {
         // 📦 CRIANDO PACOTE COM MÚLTIPLAS SESSÕES
         console.log(`📦 Criando pacote: ${saleData.package_name} com ${saleData.total_sessions} sessões`);
         
-        // Verificar se já existe este pacote para evitar duplicatas
+        // Removida a verificação de duplicatas para permitir a compra de múltiplos pacotes iguais
+        /*
         const existingPackage = appointments.find(apt => 
           apt.client_id === saleData.client_id && 
           apt.package_id === saleData.package_id &&
@@ -146,6 +147,7 @@ export function useAppointments() {
           console.log(`⚠️ Pacote já existe para ${saleData.client_name}, pulando...`);
           return existingPackage;
         }
+        */
         
         // Criar apenas a primeira sessão do pacote (as outras serão criadas conforme necessário)
         const newId = Math.max(0, ...appointments.map(a => a.id)) + 1;

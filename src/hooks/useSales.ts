@@ -189,7 +189,11 @@ export function useSales() {
               sale_date: newSale.sale_date,
               type: item.type === 'service' ? 'individual' as const : 'package_session' as const,
             });
-            if (result) agendamentosCriados++;
+            if (result && Array.isArray(result)) {
+              agendamentosCriados += result.length;
+            } else if (result) {
+              agendamentosCriados++;
+            }
           } catch (appointmentError) {
             console.error(`❌ Erro ao criar agendamento online para ${item.itemName}:`, appointmentError);
           }

@@ -52,6 +52,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { clearAndSyncDatabase } from '../utils/syncDatabase';
+import { TestButton } from "@/components/TestButton";
 
 export default function Appointments() {
   const { toast } = useToast();
@@ -1150,6 +1151,7 @@ export default function Appointments() {
           <div>
             <h1 className="text-3xl font-bold text-gradient-brand">Agendamentos</h1>
             <p className="text-muted-foreground">Controle de procedimentos e sessões de pacotes</p>
+            <TestButton />
           </div>
           <div className="flex gap-3">
             {/* BOTÃO PRINCIPAL - SINCRONIZAR COM CAIXA */}

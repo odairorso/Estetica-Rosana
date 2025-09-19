@@ -106,7 +106,7 @@ export function useAppointments() {
     }
   };
 
-  // Criar agendamento a partir de venda do caixa
+  // Criar agendamento a partir de venda do caixa (Online/Offline)
   const createFromSale = async (saleData: {
     client_id: number;
     client_name: string;
@@ -120,129 +120,129 @@ export function useAppointments() {
     sale_date: string;
     type: 'individual' | 'package_session';
   }) => {
-    console.log("🆕 DADOS RECEBIDOS NO createFromSale:");
-    console.log(`  - Cliente: ${saleData.client_name}`);
-    console.log(`  - Tipo: ${saleData.type}`);
-    console.log(`  - Total sessions: ${saleData.total_sessions}`);
-    console.log(`  - Package name: ${saleData.package_name}`);
-    console.log(`  - Service name: ${saleData.service_name}`);
-    console.log("🆕 Criando agendamento a partir de venda (OFFLINE):", saleData);
-    
-    // Para pacotes, criar APENAS UMA sessão por vez
-    if (saleData.type === 'package_session') {
-      console.log(`📦 Criando NOVA sessão para o pacote ${saleData.package_name}`);
-      
-      // Verificar quantas sessões já existem para este pacote
-      const existingSessions = appointments.filter(apt => {
-        return apt.client_name === saleData.client_name &&
-               apt.package_name === saleData.package_name &&
-               apt.package_id === saleData.package_id;
-      });
-      
-      console.log(`📅 Sessões existentes: ${existingSessions.length}`);
-      
-      // Calcular o número da próxima sessão
-      const nextSessionNumber = existingSessions.length + 1;
-      
-      // Verificar se já existe uma sessão pendente (não agendada)
-      const pendingSession = existingSessions.find(apt => 
-        apt.status === 'agendado' && 
-        (!apt.appointment_date || apt.appointment_date === '')
-      );
-      
-      if (pendingSession) {
-        console.log(`⚠️ Já existe sessão pendente:`, pendingSession.id);
-        return pendingSession;
+    const isOffline = localStorage.getItem('force-offline-mode') === 'true';
+
+    if (isOffline) {
+      console.log("🆕 Criando agendamento a partir de venda (OFFLINE):", saleData);
+      // Lógica offline existente...
+      if (saleData.type === 'package_session') {
+        const existingSessions = appointments.filter(apt => apt.client_id === saleData.client_id && apt.package_id === saleData.package_id);
+        const nextSessionNumber = existingSessions.length + 1;
+        if (nextSessionNumber > (saleData.total_sessions || 0)) return null;
+        const newId = Math.max(0, ...appointments.map(a => a.id)) + 1;
+        const newSession: Appointment = {
+          id: newId,
+          client_id: saleData.client_id,
+          client_name: saleData.client_name,
+          client_phone: saleData.client_phone || '',
+          package_id: saleData.package_id,
+          package_name: saleData.package_name,
+          total_sessions: saleData.total_sessions || 0,
+          session_number: nextSessionNumber,
+          type: 'package_session',
+          price: 0,
+          sale_date: saleData.sale_date,
+          status: 'agendado',
+          notes: `Sessão ${nextSessionNumber} de ${saleData.total_sessions || 0}`,
+          duration: 60,
+          created_at: new Date().toISOString(),
+          date: '', time: '', appointment_date: '', appointment_time: ''
+        };
+        const updatedAppointments = [...appointments, newSession];
+        setAppointments(updatedAppointments);
+        saveToStorage(updatedAppointments);
+        return newSession;
+      } else {
+        const existing = appointments.find(apt => apt.client_name === saleData.client_name && apt.service_name === saleData.service_name);
+        if (existing) return existing;
+        const newId = Math.max(0, ...appointments.map(a => a.id)) + 1;
+        const newAppointment: Appointment = {
+          id: newId,
+          client_id: saleData.client_id,
+          client_name: saleData.client_name,
+          client_phone: saleData.client_phone || '',
+          service_id: saleData.service_id,
+          service_name: saleData.service_name,
+          type: saleData.type,
+          price: saleData.price,
+          sale_date: saleData.sale_date,
+          status: 'agendado',
+          notes: `Aguardando agendamento - ${saleData.service_name}`,
+          duration: 60,
+          created_at: new Date().toISOString(),
+          date: '', time: '', appointment_date: '', appointment_time: ''
+        };
+        const updatedAppointments = [...appointments, newAppointment];
+        setAppointments(updatedAppointments);
+        saveToStorage(updatedAppointments);
+        return newAppointment;
       }
-      
-      // Verificar se excederia o total de sessões
-      if (nextSessionNumber > (saleData.total_sessions || 5)) {
-        console.log(`❌ Não pode criar sessão ${nextSessionNumber}, total é ${saleData.total_sessions}`);
-        return null;
-      }
-      
-      const newId = Math.max(0, ...appointments.map(a => a.id)) + 1;
-      
-      const newSession: Appointment = {
-        id: newId,
+    } else {
+      // LÓGICA ONLINE
+      console.log("☁️ Criando agendamento a partir de venda (ONLINE - SUPABASE):", saleData);
+
+      const appointmentToInsert = {
         client_id: saleData.client_id,
         client_name: saleData.client_name,
-        client_phone: saleData.client_phone || '',
+        client_phone: saleData.client_phone,
+        service_id: saleData.service_id,
+        service_name: saleData.service_name,
         package_id: saleData.package_id,
         package_name: saleData.package_name,
-        total_sessions: saleData.total_sessions || 5, // GARANTIR QUE total_sessions seja definido
-        session_number: nextSessionNumber,
-        type: 'package_session',
-        price: 0, // Sessões de pacote não têm preço individual
+        total_sessions: saleData.total_sessions,
+        price: saleData.price,
         sale_date: saleData.sale_date,
+        type: saleData.type,
         status: 'agendado',
-        notes: `Sessão ${nextSessionNumber} de ${saleData.total_sessions || 5} - ${saleData.package_name}`,
+        notes: `Aguardando agendamento - ${saleData.service_name || saleData.package_name}`,
         duration: 60,
-        created_at: new Date().toISOString(),
-        date: '',
+        date: '', 
         time: '',
-        appointment_date: '',
-        appointment_time: '',
       };
-      
-      console.log(`✅ SESSÃO CRIADA COM DADOS CORRETOS:`);
-      console.log(`  - Cliente: ${newSession.client_name}`);
-      console.log(`  - Pacote: ${newSession.package_name}`);
-      console.log(`  - Sessão: ${newSession.session_number}/${newSession.total_sessions}`);
-      console.log(`  - Total sessions recebido: ${saleData.total_sessions}`);
-      console.log(`  - Total sessions final: ${newSession.total_sessions}`);
-      
-      const updatedAppointments = [...appointments, newSession];
-      setAppointments(updatedAppointments);
-      saveToStorage(updatedAppointments);
-      
-      console.log(`✅ Sessão única criada: ${nextSessionNumber}/${saleData.total_sessions}`);
-      return newSession;
+
+      // Para pacotes, precisamos calcular o session_number
+      if (saleData.type === 'package_session') {
+        const { count, error: countError } = await supabase
+          .from('appointments')
+          .select('id', { count: 'exact', head: true })
+          .eq('client_id', saleData.client_id)
+          .eq('package_id', saleData.package_id);
+
+        if (countError) {
+          console.error('❌ Erro ao contar sessões existentes:', countError);
+          toast({ title: "Erro no Servidor", description: "Não foi possível verificar as sessões do pacote.", variant: "destructive" });
+          return null;
+        }
+
+        const nextSessionNumber = (count || 0) + 1;
+        if (nextSessionNumber > (saleData.total_sessions || 0)) {
+          toast({ title: "Pacote Completo", description: "Todas as sessões para este pacote já foram criadas.", variant: "destructive" });
+          return null;
+        }
+        appointmentToInsert.session_number = nextSessionNumber;
+        appointmentToInsert.notes = `Sessão ${nextSessionNumber} de ${saleData.total_sessions}`;
+        appointmentToInsert.price = 0; // Sessão de pacote não tem preço individual
+      }
+
+      const { data, error } = await supabase
+        .from('appointments')
+        .insert(appointmentToInsert)
+        .select();
+
+      if (error) {
+        console.error('❌ Erro ao criar agendamento no Supabase:', error);
+        toast({ title: "Erro no Servidor", description: `Não foi possível criar o agendamento: ${error.message}`, variant: "destructive" });
+        return null;
+      }
+
+      const createdAppointment = data?.[0];
+      if (createdAppointment) {
+        console.log('✅ Agendamento criado no Supabase:', createdAppointment);
+        setAppointments(prev => [createdAppointment, ...prev]);
+        saveToStorage([createdAppointment, ...appointments]);
+      }
+      return createdAppointment;
     }
-    
-    // Para procedimentos individuais, lógica anterior
-    const existingAppointment = appointments.find(apt => {
-      const sameClient = apt.client_name === saleData.client_name;
-      const sameItem = (saleData.type === 'individual' && apt.service_name === saleData.service_name);
-      return sameClient && sameItem;
-    });
-    
-    if (existingAppointment) {
-      console.log("⏭️ Agendamento já existe, pulando criação:", existingAppointment.id);
-      return existingAppointment;
-    }
-    
-    // Criar novo agendamento offline
-    const newId = Math.max(0, ...appointments.map(a => a.id)) + 1;
-    
-    const newAppointment: Appointment = {
-      id: newId,
-      client_id: saleData.client_id,
-      client_name: saleData.client_name,
-      client_phone: saleData.client_phone || '',
-      service_id: saleData.service_id,
-      service_name: saleData.service_name,
-      type: saleData.type,
-      price: saleData.price,
-      sale_date: saleData.sale_date,
-      status: 'agendado',
-      notes: `Aguardando agendamento - ${saleData.service_name}`,
-      duration: 60,
-      created_at: new Date().toISOString(),
-      date: '',
-      time: '',
-      appointment_date: '',
-      appointment_time: '',
-    };
-    
-    console.log("📝 Novo agendamento criado:", newAppointment);
-    
-    const updatedAppointments = [...appointments, newAppointment];
-    setAppointments(updatedAppointments);
-    saveToStorage(updatedAppointments);
-    
-    console.log("✅ Agendamento criado e salvo offline");
-    return newAppointment;
   };
 
   // Agendar procedimento pendente

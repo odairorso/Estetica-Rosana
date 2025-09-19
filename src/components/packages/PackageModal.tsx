@@ -27,6 +27,10 @@ export function PackageModal({ open, onOpenChange, package: pkg, onSave, mode }:
     valid_until: ''
   });
 
+  const handleInputChange = (field: string, value: any) => {
+    setFormData(prev => ({ ...prev, [field]: value }));
+  };
+
   useEffect(() => {
     if (pkg && mode === 'edit') {
       setFormData({
@@ -34,7 +38,7 @@ export function PackageModal({ open, onOpenChange, package: pkg, onSave, mode }:
         description: pkg.description,
         total_sessions: pkg.total_sessions,
         price: pkg.price,
-        gross_price: pkg.price,
+        gross_price: pkg.price, // On edit, we can assume gross_price was the final price
         discount: 0,
         valid_until: pkg.valid_until
       });
@@ -57,13 +61,15 @@ export function PackageModal({ open, onOpenChange, package: pkg, onSave, mode }:
     const gross = Number(formData.gross_price) || 0;
     const disc = Number(formData.discount) || 0;
     const finalPrice = Math.max(0, gross - disc);
-    handleInputChange('price', finalPrice);
-  }, [formData.gross_price, formData.discount]);
+    // Only update if the price is different to avoid re-renders
+    if (finalPrice !== formData.price) {
+        handleInputChange('price', finalPrice);
+    }
+  }, [formData.gross_price, formData.discount, formData.price]);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     
-    // REMOVIDO: Validação do client_id - agora pacotes são genéricos
     if (!formData.name.trim() || !formData.total_sessions) {
       toast({
         title: "Erro",
@@ -73,7 +79,6 @@ export function PackageModal({ open, onOpenChange, package: pkg, onSave, mode }:
       return;
     }
 
-    // REMOVIDO: Validação do cliente - pacotes agora são genéricos
     const dataToSave = {
       name: formData.name,
       description: formData.description,
@@ -92,10 +97,6 @@ export function PackageModal({ open, onOpenChange, package: pkg, onSave, mode }:
     });
   };
 
-  const handleInputChange = (field: string, value: any) => {
-    setFormData(prev => ({ ...prev, [field]: value }));
-  };
-
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-[500px]">
@@ -108,16 +109,14 @@ export function PackageModal({ open, onOpenChange, package: pkg, onSave, mode }:
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="space-y-2">
             <Label htmlFor="name">Nome do pacote *</Label>
-            <Input id="name" value={formData.name} onChange={(e) => handleInputChange('name', e.target.value)} required />
+            <Input id="name" value={formData.name} onChange={(e) => handleInputChange('name', e.target.value)} required placeholder="Ex: Pacote Limpeza de Pele Premium" />
           </div>
 
           <div className="space-y-2">
             <Label htmlFor="description">Descrição</Label>
-            <Textarea id="description" value={formData.description} onChange={(e) => handleInputChange('description', e.target.value)} rows={3} />
+            <Textarea id="description" value={formData.description} onChange={(e) => handleInputChange('description', e.target.value)} rows={3} placeholder="Descreva os serviços incluídos no pacote..." />
           </div>
           
-          {/* REMOVIDO: Seção do Cliente - pacotes agora são genéricos */}
-
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
               <Label htmlFor="total_sessions">Total de sessões *</Label>
@@ -132,11 +131,11 @@ export function PackageModal({ open, onOpenChange, package: pkg, onSave, mode }:
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
               <Label htmlFor="gross_price">Valor Bruto (R$)</Label>
-              <Input id="gross_price" type="number" min="0" step="0.01" value={formData.gross_price} onChange={(e) => handleInputChange('gross_price', parseFloat(e.target.value) || 0)} />
+              <Input id="gross_price" type="number" min="0" step="0.01" value={formData.gross_price} onChange={(e) => handleInputChange('gross_price', parseFloat(e.target.value) || 0)} placeholder="0,00" />
             </div>
             <div className="space-y-2">
               <Label htmlFor="discount">Desconto (R$)</Label>
-              <Input id="discount" type="number" min="0" step="0.01" value={formData.discount} onChange={(e) => handleInputChange('discount', parseFloat(e.target.value) || 0)} />
+              <Input id="discount" type="number" min="0" step="0.01" value={formData.discount} onChange={(e) => handleInputChange('discount', parseFloat(e.target.value) || 0)} placeholder="0,00" />
             </div>
           </div>
 

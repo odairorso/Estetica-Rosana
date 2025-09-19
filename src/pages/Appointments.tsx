@@ -956,14 +956,28 @@ export default function Appointments() {
   });
   
   // CORRIGIDO: Agrupar pacotes corretamente - BUSCAR DADOS DA VENDA ORIGINAL
+  console.log("🔍 AGRUPANDO PACOTES ATIVOS - BUSCANDO DADOS DA VENDA ORIGINAL");
   const activePackages = appointments
-    .filter(apt => apt.type === 'package_session')
+    .filter(apt => {
+      const isPackageSession = apt.type === 'package_session';
+      console.log(`🔍 Filtrando agendamento: ${apt.client_name} - ${apt.package_name} (${apt.type}) - ${isPackageSession ? 'INCLUIR' : 'EXCLUIR'}`);
+      return isPackageSession;
+    })
     .reduce((packages: any[], apt) => {
+      console.log(`🔄 PROCESSANDO AGENDAMENTO PARA AGRUPAMENTO:`, {
+        cliente: apt.client_name,
+        pacote: apt.package_name,
+        package_id: apt.package_id,
+        client_id: apt.client_id,
+        total_sessions: apt.total_sessions
+      });
+      
       // Buscar se já existe este pacote
-      const existingPackage = packages.find(pkg => 
-        pkg.package_id === apt.package_id && 
-        pkg.client_id === apt.client_id
-      );
+      const existingPackage = packages.find(pkg => {
+        const match = pkg.package_id === apt.package_id && pkg.client_id === apt.client_id;
+        console.log(`  🔍 Comparando com pacote existente: ${pkg.client_name} - ${pkg.package_name} (${match ? 'ENCONTRADO' : 'NOVO'})`);
+        return match;
+      });
       
       if (!existingPackage) {
         // Calcular sessões realizadas (concluídas)
@@ -973,6 +987,8 @@ export default function Appointments() {
           a.status === 'concluido'
         ).length;
         
+        console.log(`📊 Sessões concluídas para ${apt.client_name} - ${apt.package_name}: ${completedSessions}`);
+        
         // BUSCAR total_sessions da VENDA ORIGINAL no localStorage
         let totalSessionsFromSale = apt.total_sessions || 5;
         
@@ -980,30 +996,40 @@ export default function Appointments() {
           const salesStorage = localStorage.getItem('clinic-sales-v2');
           if (salesStorage) {
             const salesData = JSON.parse(salesStorage);
-            const originalSale = salesData.find((sale: any) => {
-              return sale.items && sale.items.some((item: any) => 
-                item.type === 'package' && 
-                item.item_id === apt.package_id &&
-                (sale.clientName === apt.client_name || sale.client_name === apt.client_name)
-              );
-            });
+            console.log(`📊 Encontradas ${salesData.length} vendas para buscar dados do pacote`);
             
-            if (originalSale) {
-              const packageItem = originalSale.items.find((item: any) => 
-                item.type === 'package' && item.item_id === apt.package_id
-              );
-              if (packageItem && packageItem.quantity) {
-                totalSessionsFromSale = packageItem.quantity;
-                console.log(`📦 ENCONTRADO! Pacote ${apt.package_name} tem ${totalSessionsFromSale} sessões da venda original`);
+            let foundSale = false;
+            for (const sale of salesData) {
+              if (sale.items && Array.isArray(sale.items)) {
+                for (const item of sale.items) {
+                  const clienteMatch = (sale.clientName === apt.client_name || sale.client_name === apt.client_name);
+                  const packageMatch = (item.type === 'package' && item.item_id === apt.package_id);
+                  
+                  console.log(`    🔍 Verificando venda: ${sale.clientName || sale.client_name} - ${item.itemName} (${clienteMatch && packageMatch ? 'MATCH' : 'NO MATCH'})`);
+                  
+                  if (clienteMatch && packageMatch && item.quantity) {
+                    totalSessionsFromSale = item.quantity;
+                    console.log(`    📦 ENCONTRADO! Pacote ${apt.package_name} tem ${totalSessionsFromSale} sessões da venda original`);
+                    foundSale = true;
+                    break;
+                  }
+                }
+                if (foundSale) break;
               }
             }
+            
+            if (!foundSale) {
+              console.log(`    ⚠️ Não encontrado na venda, mantendo valor: ${totalSessionsFromSale}`);
+            }
+          } else {
+            console.log(`⚠️ Nenhuma venda encontrada no localStorage`);
           }
         } catch (error) {
           console.error('❌ Erro ao buscar dados da venda original:', error);
         }
         
         // Criar entrada do pacote
-        packages.push({
+        const newPackage = {
           id: apt.id,
           client_id: apt.client_id,
           client_name: apt.client_name,
@@ -1015,13 +1041,18 @@ export default function Appointments() {
           price: apt.price || 0,
           sale_date: apt.sale_date || new Date().toISOString(),
           status: apt.status
-        });
+        };
         
-        console.log(`📊 Pacote processado: ${apt.package_name} - ${completedSessions}/${totalSessionsFromSale} sessões`);
+        packages.push(newPackage);
+        console.log(`✅ Pacote adicionado: ${apt.package_name} - ${completedSessions}/${totalSessionsFromSale} sessões`);
+      } else {
+        console.log(`⏭️ Pacote já existe, pulando: ${apt.package_name}`);
       }
       
       return packages;
     }, []);
+    
+  console.log(`🎉 PACOTES ATIVOS AGRUPADOS:`, activePackages);
 
   // Filtrar procedimentos e pacotes aguardando agendamento manual
   const pendingAppointments = appointments.filter(appointment => 

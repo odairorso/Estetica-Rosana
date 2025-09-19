@@ -1002,8 +1002,12 @@ export default function Appointments() {
             for (const sale of salesData) {
               if (sale.items && Array.isArray(sale.items)) {
                 for (const item of sale.items) {
-                  const clienteMatch = (sale.clientName === apt.client_name || sale.client_name === apt.client_name);
-                  const packageMatch = (item.type === 'package' && item.item_id === apt.package_id);
+                  const saleClientName = (sale.clientName || sale.client_name || '').trim().toLowerCase();
+                  const aptClientName = (apt.client_name || '').trim().toLowerCase();
+                  const clienteMatch = saleClientName === aptClientName && saleClientName !== '';
+
+                  const packageMatch = item.type === 'package' && 
+                                       (item.item_id === apt.package_id || item.itemName === apt.package_name);
                   
                   console.log(`    🔍 Verificando venda: ${sale.clientName || sale.client_name} - ${item.itemName} (${clienteMatch && packageMatch ? 'MATCH' : 'NO MATCH'})`);
                   

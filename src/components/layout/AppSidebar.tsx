@@ -21,7 +21,7 @@ import {
 } from "@/components/ui/sidebar";
 import { NavLink, useLocation } from "react-router-dom";
 import { useSidebar } from "@/components/ui/sidebar";
-import logoUrl from "@/assets/logo.png";
+import logoUrl from "@/assets/logo-rosana.jpg";
 
 const items = [
   { title: "Dashboard", url: "/dashboard", icon: LayoutDashboard },

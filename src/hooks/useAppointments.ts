@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useToast } from "@/hooks/use-toast";
 import { SYSTEM_CONFIG } from '@/config/system';
+import { supabase } from '@/integrations/supabase/client';
 
 // MODO OFFLINE COMPLETO - SEM SUPABASE PARA EVITAR LOOPS
 
@@ -52,26 +53,44 @@ export function useAppointments() {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  // Função para carregar agendamentos - SOMENTE MODO OFFLINE
+  // Função para carregar agendamentos - Online (Supabase) e Offline (localStorage)
   const loadAppointments = useCallback(async () => {
-    console.log("📋 Carregando agendamentos (MODO OFFLINE COMPLETO)...");
     setIsLoading(true);
     setError(null);
-    
-    try {
-      const stored = localStorage.getItem(SYSTEM_CONFIG.STORAGE_KEYS.APPOINTMENTS);
-      if (stored) {
-        const data = JSON.parse(stored);
-        console.log("📋 Agendamentos carregados do localStorage:", data.length);
-        setAppointments(data);
-      } else {
-        console.log('🎉 Primeiro acesso - inicializando com dados vazios');
+
+    const isOffline = localStorage.getItem('force-offline-mode') === 'true';
+
+    if (isOffline) {
+      console.log("📋 Carregando agendamentos (MODO OFFLINE)...");
+      try {
+        const stored = localStorage.getItem(APPOINTMENTS_STORAGE_KEY);
+        if (stored) {
+          const data = JSON.parse(stored);
+          setAppointments(data);
+        } else {
+          setAppointments([]);
+        }
+      } catch (err) {
+        console.error('❌ Erro ao carregar do localStorage:', err);
+        setError('Erro ao carregar agendamentos locais.');
         setAppointments([]);
       }
-    } catch (err) {
-      console.error('❌ Erro ao carregar do localStorage:', err);
-      setAppointments([]);
-      setError('Erro ao carregar agendamentos');
+    } else {
+      console.log("☁️ Carregando agendamentos (MODO ONLINE - SUPABASE)...");
+      const { data, error: supabaseError } = await supabase
+        .from('appointments')
+        .select('*')
+        .order('created_at', { ascending: false });
+
+      if (supabaseError) {
+        console.error('❌ Erro ao buscar agendamentos do Supabase:', supabaseError);
+        setError('Não foi possível conectar ao servidor. Verifique sua conexão e tente novamente.');
+        setAppointments([]);
+      } else {
+        console.log('✅ Agendamentos carregados do Supabase:', data.length);
+        setAppointments(data || []);
+        saveToStorage(data || []); // Salva os dados frescos no localStorage para cache
+      }
     }
     
     setIsLoading(false);
@@ -80,7 +99,7 @@ export function useAppointments() {
   // Salvar no localStorage
   const saveToStorage = (data: Appointment[]) => {
     try {
-      localStorage.setItem(SYSTEM_CONFIG.STORAGE_KEYS.APPOINTMENTS, JSON.stringify(data));
+      localStorage.setItem(APPOINTMENTS_STORAGE_KEY, JSON.stringify(data));
       console.log("💾 Agendamentos salvos no localStorage:", data.length);
     } catch (err) {
       console.error('❌ Erro ao salvar no localStorage:', err);

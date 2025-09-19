@@ -1,186 +1,72 @@
-import { Calendar, Clock, FileText } from "lucide-react";
 import {
   Dialog,
   DialogContent,
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { GlassCard } from "@/components/ui/glass-card";
-import { Package, SessionHistoryEntry } from "@/hooks/usePackages";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import { Badge } from "@/components/ui/badge";
+import { format } from "date-fns";
+import { ptBR } from "date-fns/locale";
+import { Package as PackageType } from "@/hooks/usePackages";
 
 interface SessionHistoryModalProps {
+  pkg: PackageType | null;
   open: boolean;
-  onOpenChange: (open: boolean) => void;
-  package: Package | null;
+  onClose: () => void;
 }
 
-export function SessionHistoryModal({ open, onOpenChange, package: pkg }: SessionHistoryModalProps) {
+export function SessionHistoryModal({
+  pkg,
+  open,
+  onClose,
+}: SessionHistoryModalProps) {
   if (!pkg) return null;
 
-<<<<<<< HEAD
-
-
-  const formatDate = (dateString: string) => {
-    if (!dateString) return 'Data não informada';
-    
-    try {
-      const date = new Date(dateString);
-      // Verificar se a data é válida
-      if (isNaN(date.getTime())) {
-        return 'Data inválida';
-      }
-      
-      return date.toLocaleDateString('pt-BR', {
-        day: '2-digit',
-        month: '2-digit',
-        year: 'numeric'
-      });
-    } catch (error) {
-      console.error('Erro ao formatar data:', error);
-      return 'Data inválida';
-    }
-  };
-
-  const sortedHistory = [...(pkg.sessionHistory || [])].sort((a, b) => 
-=======
-  const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString('pt-BR');
-  };
-
-  const sortedHistory = [...(pkg.session_history || [])].sort((a, b) => 
->>>>>>> 1be9b827db6afc3e4a1a015d739fa37e6574b522
-    new Date(b.date).getTime() - new Date(a.date).getTime()
-  );
-
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
+    <Dialog open={open} onOpenChange={onClose}>
+      <DialogContent className="max-w-lg">
         <DialogHeader>
-          <DialogTitle className="flex items-center gap-3">
-            <div className="rounded-full bg-brand-gradient p-2">
-              <Calendar className="h-4 w-4 text-white" />
-            </div>
-            Histórico de Sessões - {pkg.name}
-          </DialogTitle>
+          <DialogTitle>Histórico de Sessões</DialogTitle>
         </DialogHeader>
 
-        <div className="space-y-4">
-          {/* Resumo do pacote */}
-          <GlassCard className="p-4">
-            <div className="grid grid-cols-2 gap-4 text-sm">
-              <div>
-                <span className="text-muted-foreground">Cliente:</span>
-                <p className="font-medium">{pkg.clientName}</p>
-              </div>
-              <div>
-                <span className="text-muted-foreground">Progresso:</span>
-<<<<<<< HEAD
-                <p className="font-medium">{pkg.usedSessions}/{pkg.totalSessions} sessões</p>
-=======
-                <p className="font-medium">{pkg.used_sessions}/{pkg.total_sessions} sessões</p>
->>>>>>> 1be9b827db6afc3e4a1a015d739fa37e6574b522
-              </div>
-              <div>
-                <span className="text-muted-foreground">Valor do pacote:</span>
-                <p className="font-medium text-green-600">R$ {pkg.price.toFixed(2).replace('.', ',')}</p>
-              </div>
-              <div>
-                <span className="text-muted-foreground">Válido até:</span>
-<<<<<<< HEAD
-                <p className="font-medium">{formatDate(pkg.validUntil)}</p>
-=======
-                <p className="font-medium">{formatDate(pkg.valid_until)}</p>
->>>>>>> 1be9b827db6afc3e4a1a015d739fa37e6574b522
-              </div>
-            </div>
-          </GlassCard>
+        <ScrollArea className="max-h-96 pr-4">
+          {pkg.sessions && pkg.sessions.length > 0 ? (
+            <ul className="space-y-3">
+              {pkg.sessions.map((session, index) => (
+                <li
+                  key={index}
+                  className="flex items-center justify-between rounded-md border p-3"
+                >
+                  <div className="flex flex-col">
+                    <span className="font-medium text-sm">
+                      {session.name || `Sessão ${index + 1}`}
+                    </span>
+                    <span className="text-xs text-muted-foreground">
+                      {session.date
+                        ? format(new Date(session.date), "dd 'de' MMMM 'de' yyyy", { locale: ptBR })
+                        : "-"}
+                    </span>
+                  </div>
 
-          {/* Lista de sessões */}
-          <div className="space-y-3">
-            <h3 className="font-semibold flex items-center gap-2">
-              <Clock className="h-4 w-4" />
-              Sessões Realizadas ({sortedHistory.length})
-            </h3>
-
-            {sortedHistory.length === 0 ? (
-              <GlassCard className="p-6 text-center">
-                <div className="space-y-2">
-                  <Calendar className="h-8 w-8 text-muted-foreground mx-auto" />
-                  <p className="text-muted-foreground">Nenhuma sessão realizada ainda</p>
-                </div>
-              </GlassCard>
-            ) : (
-              <div className="space-y-2">
-                {sortedHistory.map((session, index) => (
-                  <GlassCard key={session.id} className="p-4">
-                    <div className="flex items-start justify-between">
-                      <div className="flex items-start gap-3">
-                        <div className="rounded-full bg-brand-gradient p-1.5 mt-1">
-                          <Calendar className="h-3 w-3 text-white" />
-                        </div>
-                        <div className="space-y-1">
-                          <div className="flex items-center gap-2">
-                            <span className="font-medium">{formatDate(session.date)}</span>
-                            <span className="text-xs text-muted-foreground">
-                              #{sortedHistory.length - index}
-                            </span>
-                          </div>
-                          {session.notes && (
-                            <div className="flex items-start gap-1.5 text-sm text-muted-foreground">
-                              <FileText className="h-3 w-3 mt-0.5 shrink-0" />
-                              <span>{session.notes}</span>
-                            </div>
-                          )}
-                        </div>
-                      </div>
-                    </div>
-                  </GlassCard>
-                ))}
-              </div>
-            )}
-          </div>
-
-          {/* Estatísticas */}
-          {sortedHistory.length > 0 && (
-            <GlassCard className="p-4">
-              <h4 className="font-medium mb-3">Estatísticas</h4>
-              <div className="grid grid-cols-2 gap-4 text-sm">
-                <div>
-                  <span className="text-muted-foreground">Primeira sessão:</span>
-                  <p className="font-medium">
-                    {formatDate(sortedHistory[sortedHistory.length - 1].date)}
-                  </p>
-                </div>
-                <div>
-                  <span className="text-muted-foreground">Última sessão:</span>
-                  <p className="font-medium">
-                    {formatDate(sortedHistory[0].date)}
-                  </p>
-                </div>
-                <div>
-                  <span className="text-muted-foreground">Valor por sessão:</span>
-                  <p className="font-medium text-green-600">
-<<<<<<< HEAD
-                    R$ {(pkg.price / pkg.totalSessions).toFixed(2).replace('.', ',')}
-=======
-                    R$ {(pkg.price / pkg.total_sessions).toFixed(2).replace('.', ',')}
->>>>>>> 1be9b827db6afc3e4a1a015d739fa37e6574b522
-                  </p>
-                </div>
-                <div>
-                  <span className="text-muted-foreground">Sessões restantes:</span>
-                  <p className="font-medium text-brand-start">
-<<<<<<< HEAD
-                    {pkg.remainingSessions}
-=======
-                    {pkg.remaining_sessions}
->>>>>>> 1be9b827db6afc3e4a1a015d739fa37e6574b522
-                  </p>
-                </div>
-              </div>
-            </GlassCard>
+                  <Badge
+                    className={
+                      session.completed
+                        ? "bg-green-500/20 text-green-600"
+                        : "bg-gray-500/20 text-gray-600"
+                    }
+                  >
+                    {session.completed ? "Concluída" : "Pendente"}
+                  </Badge>
+                </li>
+              ))}
+            </ul>
+          ) : (
+            <p className="text-sm text-muted-foreground text-center py-4">
+              Nenhum histórico de sessão disponível.
+            </p>
           )}
-        </div>
+        </ScrollArea>
       </DialogContent>
     </Dialog>
   );

@@ -17,11 +17,38 @@ interface SessionHistoryModalProps {
 export function SessionHistoryModal({ open, onOpenChange, package: pkg }: SessionHistoryModalProps) {
   if (!pkg) return null;
 
+<<<<<<< HEAD
+
+
+  const formatDate = (dateString: string) => {
+    if (!dateString) return 'Data não informada';
+    
+    try {
+      const date = new Date(dateString);
+      // Verificar se a data é válida
+      if (isNaN(date.getTime())) {
+        return 'Data inválida';
+      }
+      
+      return date.toLocaleDateString('pt-BR', {
+        day: '2-digit',
+        month: '2-digit',
+        year: 'numeric'
+      });
+    } catch (error) {
+      console.error('Erro ao formatar data:', error);
+      return 'Data inválida';
+    }
+  };
+
+  const sortedHistory = [...(pkg.sessionHistory || [])].sort((a, b) => 
+=======
   const formatDate = (dateString: string) => {
     return new Date(dateString).toLocaleDateString('pt-BR');
   };
 
   const sortedHistory = [...(pkg.session_history || [])].sort((a, b) => 
+>>>>>>> 1be9b827db6afc3e4a1a015d739fa37e6574b522
     new Date(b.date).getTime() - new Date(a.date).getTime()
   );
 
@@ -47,7 +74,11 @@ export function SessionHistoryModal({ open, onOpenChange, package: pkg }: Sessio
               </div>
               <div>
                 <span className="text-muted-foreground">Progresso:</span>
+<<<<<<< HEAD
+                <p className="font-medium">{pkg.usedSessions}/{pkg.totalSessions} sessões</p>
+=======
                 <p className="font-medium">{pkg.used_sessions}/{pkg.total_sessions} sessões</p>
+>>>>>>> 1be9b827db6afc3e4a1a015d739fa37e6574b522
               </div>
               <div>
                 <span className="text-muted-foreground">Valor do pacote:</span>
@@ -55,7 +86,11 @@ export function SessionHistoryModal({ open, onOpenChange, package: pkg }: Sessio
               </div>
               <div>
                 <span className="text-muted-foreground">Válido até:</span>
+<<<<<<< HEAD
+                <p className="font-medium">{formatDate(pkg.validUntil)}</p>
+=======
                 <p className="font-medium">{formatDate(pkg.valid_until)}</p>
+>>>>>>> 1be9b827db6afc3e4a1a015d739fa37e6574b522
               </div>
             </div>
           </GlassCard>
@@ -125,13 +160,21 @@ export function SessionHistoryModal({ open, onOpenChange, package: pkg }: Sessio
                 <div>
                   <span className="text-muted-foreground">Valor por sessão:</span>
                   <p className="font-medium text-green-600">
+<<<<<<< HEAD
+                    R$ {(pkg.price / pkg.totalSessions).toFixed(2).replace('.', ',')}
+=======
                     R$ {(pkg.price / pkg.total_sessions).toFixed(2).replace('.', ',')}
+>>>>>>> 1be9b827db6afc3e4a1a015d739fa37e6574b522
                   </p>
                 </div>
                 <div>
                   <span className="text-muted-foreground">Sessões restantes:</span>
                   <p className="font-medium text-brand-start">
+<<<<<<< HEAD
+                    {pkg.remainingSessions}
+=======
                     {pkg.remaining_sessions}
+>>>>>>> 1be9b827db6afc3e4a1a015d739fa37e6574b522
                   </p>
                 </div>
               </div>

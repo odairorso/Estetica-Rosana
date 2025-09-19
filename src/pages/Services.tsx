@@ -118,7 +118,11 @@ export default function Services() {
             <button
               key={category}
               onClick={() => setSelectedCategory(category)}
+<<<<<<< HEAD
+              className={`px-4 py-2 rounded-full text-sm font-medium transition-all whitespace-nowrap ${ 
+=======
               className={`px-4 py-2 rounded-full text-sm font-medium transition-all whitespace-nowrap ${
+>>>>>>> 1be9b827db6afc3e4a1a015d739fa37e6574b522
                 selectedCategory === category
                   ? "bg-primary text-primary-foreground shadow-lg"
                   : "bg-secondary/50 text-muted-foreground hover:bg-secondary hover:text-secondary-foreground"

@@ -8,6 +8,7 @@ import { useSettings } from "@/hooks/useSettings";
 import { useTheme } from "@/components/ThemeProvider";
 import { toast } from "@/hooks/use-toast";
 import { Skeleton } from "@/components/ui/skeleton";
+import { TestDataSetup } from "@/components/setup/TestDataSetup";
 
 export default function Settings() {
   const { settings, updateClinicInfo, isLoading } = useSettings();
@@ -123,6 +124,15 @@ export default function Settings() {
               Escolha como o painel deve ser exibido.
             </p>
           </div>
+        </GlassCard>
+
+        {/* Seção de Teste e Debug */}
+        <GlassCard>
+          <h2 className="text-xl font-semibold mb-4">🧪 Ferramentas de Teste</h2>
+          <p className="text-sm text-muted-foreground mb-6">
+            Crie dados de teste para verificar se o sistema está funcionando corretamente com o Supabase.
+          </p>
+          <TestDataSetup />
         </GlassCard>
       </div>
     </>

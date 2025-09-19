@@ -260,6 +260,7 @@ export function useAppointments() {
         }
         return createdAppointment;
       }
+    }
   };
 
   // Agendar procedimento pendente

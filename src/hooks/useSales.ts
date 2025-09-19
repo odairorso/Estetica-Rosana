@@ -125,7 +125,9 @@ export function useSales() {
               sale_date: saleData.sale_date,
               type: item.type === 'service' ? 'individual' as const : 'package_session' as const,
             });
-if (result && result.length > 0) agendamentosCriados += result.length;
+            if (result && result.length > 0) agendamentosCriados += result.length;
+          } catch (error) {
+            console.error('Erro ao criar agendamento:', error);
           }
         }
       }

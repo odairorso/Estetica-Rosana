@@ -1596,55 +1596,148 @@ export default function Appointments() {
                     {/* Histórico de Sessões */}
                     <div className="mb-4">
                       <h4 className="text-sm font-semibold text-gray-900 dark:text-white mb-3 flex items-center gap-2">
-                        📅 HISTÓRICO DE SESSÕES:
+                        📅 SESSÕES:
                       </h4>
-                      <div className="space-y-2 max-h-32 overflow-y-auto">
-                        {packageHistory.length > 0 ? (
-                          packageHistory.map((session, index) => (
-                            <div key={index} className="flex items-center gap-3 text-sm p-2 bg-green-50 dark:bg-green-900/30 rounded-lg border border-green-200 dark:border-green-700">
-                              <span className="text-green-600">✅</span>
-                              <span className="text-gray-700 dark:text-gray-300">
-                                {format(parseISO(session.date), "dd/MM/yyyy 'às' HH:mm")} - Sessão {session.session_number}
-                              </span>
-                            </div>
-                          ))
-                        ) : (
-                          <div className="flex items-center gap-3 text-sm p-2 bg-orange-50 dark:bg-orange-900/30 rounded-lg border border-orange-200 dark:border-orange-700">
-                            <span className="text-orange-500">⏳</span>
-                            <span className="text-gray-700 dark:text-gray-300">
-                              ___/___/____ às __:__ - Primeira sessão (agendar)
-                            </span>
-                          </div>
-                        )}
-                        {remainingSessions > 0 && completedSessions < realTotalSessions && (
-                          <div className="flex items-center gap-3 text-sm p-2 bg-blue-50 dark:bg-blue-900/30 rounded-lg border-2 border-dashed border-blue-400 dark:border-blue-500">
-                            <span className="text-blue-500">⏳</span>
-                            <span className="text-blue-700 dark:text-blue-300 font-medium">
-                              ___/___/____ às __:__ - Próxima sessão (agendar)
-                            </span>
-                          </div>
-                        )}
+                      <div className="space-y-2">
+                        {/* Renderizar todas as sessões do pacote */}
+                        {Array.from({ length: realTotalSessions }, (_, index) => {
+                          const sessionNumber = index + 1;
+                          const sessionName = sessionNumber === 1 ? 'Primeira sessão' : 
+                                            sessionNumber === 2 ? 'Segunda sessão' :
+                                            sessionNumber === 3 ? 'Terceira sessão' :
+                                            sessionNumber === 4 ? 'Quarta sessão' :
+                                            sessionNumber === 5 ? 'Quinta sessão' :
+                                            sessionNumber === 6 ? 'Sexta sessão' :
+                                            sessionNumber === 7 ? 'Sétima sessão' :
+                                            sessionNumber === 8 ? 'Oitava sessão' :
+                                            sessionNumber === 9 ? 'Nona sessão' :
+                                            sessionNumber === 10 ? 'Décima sessão' :
+                                            `${sessionNumber}ª sessão`;
+                          
+                          // Verificar se esta sessão já foi realizada
+                          const completedSession = packageHistory.find(session => 
+                            session.session_number === sessionNumber
+                          );
+                          
+                          // Verificar se esta sessão está agendada mas não concluída
+                          const scheduledSession = appointments.find(apt => 
+                            apt.package_id === pkg.package_id && 
+                            apt.client_id === pkg.client_id && 
+                            apt.session_number === sessionNumber &&
+                            apt.status === 'agendado'
+                          );
+                          
+                          if (completedSession) {
+                            // Sessão já realizada
+                            return (
+                              <div key={sessionNumber} className="flex items-center justify-between p-3 bg-green-50 dark:bg-green-900/30 rounded-lg border border-green-200 dark:border-green-700">
+                                <div className="flex items-center gap-3">
+                                  <span className="text-green-600 text-lg">✅</span>
+                                  <div>
+                                    <span className="text-gray-900 dark:text-gray-100 font-medium">
+                                      {sessionName} (concluída)
+                                    </span>
+                                    <p className="text-xs text-gray-600 dark:text-gray-400">
+                                      {format(parseISO(completedSession.date), "dd/MM/yyyy 'às' HH:mm")}
+                                    </p>
+                                  </div>
+                                </div>
+                              </div>
+                            );
+                          } else if (scheduledSession) {
+                            // Sessão agendada mas não realizada
+                            return (
+                              <div key={sessionNumber} className="flex items-center justify-between p-3 bg-blue-50 dark:bg-blue-900/30 rounded-lg border border-blue-200 dark:border-blue-700">
+                                <div className="flex items-center gap-3">
+                                  <span className="text-blue-600 text-lg">📅</span>
+                                  <div>
+                                    <span className="text-gray-900 dark:text-gray-100 font-medium">
+                                      {sessionName} (agendada)
+                                    </span>
+                                    <p className="text-xs text-gray-600 dark:text-gray-400">
+                                      {scheduledSession.appointment_date && scheduledSession.appointment_time ? 
+                                        `${format(parseISO(scheduledSession.appointment_date), "dd/MM/yyyy")} às ${scheduledSession.appointment_time}` :
+                                        'Aguardando definição de data/hora'
+                                      }
+                                    </p>
+                                  </div>
+                                </div>
+                                <Button
+                                  size="sm"
+                                  variant="outline"
+                                  className="text-blue-700 border-blue-300 hover:bg-blue-100"
+                                  onClick={() => {
+                                    setSelectedAppointment(scheduledSession);
+                                    setScheduleModalOpen(true);
+                                  }}
+                                >
+                                  Agendar Data
+                                </Button>
+                              </div>
+                            );
+                          } else {
+                            // Sessão ainda não agendada
+                            return (
+                              <div key={sessionNumber} className="flex items-center justify-between p-3 bg-orange-50 dark:bg-orange-900/30 rounded-lg border border-orange-200 dark:border-orange-700">
+                                <div className="flex items-center gap-3">
+                                  <span className="text-orange-600 text-lg">⏳</span>
+                                  <div>
+                                    <span className="text-gray-900 dark:text-gray-100 font-medium">
+                                      {sessionName} (pendente)
+                                    </span>
+                                    <p className="text-xs text-gray-600 dark:text-gray-400">
+                                      Clique para agendar esta sessão
+                                    </p>
+                                  </div>
+                                </div>
+                                <Button
+                                  size="sm"
+                                  className="bg-gradient-to-r from-blue-500 to-purple-500 hover:from-blue-600 hover:to-purple-600 text-white"
+                                  onClick={() => {
+                                    // Criar agendamento para esta sessão específica
+                                    createFromSale({
+                                      client_id: pkg.client_id,
+                                      client_name: pkg.client_name,
+                                      client_phone: pkg.client_phone || '',
+                                      package_id: pkg.package_id,
+                                      package_name: pkg.package_name,
+                                      total_sessions: realTotalSessions,
+                                      session_number: sessionNumber,
+                                      price: 0,
+                                      sale_date: pkg.sale_date,
+                                      type: 'package_session',
+                                    }).then((newAppointment) => {
+                                      if (newAppointment) {
+                                        setSelectedAppointment(newAppointment);
+                                        setScheduleModalOpen(true);
+                                        toast({
+                                          title: "📅 Sessão Criada!",
+                                          description: `${sessionName} criada. Escolha data e horário.`,
+                                        });
+                                        refreshAppointments();
+                                      }
+                                    });
+                                  }}
+                                >
+                                  Agendar Próxima
+                                </Button>
+                              </div>
+                            );
+                          }
+                        })}
                       </div>
                     </div>
 
-                    {/* Botões de Ação */}
-                    <div className="flex gap-3">
+                    {/* Botão de Histórico Completo */}
+                    <div className="flex justify-center">
                       <Button
                         size="sm"
                         variant="outline"
-                        className="flex-1 border-blue-300 hover:bg-blue-50 dark:hover:bg-blue-900/30 text-blue-700 dark:text-blue-300 bg-white/80 dark:bg-slate-700/80"
+                        className="border-blue-300 hover:bg-blue-50 dark:hover:bg-blue-900/30 text-blue-700 dark:text-blue-300 bg-white/80 dark:bg-slate-700/80"
                         onClick={() => handleViewPackageHistory(pkg)}
                       >
                         <History className="h-4 w-4 mr-2" />
-                        📝 VER HISTÓRICO
-                      </Button>
-                      <Button
-                        size="sm"
-                        className="flex-1 bg-gradient-to-r from-blue-500 to-purple-500 hover:from-blue-600 hover:to-purple-600 text-white shadow-lg"
-                        onClick={() => scheduleNextSession(pkg.id.toString())}
-                      >
-                        <CalendarIcon className="h-4 w-4 mr-2" />
-                        🗓️ AGENDAR PRÓXIMA
+                        📝 VER HISTÓRICO COMPLETO
                       </Button>
                     </div>
                   </div>

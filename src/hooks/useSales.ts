@@ -106,11 +106,17 @@ export function useSales() {
       
       console.log("✅ Venda salva offline:", newSale);
       
+      // 🚀 TRANSFERÊNCIA AUTOMÁTICA PARA AGENDAMENTOS
       let agendamentosCriados = 0;
-      const servicosEPacotes = saleData.items.filter(item => item.type === 'service' || item.type === 'package');
+      let pacotesCriados = 0;
+      let procedimentosCriados = 0;
+      
+      console.log("🔄 INICIANDO TRANSFERÊNCIA AUTOMÁTICA PARA AGENDAMENTOS...");
       
       for (const item of saleData.items) {
         if (item.type === 'service' || item.type === 'package') {
+          console.log(`📋 Processando ${item.type}: ${item.itemName} (${item.quantity} ${item.type === 'package' ? 'sessões' : 'unidade(s)'})`);
+          
           try {
             const result = await createFromSale({
               client_id: saleData.client_id,
@@ -125,16 +131,38 @@ export function useSales() {
               sale_date: saleData.sale_date,
               type: item.type === 'service' ? 'individual' as const : 'package_session' as const,
             });
-            if (result && result.length > 0) agendamentosCriados += result.length;
+            
+            if (result) {
+              if (item.type === 'package') {
+                pacotesCriados++;
+                console.log(`✅ Pacote transferido: ${item.itemName} com ${item.quantity} sessões`);
+              } else {
+                procedimentosCriados++;
+                console.log(`✅ Procedimento transferido: ${item.itemName}`);
+              }
+              agendamentosCriados++;
+            }
           } catch (error) {
-            console.error('Erro ao criar agendamento:', error);
+            console.error(`❌ Erro ao transferir ${item.itemName}:`, error);
           }
         }
       }
       
+      // Mensagem personalizada baseada no que foi transferido
+      let mensagemTransferencia = "";
+      if (pacotesCriados > 0 && procedimentosCriados > 0) {
+        mensagemTransferencia = ` ${pacotesCriados} pacote(s) e ${procedimentosCriados} procedimento(s) transferidos para agendamentos.`;
+      } else if (pacotesCriados > 0) {
+        mensagemTransferencia = ` ${pacotesCriados} pacote(s) transferido(s) para agendamentos.`;
+      } else if (procedimentosCriados > 0) {
+        mensagemTransferencia = ` ${procedimentosCriados} procedimento(s) transferido(s) para agendamentos.`;
+      }
+      
+      console.log(`🎉 TRANSFERÊNCIA CONCLUÍDA: ${agendamentosCriados} itens transferidos para agendamentos`);
+      
       toast({
-        title: "✅ Venda registrada (Offline)!",
-        description: `Venda para ${saleData.clientName} registrada localmente.`,
+        title: "✅ Venda registrada e transferida!",
+        description: `Venda para ${saleData.clientName} registrada.${mensagemTransferencia} Vá para 'Agendamentos' para marcar as datas.`,
       });
       
       return newSale;

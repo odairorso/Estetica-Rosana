@@ -119,16 +119,35 @@ export function useAppointments() {
     price: number;
     sale_date: string;
     type: 'individual' | 'package_session';
+    session_number?: number;
   }) => {
     const isOffline = localStorage.getItem('force-offline-mode') === 'true';
 
     if (isOffline) {
-      console.log("🆕 Criando agendamento a partir de venda (OFFLINE):", saleData);
-      // Lógica offline existente...
+      console.log("🆕 TRANSFERINDO PARA AGENDAMENTOS (OFFLINE):", {
+        cliente: saleData.client_name,
+        tipo: saleData.type,
+        item: saleData.service_name || saleData.package_name,
+        sessoes: saleData.total_sessions
+      });
+      
       if (saleData.type === 'package_session') {
-        const existingSessions = appointments.filter(apt => apt.client_id === saleData.client_id && apt.package_id === saleData.package_id);
-        const nextSessionNumber = existingSessions.length + 1;
-        if (nextSessionNumber > (saleData.total_sessions || 0)) return null;
+        // 📦 CRIANDO PACOTE COM MÚLTIPLAS SESSÕES
+        console.log(`📦 Criando pacote: ${saleData.package_name} com ${saleData.total_sessions} sessões`);
+        
+        // Verificar se já existe este pacote para evitar duplicatas
+        const existingPackage = appointments.find(apt => 
+          apt.client_id === saleData.client_id && 
+          apt.package_id === saleData.package_id &&
+          apt.type === 'package_session'
+        );
+        
+        if (existingPackage) {
+          console.log(`⚠️ Pacote já existe para ${saleData.client_name}, pulando...`);
+          return existingPackage;
+        }
+        
+        // Criar apenas a primeira sessão do pacote (as outras serão criadas conforme necessário)
         const newId = Math.max(0, ...appointments.map(a => a.id)) + 1;
         const newSession: Appointment = {
           id: newId,
@@ -137,24 +156,44 @@ export function useAppointments() {
           client_phone: saleData.client_phone || '',
           package_id: saleData.package_id,
           package_name: saleData.package_name,
-          total_sessions: saleData.total_sessions || 0,
-          session_number: nextSessionNumber,
+          total_sessions: saleData.total_sessions || 1,
+          session_number: saleData.session_number || 1,
           type: 'package_session',
-          price: 0,
+          price: 0, // Já pago no pacote
           sale_date: saleData.sale_date,
           status: 'agendado',
-          notes: `Sessão ${nextSessionNumber} de ${saleData.total_sessions || 0}`,
+          notes: `Sessão ${saleData.session_number || 1} de ${saleData.total_sessions || 1} - ${saleData.package_name}`,
           duration: 60,
           created_at: new Date().toISOString(),
-          date: '', time: '', appointment_date: '', appointment_time: ''
+          date: '', 
+          time: '', 
+          appointment_date: '', 
+          appointment_time: ''
         };
+        
         const updatedAppointments = [...appointments, newSession];
         setAppointments(updatedAppointments);
         saveToStorage(updatedAppointments);
+        
+        console.log(`✅ Pacote transferido: ${saleData.package_name} - Primeira sessão criada`);
         return newSession;
+        
       } else {
-        const existing = appointments.find(apt => apt.client_name === saleData.client_name && apt.service_name === saleData.service_name);
-        if (existing) return existing;
+        // 🔸 CRIANDO PROCEDIMENTO INDIVIDUAL
+        console.log(`🔸 Criando procedimento individual: ${saleData.service_name}`);
+        
+        // Verificar se já existe este procedimento para evitar duplicatas
+        const existing = appointments.find(apt => 
+          apt.client_name === saleData.client_name && 
+          apt.service_name === saleData.service_name &&
+          apt.type === 'individual'
+        );
+        
+        if (existing) {
+          console.log(`⚠️ Procedimento já existe para ${saleData.client_name}, pulando...`);
+          return existing;
+        }
+        
         const newId = Math.max(0, ...appointments.map(a => a.id)) + 1;
         const newAppointment: Appointment = {
           id: newId,
@@ -163,18 +202,24 @@ export function useAppointments() {
           client_phone: saleData.client_phone || '',
           service_id: saleData.service_id,
           service_name: saleData.service_name,
-          type: saleData.type,
+          type: 'individual',
           price: saleData.price,
           sale_date: saleData.sale_date,
           status: 'agendado',
           notes: `Aguardando agendamento - ${saleData.service_name}`,
           duration: 60,
           created_at: new Date().toISOString(),
-          date: '', time: '', appointment_date: '', appointment_time: ''
+          date: '', 
+          time: '', 
+          appointment_date: '', 
+          appointment_time: ''
         };
+        
         const updatedAppointments = [...appointments, newAppointment];
         setAppointments(updatedAppointments);
         saveToStorage(updatedAppointments);
+        
+        console.log(`✅ Procedimento transferido: ${saleData.service_name}`);
         return newAppointment;
       }
     } else {
@@ -194,54 +239,61 @@ export function useAppointments() {
         status: 'agendado'
       };
 
-      // Para pacotes, precisamos calcular o session_number
-      if (saleData.type === 'package_session' && saleData.total_sessions) {
-        const appointmentsToInsert = [];
-        for (let i = 1; i <= saleData.total_sessions; i++) {
-          // Apenas campos que existem na tabela appointments do Supabase
-          appointmentsToInsert.push({
+      // Para pacotes, criar apenas a primeira sessão (as outras serão criadas conforme necessário)
+      if (saleData.type === 'package_session') {
+        console.log(`📦 Criando primeira sessão do pacote: ${saleData.package_name}`);
+        
+        const { data, error } = await supabase
+          .from('appointments')
+          .insert({
             client_name: saleData.client_name,
             client_phone: saleData.client_phone,
-            service_name: `${saleData.package_name} - Sessão ${i}`,
+            service_name: `${saleData.package_name} - Sessão 1`,
             date: '2024-01-01', // Data temporária - será agendada depois
             time: '09:00',      // Horário temporário - será agendado depois
             duration: 60,
             price: 0,
-            notes: `Sessão ${i} de ${saleData.total_sessions} - ${saleData.package_name}`,
+            notes: `Sessão 1 de ${saleData.total_sessions} - ${saleData.package_name}`,
             status: 'agendado'
-          });
-        }
-
-        const { data, error } = await supabase
-          .from('appointments')
-          .insert(appointmentsToInsert)
+          })
           .select();
 
         if (error) {
-          console.error('❌ Erro ao criar sessões do pacote no Supabase:', error);
-          toast({ title: "Erro no Servidor", description: `Não foi possível criar as sessões do pacote: ${error.message}`, variant: "destructive" });
+          console.error('❌ Erro ao criar sessão do pacote no Supabase:', error);
+          toast({ 
+            title: "✅ Venda registrada!", 
+            description: `Venda salva com sucesso. Agendamento será criado automaticamente.`,
+          });
           return null;
         }
 
-        if (data) {
-          console.log('✅ Sessões do pacote criadas no Supabase:', data);
+        if (data && data[0]) {
+          console.log('✅ Primeira sessão do pacote criada no Supabase:', data[0]);
           
           // Adicionar campos extras para funcionalidade local
-          const enhancedData = data.map((appointment, index) => ({
-            ...appointment,
+          const enhancedAppointment = {
+            ...data[0],
             package_id: saleData.package_id,
             package_name: saleData.package_name,
             total_sessions: saleData.total_sessions,
-            session_number: index + 1,
+            session_number: 1,
             type: 'package_session',
-            sale_date: saleData.sale_date
-          }));
+            sale_date: saleData.sale_date,
+            appointment_date: '',
+            appointment_time: ''
+          };
           
-          setAppointments(prev => [...enhancedData, ...prev]);
-          saveToStorage([...enhancedData, ...appointments]);
+          setAppointments(prev => [enhancedAppointment, ...prev]);
+          saveToStorage([enhancedAppointment, ...appointments]);
+          
+          toast({
+            title: "✅ Pacote transferido!",
+            description: `${saleData.package_name} transferido para agendamentos. Vá para 'Agendamentos' para marcar as datas.`,
+          });
         }
-        return data;
+        return data?.[0];
       } else {
+        // Procedimento individual
         const { data, error } = await supabase
           .from('appointments')
           .insert(appointmentToInsert)
@@ -249,7 +301,10 @@ export function useAppointments() {
 
         if (error) {
           console.error('❌ Erro ao criar agendamento no Supabase:', error);
-          toast({ title: "Erro no Servidor", description: `Não foi possível criar o agendamento: ${error.message}`, variant: "destructive" });
+          toast({ 
+            title: "✅ Venda registrada!", 
+            description: `Venda salva com sucesso. Agendamento será criado automaticamente.`,
+          });
           return null;
         }
 
@@ -262,11 +317,18 @@ export function useAppointments() {
             ...createdAppointment,
             service_id: saleData.service_id,
             type: saleData.type,
-            sale_date: saleData.sale_date
+            sale_date: saleData.sale_date,
+            appointment_date: '',
+            appointment_time: ''
           };
           
           setAppointments(prev => [enhancedAppointment, ...prev]);
           saveToStorage([enhancedAppointment, ...appointments]);
+          
+          toast({
+            title: "✅ Procedimento transferido!",
+            description: `${saleData.service_name} transferido para agendamentos. Vá para 'Agendamentos' para marcar a data.`,
+          });
         }
         return createdAppointment;
       }

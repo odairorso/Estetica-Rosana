@@ -1002,9 +1002,18 @@ export default function Appointments() {
             for (const sale of salesData) {
               if (sale.items && Array.isArray(sale.items)) {
                 for (const item of sale.items) {
-                  // Match by client and package IDs for reliability
-                  const clienteMatch = sale.client_id === apt.client_id;
-                  const packageMatch = item.type === 'package' && item.item_id === apt.package_id;
+                  // SUPER ROBUST MATCHING
+                  const saleClientName = (sale.clientName || sale.client_name || '').trim().toLowerCase();
+                  const aptClientName = (apt.client_name || '').trim().toLowerCase();
+                  const clienteMatchByName = saleClientName !== '' && saleClientName === aptClientName;
+                  const clienteMatchById = sale.client_id && apt.client_id && sale.client_id === apt.client_id;
+                  const clienteMatch = clienteMatchById || clienteMatchByName;
+
+                  const aptPackageName = (apt.package_name || '').trim().toLowerCase();
+                  const itemPackageName = (item.itemName || '').trim().toLowerCase();
+                  const packageMatchByName = itemPackageName !== '' && itemPackageName === aptPackageName;
+                  const packageMatchById = item.item_id && apt.package_id && item.item_id === apt.package_id;
+                  const packageMatch = item.type === 'package' && (packageMatchById || packageMatchByName);
                   
                   console.log(`    🔍 Verificando venda: ${sale.clientName || sale.client_name} - ${item.itemName} (${clienteMatch && packageMatch ? 'MATCH' : 'NO MATCH'})`);
                   

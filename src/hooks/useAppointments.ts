@@ -241,26 +241,25 @@ export function useAppointments() {
         }
         return data;
       } else {
+        const { data, error } = await supabase
+          .from('appointments')
+          .insert(appointmentToInsert)
+          .select();
 
-      const { data, error } = await supabase
-        .from('appointments')
-        .insert(appointmentToInsert)
-        .select();
+        if (error) {
+          console.error('❌ Erro ao criar agendamento no Supabase:', error);
+          toast({ title: "Erro no Servidor", description: `Não foi possível criar o agendamento: ${error.message}`, variant: "destructive" });
+          return null;
+        }
 
-      if (error) {
-        console.error('❌ Erro ao criar agendamento no Supabase:', error);
-        toast({ title: "Erro no Servidor", description: `Não foi possível criar o agendamento: ${error.message}`, variant: "destructive" });
-        return null;
+        const createdAppointment = data?.[0];
+        if (createdAppointment) {
+          console.log('✅ Agendamento criado no Supabase:', createdAppointment);
+          setAppointments(prev => [createdAppointment, ...prev]);
+          saveToStorage([createdAppointment, ...appointments]);
+        }
+        return createdAppointment;
       }
-
-      const createdAppointment = data?.[0];
-      if (createdAppointment) {
-        console.log('✅ Agendamento criado no Supabase:', createdAppointment);
-        setAppointments(prev => [createdAppointment, ...prev]);
-        saveToStorage([createdAppointment, ...appointments]);
-      }
-      return createdAppointment;
-    }
   };
 
   // Agendar procedimento pendente
